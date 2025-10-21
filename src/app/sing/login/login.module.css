@@ -1,0 +1,216 @@
+:root {
+    --border: #e6e6e6;
+    --text: #222;
+    --muted: #666;
+    --bg: #fafafa;
+    --brand: #2ecc71; /* 대파 느낌의 산뜻한 그린 */
+}
+
+/* 레이아웃 */
+.container {
+    min-height: calc(100dvh - 120px);
+    display: grid;
+    place-items: center;
+    padding: 24px 16px;
+    background: var(--bg);
+}
+
+.card {
+    width: 100%;
+    max-width: 420px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px 24px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+}
+
+.title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin: 4px 0 20px;
+    text-align: center;
+}
+
+/* 폼 공통 */
+.row {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.label {
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.input {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.input:focus {
+    border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.15);
+}
+
+/* 옵션 (아이디 저장 / 자동 로그인) */
+.options {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin: 8px 0 4px;
+}
+
+.checkItem {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--text);
+    user-select: none;
+}
+
+.checkItem input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--brand);
+}
+
+.optionNote {
+    margin: 0 0 10px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+/* 버튼/액션 */
+.actions {
+    margin-top: 6px;
+}
+
+.submitBtn {
+    width: 100%;
+    height: 44px;
+    border: 0;
+    border-radius: 10px;
+    background: var(--brand);
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: transform .04s ease;
+}
+
+.submitBtn:active {
+    transform: translateY(1px);
+}
+
+/* 찾기 링크 */
+.links {
+    margin-top: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    font-size: 14px;
+}
+
+.link {
+    color: #2f6feb;
+    text-decoration: none;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
+
+.divider {
+    color: #ccc;
+}
+
+/* SNS 로그인 */
+.snsWrap {
+    margin-top: 18px;
+    display: grid;
+    gap: 10px;
+}
+
+.snsBtn {
+    width: 100%;
+    height: 44px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    background: #fff;
+}
+
+/* 브랜드 컬러 */
+.kakao {
+    background: #FEE500;
+    border-color: #F4D600;
+}
+
+.naver {
+    background: #03C75A;
+    color: #fff;
+    border-color: #03C75A;
+}
+
+/* /app/sing/login/login.module.css 파일에 다음 내용 추가 */
+
+/* 에러 메시지 스타일 */
+.error {
+    color: #ff4d4f; /* 붉은색 */
+    font-size: 0.9em;
+    text-align: center;
+    margin-top: 10px;
+}
+
+/* 아이디 찾기 결과 박스 스타일 */
+.resultBox {
+    background-color: #f7f7f7;
+    border: 1px solid #ddd;
+    padding: 20px;
+    margin-bottom: 30px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* 결과 메시지 */
+.resultMessage {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+/* 찾은 아이디 */
+.foundId {
+    font-size: 1.2em;
+    color: #007bff; /* 대파마켓의 메인 컬러로 사용했던 녹색 계열을 사용해도 좋습니다. */
+    margin-bottom: 5px;
+}
+
+.foundId strong {
+    font-weight: 700;
+}
+
+/* 가입일자 */
+.foundDate {
+    font-size: 0.9em;
+    color: #666;
+}
+
+/* 로그인 버튼 (결과 창에서 재사용) */
+.resultBox + .actions .submitBtn {
+    /* 배경색을 녹색 계열로 유지하여 버튼의 연속성을 높임 */
+    background-color: #4CAF50; /* 예시로 녹색 계열 사용 */
+}

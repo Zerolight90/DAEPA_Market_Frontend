@@ -1,0 +1,112 @@
+.wrap{width:1000px;margin:40px auto;background:#f7f7f7;border-radius:10px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.title{text-align:center;margin-bottom:16px}
+.box{display:flex;border:1px solid #e5e5e5;background:#fff;border-radius:10px;overflow:hidden;height:680px} /* ⬅️ 높이 고정 */
+
+/* 리스트 */
+.list{width:36%;border-right:1px solid #eee;background:#fafafa;display:flex;flex-direction:column;overflow:hidden} /* ⬅️ overflow hidden */
+.listTitle{padding:12px 14px;font-size:15px;border-bottom:1px solid #eee;background:#fff}
+.ul{list-style:none;margin:0;padding:0;overflow-y:auto;flex:1} /* ⬅️ flex:1로 꽉 채우기 */
+.item{display:grid;grid-template-columns:56px 1fr;gap:10px;padding:12px 14px;cursor:pointer;border-bottom:1px solid #efefef;transition:background .15s}
+.item:hover{background:#f1f1f1}
+.active{background:#e9f3ff}
+.thumb{width:56px;height:56px;border-radius:8px;object-fit:cover}
+.itemMain{min-width:0}
+.top{display:flex;justify-content:space-between;gap:8px}
+.name{font-weight:600}
+.time{font-size:12px;color:#888;white-space:nowrap}
+
+.productRow{display:flex;align-items:center;gap:8px;margin:2px 0 6px}
+.product{font-size:13px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.status{font-size:11px;padding:2px 6px;border-radius:6px;border:1px solid}
+.progress{color:#2b5a00;border-color:#cde7b2;background:#f3faeb}
+.reserved{color:#6b3a00;border-color:#ffd9a8;background:#fff3e4}
+.done{color:#3b3b3b;border-color:#d8d8d8;background:#f3f3f3}
+
+.bottom{display:flex;align-items:center;gap:6px}
+.last{font-size:13px;color:#666;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.role{font-size:11px;padding:2px 6px;border-radius:999px;border:1px solid}
+.seller{color:#b14700;border-color:#ffc9a4;background:#fff4e9}
+.buyer{color:#005a37;border-color:#bfe7d8;background:#ecf9f4}
+.unread{min-width:18px;height:18px;padding:0 6px;border-radius:999px;background:#ff375f;color:#fff;font-size:11px;line-height:18px;text-align:center}
+
+/* 우측 방 */
+.room{flex:1;display:flex;flex-direction:column}
+.header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #eee;background:#fff}
+.meta{display:flex;align-items:center;gap:8px;min-width:0;position:relative}
+.roomName{font-size:16px}
+.dot{color:#c7c7c7}
+.roomProduct{font-size:13px;color:#666;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.headerThumb{width:44px;height:44px;border-radius:8px;object-fit:cover}
+
+/* 메시지 영역 */
+.messages{flex:1;padding:16px;background:#fdfdfd;overflow-y:auto;display:flex;flex-direction:column;gap:10px;min-height:0} /* ⬅️ min-height:0로 내부 스크롤 정상화 */
+.msg{max-width:72%;display:flex;flex-direction:column;gap:4px}
+.sender{font-size:12px;color:#666;padding-left:8px}
+.other{align-self:flex-start}
+.other .bubble{background:#f1f1f1;color:#222;border-radius:12px;padding:10px 12px}
+.me{align-self:flex-end;text-align:right}
+.me .bubble{background:#ffe682;color:#2a2a2a;border-radius:12px;padding:10px 12px;box-shadow:0 1px 0 rgba(0,0,0,.04) inset}
+
+.bubbleRow{display:inline-flex;align-items:flex-end;gap:6px}
+.timeSmall{font-size:11px;color:#888}
+.readText{font-size:11px;color:#0a7cff;margin-top:2px;text-align:right;display:inline-block}
+
+/* 입력 바 */
+.inputBar{display:grid;grid-template-columns:1fr 96px;gap:8px;padding:12px;border-top:1px solid #eee;background:#fff}
+.input{border:1px solid #ddd;border-radius:10px;padding:10px 12px;resize:none;min-height:40px;max-height:140px;outline:none}
+.input:focus{border-color:#999}
+.sendBtn{border:none;border-radius:10px;background:#111;color:#fff;font-weight:600;cursor:pointer}
+.sendBtn:disabled{opacity:.4;cursor:not-allowed}
+
+/* 사용자 메뉴 */
+.userBtn{background:transparent;border:0;padding:0;margin:0;cursor:pointer;display:inline-flex;align-items:center}
+.userBtn:focus{outline:2px solid #cfe3ff;border-radius:6px}
+.userMenu{
+    position:absolute;top:110%;left:0;min-width:160px;background:#fff;border:1px solid #e6e6e6;border-radius:10px;
+    box-shadow:0 8px 24px rgba(0,0,0,.08);padding:6px;z-index:20
+}
+.userMenu button{width:100%;background:none;border:0;text-align:left;padding:10px 10px;border-radius:8px;font-size:14px;cursor:pointer}
+.userMenu button:hover{background:#f5f7fb}
+.userMenu .danger{color:#c62828}
+
+/* Modal */
+.modalOverlay{position:fixed;inset:0;background:rgba(0,0,0,.4);backdrop-filter:blur(1px);z-index:90}
+.modal{
+    position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+    width:min(520px,92vw);background:#fff;border:1px solid #e6e6e6;border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.18);
+    z-index:100;overflow:hidden
+}
+.modalHeader{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid #f0f0f0;background:#fff}
+.modalTitle{font-size:18px}
+.modalClose{background:none;border:0;font-size:22px;line-height:1;cursor:pointer;color:#666;padding:4px 8px;border-radius:8px}
+.modalClose:hover{background:#f6f7f9}
+.modalBody{padding:14px 16px 18px}
+.field{display:grid;gap:8px;margin-bottom:12px}
+.label{font-weight:600;font-size:14px;color:#222}
+.readonlyBox{padding:10px 12px;border:1px solid #eee;border-radius:10px;background:#fafafa}
+.select,.textarea{width:100%;border:1px solid #ddd;border-radius:10px;padding:10px 12px;outline:none}
+.select:focus,.textarea:focus{border-color:#999}
+.tip{font-size:12px;color:#888;margin-top:2px}
+.modalActions{margin-top:14px;display:flex;justify-content:flex-end;gap:8px}
+.btnGhost{border:1px solid #ddd;background:#fff;color:#222;padding:10px 14px;border-radius:10px;cursor:pointer}
+.btnGhost:hover{background:#f6f7f9}
+.btnDanger{border:0;background:#c62828;color:#fff;padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:600}
+.btnDanger:hover{filter:brightness(.95)}
+
+.dateDivider{display:flex;justify-content:center;align-items:center;margin:12px 0;color:#999;font-size:12px}
+.senderRow{display:flex;align-items:center;gap:6px;margin:0 0 4px 0}
+.avatar{width:28px;height:28px;border-radius:50%;object-fit:cover;border:1px solid #eee}
+.senderName{font-size:12px;color:#666}
+
+/* 반응형 */
+@media (max-width:860px){
+    .wrap{width:100%;border-radius:0;padding:0;box-shadow:none}
+    .list{width:42%}
+    .roomProduct{max-width:160px}
+}
+@media (max-width:640px){
+    .box{flex-direction:column}
+    .list{width:100%;max-height:280px}
+    .roomProduct{display:none}
+    .messages{min-height:360px}
+}

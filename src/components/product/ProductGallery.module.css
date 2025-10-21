@@ -1,0 +1,18 @@
+.wrap{}
+.main{
+    width:100%; aspect-ratio: 1/1;
+    background:#000; border:1px solid #e5e5e5; border-radius:10px;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.mainImg{ width:100%; height:100%; object-fit:contain; background:#000; }
+
+.thumbs{
+    margin-top:10px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;
+}
+.tBtn{
+    width:80px; height:80px; padding:0; border:2px solid transparent;
+    border-radius:8px; overflow:hidden; background:#fff; cursor:pointer;
+}
+.tBtn:hover{ border-color:#d0d0d0; }
+.active{ border-color:#008c6e; }
+.tImg{ width:100%; height:100%; object-fit:cover; display:block; }

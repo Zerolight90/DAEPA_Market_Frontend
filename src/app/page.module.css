@@ -1,0 +1,79 @@
+/* Title */
+.categoryTitle {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 16px 0 24px;
+}
+@media (min-width: 768px) { .categoryTitle { font-size: 1.8rem; } }
+@media (min-width: 1024px) { .categoryTitle { font-size: 2.2rem; } }
+
+
+.categoryList {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 8px;
+}
+@media (min-width: 768px) {
+  .categoryList { grid-template-columns: repeat(4, 1fr); gap: 18px; }
+}
+@media (min-width: 1280px) {
+  .categoryList { grid-template-columns: repeat(8, 1fr); gap: 20px; }
+}
+
+.cardLink { display: block; text-decoration: none; color: inherit; outline: none; }
+
+.categoryCard {
+  text-align: center;
+  padding: 12px;
+  border-radius: 12px;
+  border-color: rgba(0, 0, 0, 0.08);
+  background: #fff;
+  transition:
+          transform 160ms ease,
+          box-shadow 160ms ease,
+          border-color 160ms ease,
+          background 160ms ease;
+}
+
+.categoryIcon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+.categoryName { margin: 6px 0 2px; font-size: 1rem; font-weight: 600; }
+.categoryCount { margin: 0; font-size: 0.9rem; opacity: 0.8; }
+
+@media (hover: hover) and (pointer: fine) {
+  .cardLink:hover .categoryCard {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06), 0 1px 0 rgba(0,0,0,0.03);
+    border-color: rgba(0,0,0,0.12);
+    background: rgba(0,0,0,0.015);
+  }
+  .cardLink:hover .categoryIcon { transform: translateY(-2px) scale(1.06); opacity: 0.95; }
+}
+
+.cardLink:focus-visible .categoryCard {
+  outline: 2px solid #22c55e;
+  outline-offset: 2px;
+  transform: translateY(-3px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06), 0 1px 0 rgba(0,0,0,0.03);
+}
+
+.cardLink:active .categoryCard {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05), 0 1px 0 rgba(0,0,0,0.02);
+}
+
+@media (prefers-color-scheme: dark) {
+  .cardLink:hover .categoryCard {
+    border-color: rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.03);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .categoryCard, .categoryIcon { transition: none; }
+}

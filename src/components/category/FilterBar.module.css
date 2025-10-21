@@ -1,0 +1,53 @@
+.wrap {
+    position: sticky;
+    top: 56px; /* 헤더 높이에 맞게 조정 */
+    z-index: 20;
+    background: #fff;
+    border-bottom: 1px solid #eee;
+}
+
+.inner {
+    max-width: 1040px; /* .container 폭과 맞추면 더 깔끔 */
+    margin: 0 auto;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #666;
+    font-size: 14px;
+}
+.breadcrumbs a {
+    color: #666;
+    text-decoration: none;
+}
+.sep { color: #aaa; }
+
+.actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.chip {
+    display: inline-block;
+    padding: 6px 10px;
+    border: 1px solid #e5e5e5;
+    border-radius: 999px;
+    font-size: 13px;
+    color: #444;
+    background: #fff;
+    text-decoration: none;
+    cursor: pointer;
+}
+.active {
+    border-color: #00a651;
+    color: #00a651;
+    background: #f6fffa;
+}

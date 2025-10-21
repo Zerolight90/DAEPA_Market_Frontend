@@ -1,0 +1,116 @@
+.warp {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 16px;
+    box-sizing: border-box;
+}
+
+.header {
+    width: 100%;
+    padding: 10px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 15px;
+    gap: 8px;
+    box-sizing: border-box;
+}
+
+.top { color: #555; margin: 0; }
+
+.rmenu {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+.rmenu a {
+    color: #555;
+    text-decoration: none;
+    transition: color .2s ease;
+    white-space: nowrap;
+}
+.rmenu a:hover { color: #000; }
+
+/* 로고/검색/아이콘 */
+.menu {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0 16px;
+    gap: 12px;
+    box-sizing: border-box;
+}
+
+.logo { display: flex; align-items: center; }
+
+/* 검색 */
+.search { flex: 1 1 auto; display: flex; min-width: 0; }
+.searchControl { width: 100%; }
+
+/* 아이콘 */
+.icon { display: flex; align-items: center; gap: 14px; }
+.icon a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    color: #666;
+    transition: color .2s ease, transform .1s ease;
+}
+.icon a:hover { color: #000; transform: translateY(-1px); }
+.icon :global(svg) { font-size: 22px; }
+
+/* 구분선 */
+.hr {
+    border: 0;
+    border-top: 1px solid #e5e5e5;
+    margin: 0;
+}
+
+/* 반응형 */
+@media (max-width: 480px) {
+    .header { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 0; }
+    .top { font-size: 14px; text-align: center; }
+    .rmenu { justify-content: center; gap: 12px; }
+
+    .menu { flex-direction: column; align-items: stretch; gap: 10px; padding: 10px 0 12px; }
+    .logo { justify-content: center; }
+    .icon { justify-content: center; gap: 12px; }
+}
+
+@media (min-width: 768px) {
+    .warp { padding: 0 20px; }
+    .header { gap: 10px; }
+    .rmenu { gap: 18px; }
+
+    .menu { flex-direction: row; align-items: center; gap: 16px; padding: 16px 0 18px; }
+    .search { max-width: 720px; margin: 0 8px; }
+    .icon { gap: 16px; }
+    .icon :global(svg) { font-size: 24px; }
+}
+
+@media (min-width: 1280px) {
+    .warp { padding: 0 24px; }
+    .header { padding: 12px 0; gap: 12px; }
+    .rmenu { gap: 20px; }
+
+    .menu { gap: 18px; padding: 18px 0 20px; }
+    .search { max-width: 800px; }
+    .icon { gap: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .icon a, .rmenu a { transition: none; }
+}
+
+
+.sticky {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 50;
+}
+@media (hover: hover) and (pointer: fine) {
+    .sticky { box-shadow: 0 1px 0 rgba(0,0,0,0.06); }
+}

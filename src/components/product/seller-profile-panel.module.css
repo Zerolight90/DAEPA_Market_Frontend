@@ -1,0 +1,10 @@
+.box { border:1px solid #eaeaea; border-radius:12px; padding:14px; background:#fff; }
+.row { display:grid; grid-template-columns:64px 1fr; gap:12px; align-items:center; }
+.avatar { position:relative; width:64px; height:64px; border-radius:50%; overflow:hidden; background:#f4f4f4; }
+.meta { display:grid; gap:2px; }
+.name { font-weight:700; }
+.sub { color:#666; font-size:13px; }
+.since { color:#888; font-size:12px; }
+.actions { display:flex; gap:8px; margin-top: 12px; }
+.link { display:inline-block; padding:8px 12px; border:1px solid #eaeaea; border-radius:10px; text-decoration:none; color:#222; background:#fafafa; }
+.link:hover { background:#f3f3f3; }

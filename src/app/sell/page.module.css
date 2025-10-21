@@ -1,0 +1,64 @@
+/* 레이아웃 */
+.wrap { background:#ffffff; }
+.container { max-width: 960px; margin: 0 auto; padding: 28px 16px 60px; }
+.pageTitle { font-size:20px; font-weight:700; margin-bottom:16px; }
+
+/* 공통 카드 */
+.card { border-top:1px solid #e5e7eb; padding:18px 0; }
+.row { display:flex; gap:24px; align-items:flex-start; }
+.labelCol { width:140px; color:#111827; font-weight:600; padding-top:8px; }
+.fieldCol { flex:1; }
+
+/* 입력 요소 */
+.input { width:100%; border:1px solid #d1d5db; border-radius:6px; padding:10px 12px; font-size:14px; }
+.input:focus, .select:focus, .textarea:focus { outline: none; box-shadow:0 0 0 3px rgba(0,0,0,.06); }
+.textarea { min-height:160px; resize:vertical; }
+.helper { font-size:12px; color:#6b7280; margin-top:6px; text-align:right; }
+
+/* 카테고리 박스 */
+.categoryBox { width:330px; height:180px; border:1px solid #e5e7eb; border-radius:6px; overflow:auto; }
+.categoryBox ul { list-style:none; margin:0; padding:10px; }
+.categoryBox li { padding:8px 10px; border-radius:6px; cursor:default; }
+.categoryBox li:hover { background:#f3f4f6; }
+
+/* 업로더(아이콘/카운터만) */
+.uploader { width:120px; height:120px; border:1px dashed #cbd5e1; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; color:#6b7280; }
+.camIcon { width:36px; height:28px; border:2px solid #9ca3af; border-radius:6px; position:relative; }
+.camIcon::before { content:""; position:absolute; width:12px; height:12px; border-radius:50%; border:2px solid #9ca3af; right:-8px; top:-6px; background:#fff; }
+.counter { font-size:12px; color:#6b7280; }
+
+/* === 카테고리 그리드(3열) === */
+.categoryGrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; max-width: 720px; }
+.col { border: 1px solid #e5e7eb; border-radius: 6px; background: #fff; overflow: hidden; }
+.colHeader { font-size: 12px; font-weight: 700; color: #6b7280; background: #f9fafb; border-bottom: 1px solid #eef0f3; padding: 10px 12px; }
+.list { list-style: none; margin: 0; padding: 6px; max-height: 220px; overflow: auto; }
+.item { padding: 8px 10px; border-radius: 6px; cursor: pointer; color: #111827; }
+.item:hover { background: #f3f4f6; }
+.itemActive { background: #eef6ff; color: #1d4ed8; font-weight: 700; }
+.itemMuted { padding: 8px 10px; color: #9ca3af; }
+
+/* 가격 라인 (잘림 방지) */
+.priceRow { display: flex; align-items: center; gap: 12px; }
+.priceInput { flex: 1 1 auto; min-width: 0; width: auto; }
+.safePay { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: #059669; font-weight: 600; text-decoration: none; cursor: default; flex-shrink: 0; white-space: nowrap; }
+.safeDot { width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block; }
+
+/* 인라인 라디오 */
+.radioInline { display:flex; gap:20px;}
+.radio { display:inline-flex; align-items:center; gap:8px; font-size:14px; color:#111827; }
+
+/* 거래 방법 섹션 */
+.sectionTitle { font-size:18px; font-weight:700; margin:28px 0 6px; }
+.sectionHint { color:#6b7280; font-size:12px; margin-bottom:10px; }
+
+.radioGroupCard { border-top:1px solid #e5e7eb; border-bottom:1px solid #e5e7eb; }
+.radioRow { display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-top:1px solid #f3f4f6; }
+.radioRow:first-child { border-top:none; }
+
+/* 동의 라인 */
+.noticeLine { display:flex; align-items:center; gap:8px; color:#4b5563; font-size:13px; margin:16px 0 18px; }
+.checkDot { width:12px; height:12px; border-radius:50%; background:#10b981; display:inline-block; }
+
+/* 버튼 */
+.primaryBtn { width:100%; border:none; background:#111827; color:#fff; padding:14px 16px; border-radius:8px; font-weight:700; font-size:15px; cursor:pointer; }
+.primaryBtn:hover { background:#000; }

@@ -1,0 +1,45 @@
+.wrap {
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+}
+
+/* matrix 구조 */
+.matrix {
+    background: #fff;
+    border: 1px solid #efefef;
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    margin-top: -1px;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid #f2f2f2;
+}
+
+.cell {
+    padding: 14px 16px;
+    border-left: 1px solid #f2f2f2;
+    min-height: 70px;
+    line-height: 1.5;
+}
+.cell:first-child { border-left: none; }
+
+.midLink {
+    color: #222;
+    font-weight: 600;
+    text-decoration: none;
+}
+.midLink:hover { color: #2ac1bc; text-decoration: underline; }
+
+.smallLink {
+    color: #666;
+    font-size: 13px;
+    margin-right: 12px;
+    text-decoration: none;
+}
+.smallLink:hover { text-decoration: underline; }

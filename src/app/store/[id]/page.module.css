@@ -1,0 +1,85 @@
+:root{
+    --brand: #008c6e;          /* 대파 그린 */
+    --brand-dark:#007459;
+    --text:#222;
+    --sub:#777;
+    --line:#eaeaea;
+    --bg:#fff;                 /* PC는 흰 배경 */
+    --container: 1200px;
+}
+
+.page{ background: var(--bg); min-height:100vh; }
+.container{ width: var(--container); margin: 0 auto; }
+
+/* breadcrumb */
+.bcWrap{ padding: 18px 0 6px; color:#999; font-size:13px; }
+.bc{ color:#666; text-decoration:none; }
+.bc:hover{ text-decoration:underline; }
+.sep{ margin:0 6px; color:#c7c7c7; }
+
+/* two-column */
+.container:nth-of-type(2){
+    display:grid;
+    grid-template-columns: 720px 440px;  /* 중고나라 비율 근접 */
+    gap: 40px;
+    padding: 24px 0 60px;
+}
+
+/* 좌측 */
+.leftCol{}
+
+/* 우측 패널 */
+.rightCol{
+    position: sticky;
+    top: 80px;
+    align-self: start;
+    border:1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+    background:#fff;
+}
+
+.title{ font-size:22px; font-weight:700; line-height:1.4; margin:0 0 8px; }
+.price{ font-size:32px; font-weight:800; margin-bottom:12px; color:var(--text); }
+
+/* 정보 테이블 */
+.table{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); margin: 16px 0; }
+.row{
+    display:grid; grid-template-columns: 110px 1fr;
+    padding:10px 0; border-bottom:1px solid #f4f4f4; font-size:14px; color:#444;
+}
+.row:last-child{ border-bottom:none; }
+.row dt{ color:#888; }
+
+/* 좌측 섹션 */
+.section { margin-top: 32px; }
+.h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+.desc p{ font-size:15px; color:#444; line-height:1.7; margin:8px 0; }
+
+.kvMini {
+    list-style: none;
+    margin: 12px 0 20px;
+    padding: 0;
+    display: grid;
+    gap: 8px;
+}
+.kvMini li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 10px 12px;
+    background: #fff;
+}
+.kvMini li span { color: #666; font-size: 14px; }
+.kvMini li strong { color: #222; font-weight: 700; }
+
+
+
+
+/* 반응형 */
+@media (max-width: 1024px){
+    .container:nth-of-type(2){ grid-template-columns:1fr; gap:20px; padding:16px 0 40px; }
+    .rightCol{ position: static; }
+}

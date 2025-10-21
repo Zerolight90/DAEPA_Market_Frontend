@@ -1,0 +1,19 @@
+.box {
+    border: 1px solid #d9efe8;
+    background: #eafaf3;
+    color: #00634f;
+    border-radius: 12px;
+    padding: 18px 18px 18px 28px;
+    line-height: 1.8;
+    margin-top: 16px;
+}
+
+.title { display: block; margin-bottom: 8px; }
+
+.list {
+    margin: 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+.list li + li { margin-top: 6px; }

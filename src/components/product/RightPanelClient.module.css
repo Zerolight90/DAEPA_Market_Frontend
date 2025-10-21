@@ -1,0 +1,15 @@
+:root{ --brand:#008c6e; --brand-dark:#007459; --line:#eaeaea; --sub:#777; }
+
+.btnRow{ display:grid; grid-template-columns: 1fr 1fr 1.2fr; gap:10px; margin-top:12px; }
+.btnWish{ height:46px; border:1px solid var(--line); background:#fff; border-radius:8px; cursor:pointer; }
+.btnChat{ height:46px; border:1px solid var(--brand); color:var(--brand); background:#e8fbf3; border-radius:8px; font-weight:700; cursor:pointer; }
+.btnChat:hover{ background:#d9f6ec; }
+.btnBuy{ height:46px; border:none; background:var(--brand); color:#fff; font-weight:800; border-radius:8px; cursor:pointer; }
+.btnBuy:hover{ background:var(--brand-dark); }
+
+.safe{ margin-top:10px; font-size:12px; color:#fff; background:var(--brand); display:inline-block; padding:6px 10px; border-radius:6px; }
+
+.utils{ display:flex; align-items:center; gap:8px; color:var(--sub); font-size:13px; margin-top:12px; }
+.link{ background:none; border:none; color:var(--sub); text-decoration:underline; cursor:pointer; }
+.dot{ color:#c7c7c7; }
+.profileBtn{ width:100%; height:40px; margin-top:10px; background:#f6f6f6; border:1px solid var(--line); border-radius:8px; cursor:pointer; }

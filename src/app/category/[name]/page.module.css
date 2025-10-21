@@ -1,0 +1,12 @@
+.container { /* 선택: 글로벌 .container가 있으면 생략 가능 */
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 0 12px;
+}
+
+.title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 12px 0 4px;
+}
+.count { font-size: 14px; color: #888; margin-left: 6px; }
