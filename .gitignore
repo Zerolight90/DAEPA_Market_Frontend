@@ -1,0 +1,121 @@
+# =========================
+# OS / 편의
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE / 에디터
+# =========================
+.vscode/
+.idea/
+*.iml
+*.swp
+*.swo
+.project
+.classpath
+.settings/
+
+# =========================
+# 공통 로그/임시
+# =========================
+*.log
+logs/
+tmp/
+*.tmp
+coverage/
+
+# =========================
+# GitHub Actions (CI)
+# =========================
+# 기본적으로 모든 yml을 막되, CI 워크플로우만 허용
+*.yml
+!*.example.yml
+!.github/
+!.github/workflows/
+!.github/workflows/*.yml
+
+# =========================
+# 환경변수/비밀 (루트 공통)
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Docker
+# =========================
+.docker/
+docker.env
+docker/.env
+docker-compose.override.yml
+# docker-compose.yml 은 보통 커밋합니다 (민감값은 env 분리)
+# Dockerfile도 커밋 OK (시크릿 하드코딩 금지)
+
+# 배포 스크립트/키 (예: EC2 관련)
+deploy/*.pem
+deploy/*.key
+deploy/.env
+*.pem
+*.key
+
+# =========================
+# Frontend (Next.js가 리포 루트일 때)
+# (모노레포면 아래 "frontend/" 접두사 사용)
+# =========================
+node_modules/
+.next/
+.next/cache/
+out/
+dist/
+.turbo/
+.vercel/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Next.js 환경변수(루트) – 이미 위 .env 규칙이 막음
+# 클라이언트 노출이 필요한 값은 NEXT_PUBLIC_ 접두사 사용(하지만 .env는 커밋금지)
+
+# =========================
+# Backend (Spring Boot / Gradle)
+# (모노레포면 아래 "backend/" 접두사 사용)
+# =========================
+/build/
+/out/
+/target/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+/**/build/
+
+# Spring 설정 파일: 실설정 yml 전부 차단 (예시는 허용)
+src/main/resources/*.yml
+!src/main/resources/*example.yml
+
+# =========================
+# Monorepo 디렉토리 구조 지원(있을 때)
+# =========================
+# Frontend 폴더가 따로 있을 때
+frontend/node_modules/
+frontend/.next/
+frontend/.next/cache/
+frontend/out/
+frontend/dist/
+frontend/.turbo/
+frontend/.vercel/
+frontend/coverage/
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# Backend 폴더가 따로 있을 때
+backend/build/
+backend/out/
+backend/target/
+backend/.gradle/
+backend/src/main/resources/*.yml
+!backend/src/main/resources/*example.yml
+
+# 공통 yml 차단 규칙으로 인해 예기치 않게 막히는 파일이 있다면
+# !경로/파일.yml 로 개별 허용 예외를 추가하면 됩니다.
