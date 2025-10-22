@@ -1,7 +1,8 @@
+// /lib/chat/useChatSocket.js
 "use client";
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { createChatClient } from "./stompClient";
-import { API_BASE, fetchMessages } from "./api";
+import { fetchMessages } from "./api";
 
 /** 백엔드/프론트 필드 통합 */
 function normalizeMessage(raw) {
@@ -17,6 +18,11 @@ function normalizeMessage(raw) {
     };
 }
 
+/**
+ * roomId: number | string
+ * me: { id: number, name: string }
+ * baseUrl: 백엔드 실제 주소(WS용). 미지정 시 http://<host>:8080 추정
+ */
 export function useChatSocket({ roomId, me, baseUrl }) {
     const clientRef = useRef(null);
     const subRef = useRef(null);
@@ -29,6 +35,7 @@ export function useChatSocket({ roomId, me, baseUrl }) {
     const liveQueueRef = useRef([]);
     const loadedRef = useRef(false);
 
+    // 방 바뀔 때 초기화
     useEffect(() => {
         setMessages([]);
         setLoaded(false);
@@ -40,23 +47,27 @@ export function useChatSocket({ roomId, me, baseUrl }) {
     const activate = useCallback(() => {
         if (clientRef.current) return;
 
+        // WS는 프록시가 안 됨 → 백엔드 실주소 필요
         const urlBase =
             baseUrl ||
-            process.env.NEXT_PUBLIC_API_BASE ||
             (typeof window !== "undefined"
                 ? `${window.location.protocol}//${window.location.hostname}:8080`
-                : API_BASE);
+                : "http://localhost:8080");
 
         const c = createChatClient({ baseUrl: urlBase, userId: me.id, displayName: me.name });
 
         c.onConnect = async () => {
             setConnected(true);
 
+            // 기존 구독 해제
             if (subRef.current) {
-                try { subRef.current.unsubscribe(); } catch (_) {}
+                try {
+                    subRef.current.unsubscribe();
+                } catch (_) {}
                 subRef.current = null;
             }
 
+            // 실시간 구독
             subRef.current = c.subscribe(`/sub/chats/${roomId}`, (frame) => {
                 try {
                     const msg = normalizeMessage(JSON.parse(frame.body));
@@ -77,9 +88,12 @@ export function useChatSocket({ roomId, me, baseUrl }) {
                 }
             });
 
+            // 초기 메시지 로드(REST) → 실시간 큐 병합
             try {
                 const arr = await fetchMessages(roomId, 30);
-                const baseList = (Array.isArray(arr) ? arr : []).map(normalizeMessage).filter(Boolean);
+                const baseList = (Array.isArray(arr) ? arr : [])
+                    .map(normalizeMessage)
+                    .filter(Boolean);
 
                 const next = [];
                 for (const m of baseList) {
@@ -115,11 +129,15 @@ export function useChatSocket({ roomId, me, baseUrl }) {
 
     const deactivate = useCallback(() => {
         if (subRef.current) {
-            try { subRef.current.unsubscribe(); } catch (_) {}
+            try {
+                subRef.current.unsubscribe();
+            } catch (_) {}
             subRef.current = null;
         }
         if (clientRef.current) {
-            try { clientRef.current.deactivate(); } catch (_) {}
+            try {
+                clientRef.current.deactivate();
+            } catch (_) {}
             clientRef.current = null;
         }
         setConnected(false);
@@ -130,36 +148,39 @@ export function useChatSocket({ roomId, me, baseUrl }) {
         return () => deactivate();
     }, [activate, deactivate]);
 
-    const sendText = useCallback((text, tempId) => {
-        if (!clientRef.current || !clientRef.current.connected) return;
-        clientRef.current.publish({
-            destination: `/app/chats/${roomId}/send`,
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-                roomId,
-                text,
-                tempId,
-                senderId: me.id, // 서버가 확실히 받도록
+    const sendText = useCallback(
+        (text, tempId) => {
+            if (!clientRef.current || !clientRef.current.connected) return;
+            clientRef.current.publish({
+                destination: `/app/chats/${roomId}/send`,
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                    roomId,
+                    text,
+                    tempId,
+                    senderId: me.id,
+                }),
+            });
+        },
+        [roomId, me.id]
+    );
 
-            }),
-
-        });
-    }, [roomId, me.id]);
-
-
-    const sendRead = useCallback((lastSeenMessageId) => {
-        if (!clientRef.current || !clientRef.current.connected) return;
-        clientRef.current.publish({
-            destination: `/app/chats/${roomId}/read`,
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({
-                type: "READ",
-                roomId,
-                readerId: me.id,
-                lastSeenMessageId,
-            }),
-        });
-    }, [roomId, me.id]);
+    const sendRead = useCallback(
+        (lastSeenMessageId) => {
+            if (!clientRef.current || !clientRef.current.connected) return;
+            clientRef.current.publish({
+                destination: `/app/chats/${roomId}/read`,
+                headers: { "content-type": "application/json" },
+                body: JSON.stringify({
+                    type: "READ",
+                    roomId,
+                    readerId: me.id,
+                    lastSeenMessageId,
+                }),
+            });
+        },
+        [roomId, me.id]
+    );
 
     return { connected, loaded, messages, sendText, sendRead };
 }
