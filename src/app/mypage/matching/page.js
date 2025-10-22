@@ -103,6 +103,7 @@ export default function MyPage() {
                 const response = await fetch('http://localhost:8080/api/userpicks');
                 if (!response.ok) {
                     throw new Error('데이터를 불러오는 데 실패했습니다.');
+
                 }
                 const data = await response.json();
                 setUserPicks(data); // 상태에 데이터 저장
@@ -204,7 +205,7 @@ export default function MyPage() {
             }
             // 화면에서도 즉시 해당 항목 제거
             setUserPicks(currentPicks =>
-                currentPicks.filter(pick => pick.up_idx !== idToDelete)
+                currentPicks.filter(pick => pick.upIdx !== idToDelete)
             );
         } catch (err) {
             alert(err.message);
@@ -393,7 +394,7 @@ export default function MyPage() {
                                 labelId="demo-simple-select-label"
                                 id="demo-simple-select"
                                 value={upper}
-                                label="Upper"
+                                label="상위 카테고리"
                                 onChange={handleChange}
                                 >
 
@@ -445,27 +446,59 @@ export default function MyPage() {
                         renderInput={(params) => <TextField {...params} label="하위 카테고리" />}
                         />
 
-                        <FormControl fullWidth sx={{ m: 1, width: 120 }} size="small">
+                        <FormControl fullWidth sx={{ m: 1, width: 130 }} size="small">
                             <InputLabel htmlFor="outlined-adornment-amount">최소금액</InputLabel>
                             <OutlinedInput
                                 id="outlined-adornment-amount"
                                 type="number" // 숫자만 입력되도록 타입 지정
                                 value={minPrice} // State와 연결
                                 onChange={(e) => setMinPrice(e.target.value)} // State 업데이트
-                                startAdornment={<InputAdornment position="start">$</InputAdornment>}
+                                startAdornment={<InputAdornment position="start">₩</InputAdornment>}
                                 label="Amount"
+                                inputProps={{
+                                    sx: {
+                                        // 크롬, 엣지, 사파리 스핀 버튼 제거
+                                        '&::-webkit-outer-spin-button': {
+                                            WebkitAppearance: 'none',
+                                            margin: 0,
+                                        },
+                                        '&::-webkit-inner-spin-button': {
+                                            WebkitAppearance: 'none',
+                                            margin: 0,
+                                        },
+                                        // 파이어폭스 스핀 버튼 제거
+                                        MozAppearance: 'textfield',
+                                    },
+                                    onWheel: (event) => event.currentTarget.blur()
+                                }}
                             />
                         </FormControl>
                         ~
-                        <FormControl fullWidth sx={{ m: 1, width: 120 }} size="small">
+                        <FormControl fullWidth sx={{ m: 1, width: 130 }} size="small">
                             <InputLabel htmlFor="outlined-adornment-amount">최대금액</InputLabel>
                             <OutlinedInput
                                 id="outlined-adornment-amount"
                                 type="number" // 숫자만 입력되도록 타입 지정
                                 value={maxPrice} // State와 연결
                                 onChange={(e) => setMaxPrice(e.target.value)} // State 업데이트
-                                startAdornment={<InputAdornment position="start">$</InputAdornment>}
+                                startAdornment={<InputAdornment position="start">₩</InputAdornment>}
                                 label="Amount"
+                                inputProps={{
+                                    sx: {
+                                        // 크롬, 엣지, 사파리 스핀 버튼 제거
+                                        '&::-webkit-outer-spin-button': {
+                                            WebkitAppearance: 'none',
+                                            margin: 0,
+                                        },
+                                        '&::-webkit-inner-spin-button': {
+                                            WebkitAppearance: 'none',
+                                            margin: 0,
+                                        },
+                                        // 파이어폭스 스핀 버튼 제거
+                                        MozAppearance: 'textfield',
+                                    },
+                                    onWheel: (event) => event.currentTarget.blur()
+                                }}
                             />
                         </FormControl>
 
@@ -484,23 +517,23 @@ export default function MyPage() {
                             추가된 알림 관심 카테고리가 없습니다.
                         </div>
                     ) : (
-                        <ul>
+                        <ul style={{listStyle: "none", marginTop: "10px"}}>
                             {userPicks.map((pick) => (
-                                <li key={pick.up_idx} style={{ borderBottom: '1px solid #eee', padding: '15px 0' }}>
+                                <li key={pick.upIdx} style={{ borderBottom: '1px solid #eee', padding: '15px 0' }}>
                                     <div style={{ display: "flex", alignItems: "center", gap: '20px' }}>
                                         {/* 백엔드에서 받은 데이터의 필드명(컬럼명)에 맞게 수정해야 합니다. */}
-                                        <span style={{ width: '100px' }}>{pick.upper_idx}</span>
-                                        <span style={{ width: '120px' }}>{pick.middle_idx}</span>
-                                        <span style={{ width: '150px' }}>{pick.ct_low}</span>
+                                        <span style={{ width: '100px' }}>{pick.upperCategory}</span>
+                                        <span style={{ width: '120px' }}>{pick.middleCategory}</span>
+                                        <span style={{ width: '150px' }}>{pick.lowCategory}</span>
                                         <span style={{ flex: 1 }}>
-                                            {pick.up_low_cost.toLocaleString()}원 ~ {pick.up_high_cost.toLocaleString()}원
+                                            {pick.minPrice.toLocaleString()}원 ~ {pick.maxPrice.toLocaleString()}원
                                         </span>
                                         <Stack spacing={2} direction="row">
                                             <Button
                                                 variant="contained"
                                                 color="error"
                                                 size="small"
-                                                onClick={() => handleDelete(pick.up_idx)}
+                                                onClick={() => handleDelete(pick.upIdx)}
                                             >
                                                 삭제
                                             </Button>

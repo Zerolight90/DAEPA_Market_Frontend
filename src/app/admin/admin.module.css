@@ -578,7 +578,7 @@
 
 .tableRow {
   display: grid;
-  grid-template-columns: 1fr 1fr 1.5fr 1fr 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 0.8fr 1.5fr 1fr 1fr 1fr 0.8fr 1fr 1fr;
   gap: 1rem;
   padding: 1rem 1.5rem;
   align-items: center;
@@ -1278,6 +1278,31 @@
 
 .mannerTemp.low {
   color: #ef4444; /* Red for low temperature */
+}
+
+/* Gender styles */
+.gender {
+  font-size: 0.875rem;
+  color: #374151;
+  font-weight: 500;
+}
+
+/* Warning count styles */
+.warningCount {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.warningCount.highWarning {
+  color: #dc2626; /* Red for high warning count */
+}
+
+.warningCount.mediumWarning {
+  color: #f59e0b; /* Orange for medium warning count */
+}
+
+.warningCount.lowWarning {
+  color: #10b981; /* Green for low warning count */
 }
 
 /* Custom Scrollbar Styles */
