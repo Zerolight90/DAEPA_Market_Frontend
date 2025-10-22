@@ -1,28 +1,47 @@
-const BASE = process.env.NEXT_PUBLIC_API_BASE || "";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+
+/** 내부: 절대/상대 경로 처리 + /api prefix 보장 */
+function buildUrl(path) {
+    if (!path) throw new Error("api(): path is required");
+    if (/^https?:\/\//i.test(path)) return path;         // 절대 URL이면 그대로
+    const clean = path.startsWith("/") ? path : `/${path}`;
+    const withApi = clean.startsWith("/api/") ? clean : `/api${clean}`;
+    return `${API_BASE}${withApi}`;                       // http://localhost:8080/api/...
+}
 
 /**
- * 공통 fetch 래퍼 (SSR/CSR 모두 사용)
- * - 서버 컴포넌트에서: next 옵션으로 캐싱/리밸리데이트 제어
- * - 클라이언트 컴포넌트에서: 일반 fetch
+ * 공통 fetch (SSR/CSR)
+ * - ISR 쓰려면 next 전달, 아니면 기본 no-store
  */
-export async function api(path, { method = "GET", headers = {}, body, next } = {}) {
-    const url = `${BASE}${path}`;
-    const init = {
-        method,
-        headers: { "Content-Type": "application/json", ...headers },
-        body: body ? JSON.stringify(body) : undefined,
-        // next 옵션은 서버에서만 사용됨(무시되어도 안전)
-        next,
-        cache: "no-store" // 기본은 최신; 페이지별로 next.revalidate 지정 가능
-    };
+export async function api(
+    path,
+    { method = "GET", headers = {}, body, next, cache, credentials } = {}
+) {
+    const url = buildUrl(path);
+    const init = { method, headers: { ...headers } };
+
+    // GET이 아닌데 body가 있으면 처리
+    const hasBody = body != null && method.toUpperCase() !== "GET";
+    if (hasBody) {
+        if (typeof FormData !== "undefined" && body instanceof FormData) {
+            init.body = body; // Content-Type 자동
+        } else {
+            init.body = typeof body === "string" ? body : JSON.stringify(body);
+            if (!init.headers["Content-Type"]) init.headers["Content-Type"] = "application/json";
+        }
+    }
+
+    // 캐시 옵션 충돌 방지
+    if (next) init.next = next; else init.cache = cache ?? "no-store";
+    if (credentials) init.credentials = credentials;
 
     const res = await fetch(url, init);
     if (!res.ok) {
         const text = await res.text().catch(() => "");
         throw new Error(`API ${res.status} ${res.statusText} - ${text}`);
     }
-    // 응답이 비어있을 수도 있으니 방어
+
+    if (res.status === 204) return null;
     const ct = res.headers.get("content-type") || "";
-    if (!ct.includes("application/json")) return null;
-    return res.json();
+    return ct.includes("application/json") ? res.json() : res.text();
 }

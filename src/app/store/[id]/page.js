@@ -3,9 +3,9 @@ import Link from "next/link";
 import styles from "./page.module.css";
 import { toKRW } from "@/lib/formatters";
 import { catHref } from "@/lib/urls";
-import { fetchProduct, fetchRelated } from "@/lib/api/products";
+import { fetchProduct, fetchRelated } from "@/lib/api/products"; // ← 이 함수가 DTO→프론트형으로 변환해줘야 함
 
-// ✅ 목업 폴백용 (API 실패/미설정 시 사용)
+// mock fallback
 import { getItemById, getRelatedItems } from "@/lib/mockItems";
 
 // Client
@@ -17,15 +17,14 @@ import { ModalProvider } from "@/components/ui/modal/ModalProvider";
 import DetailsPanel from "@/components/product/DetailsPanel";
 import SellerProfilePanel from "@/components/product/SellerProfilePanel";
 import RelatedProducts from "@/components/product/RelateProducts";
-// Client
 import SellerOtherList from "@/components/product/SellerOtherList";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProductPage(props) {
+    // ✅ Next 15: params 비동기(동적 API)
     const { id } = await props.params;
 
-    // ✅ USE_MOCK=true 이면 강제 목업 모드
     const FORCE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === "true";
     const HAS_API_BASE = !!process.env.NEXT_PUBLIC_API_BASE;
 
@@ -33,13 +32,12 @@ export default async function ProductPage(props) {
     let related = [];
 
     if (!FORCE_MOCK && HAS_API_BASE) {
-        // 1) API 시도
         try {
+            // ✅ 백엔드 DTO를 프론트 구조로 변환해서 반환하도록 fetchProduct 구현
             item = await fetchProduct(id);
         } catch (e) {
             console.error("[fetchProduct failed]", e);
         }
-        // 2) API 성공 시 연관상품도 API
         if (item) {
             try {
                 related = (await fetchRelated(id, 10)) || [];
@@ -50,7 +48,7 @@ export default async function ProductPage(props) {
         }
     }
 
-    // 3) API가 없거나 실패했으면 목업 폴백
+    // 폴백
     if (!item) {
         item = getItemById(id);
         related = getRelatedItems(id, 10);
@@ -64,25 +62,36 @@ export default async function ProductPage(props) {
         );
     }
 
+    // ✅ 안전한 기본값들
+    const images = Array.isArray(item.images) && item.images.length > 0
+        ? item.images
+        : (item.thumbnail ? [item.thumbnail] : (item.img ? [item.img] : []));
+
+    const seller = item.seller ?? { id: null, name: "알 수 없음", avatar: "/no-image.png" };
+
     return (
         <div className={styles.page}>
-            {/* 브레드크럼 */}
+            {/* 브레드크럼: 카테고리 정보가 없을 수 있으니 방어 */}
             <div className={`${styles.container} ${styles.bcWrap}`}>
                 <Link href="/" className={styles.bc}>홈</Link>
-                <span className={styles.sep}>›</span>
-                <Link href={catHref(item.category)} className={styles.bc}>{item.category}</Link>
-                {item.mid && (<><span className={styles.sep}>›</span><Link href={catHref(item.category, item.mid)} className={styles.bc}>{item.mid}</Link></>)}
-                {item.sub && (<><span className={styles.sep}>›</span><Link href={catHref(item.category, item.mid, item.sub)} className={styles.bc}>{item.sub}</Link></>)}
+                {item.category && (
+                    <>
+                        <span className={styles.sep}>›</span>
+                        <Link href={catHref(item.category)} className={styles.bc}>{item.category}</Link>
+                        {item.mid && (<><span className={styles.sep}>›</span><Link href={catHref(item.category, item.mid)} className={styles.bc}>{item.mid}</Link></>)}
+                        {item.sub && (<><span className={styles.sep}>›</span><Link href={catHref(item.category, item.mid, item.sub)} className={styles.bc}>{item.sub}</Link></>)}
+                    </>
+                )}
             </div>
 
             <ModalProvider>
                 <div className={styles.container}>
                     {/* 좌측 */}
                     <section className={styles.leftCol}>
-                        <ProductGallery images={item.images?.length ? item.images : [item.img]} />
+                        <ProductGallery images={images} />
                         <DetailsPanel item={item} />
 
-                        {related?.length > 0 && (
+                        {Array.isArray(related) && related.length > 0 && (
                             <div className={styles.section}>
                                 <h3 className={styles.h3}>연관 상품</h3>
                                 <RelatedProducts items={related} />
@@ -101,15 +110,14 @@ export default async function ProductPage(props) {
                             price={item.price}
                             wishCount={item.wishCount ?? 0}
                             description={item.description || ""}
-                            seller={item.seller}
+                            seller={seller}
                         />
 
-                        <SellerProfilePanel seller={item.seller} />
+                        <SellerProfilePanel seller={seller} />
 
                         <div className={styles.section}>
                             <h3 className={styles.h3}>판매자의 다른 상품</h3>
-                            {/* 클라에서 API로 로딩, 실패 시 내부에서 자체 처리 */}
-                            <SellerOtherList sellerId={item.seller?.id} excludeId={item.id} />
+                            <SellerOtherList sellerId={seller.id} excludeId={item.id} />
                         </div>
                     </aside>
                 </div>
