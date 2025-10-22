@@ -32,6 +32,18 @@
 }
 .rmenu a:hover { color: #000; }
 
+.rmenu button {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: #555;
+    font: inherit;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: color .2s ease;
+}
+
 /* 로고/검색/아이콘 */
 .menu {
     display: flex;
