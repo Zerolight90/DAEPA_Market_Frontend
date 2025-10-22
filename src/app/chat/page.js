@@ -1,7 +1,6 @@
-// 원하는 한 줄만 주석 해제해서 사용하세요.
+// /app/chat/page.js  (Server Component 그대로 둬도 OK)
 import MarketChat from "@/components/chat/MarketChat";
 
 export default function Page() {
-    return <MarketChat />; // 또는 <MinimalChat />
-
+    return <MarketChat />;  // MarketChat 자체가 "use client"라서 자동으로 클라이언트 경계가 잡혀요.
 }

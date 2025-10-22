@@ -1,38 +1,33 @@
-export const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE ||
-    (typeof window !== "undefined"
-        ? `${window.location.protocol}//${window.location.hostname}:8080`
-        : "http://localhost:8080");
+// /lib/chat/api.js
+import axios from "axios";
 
-/** 채팅방 목록 가져오기 */
-export async function fetchRooms(userId = 101) {
-    const url = new URL(`${API_BASE}/api/chats/my-rooms`);
-    url.searchParams.set("userId", String(userId));
-    const res = await fetch(url.toString(), { method: "GET", credentials: "include" });
-    if (!res.ok) throw new Error(`fetchRooms failed: ${res.status} ${await res.text().catch(()=> "")}`);
-    return res.json();
+// Next rewrite가 /api/chats/** 를 백엔드로 프록시함
+const http = axios.create({
+    baseURL: "",
+    withCredentials: false,
+});
+
+// roomId가 ["9021"]처럼 들어오는 경우 대비
+function normRoomId(id) {
+    const raw = Array.isArray(id) ? id[0] : String(id);
+    const digits = raw.replace(/[^0-9]/g, "");
+    return digits;
 }
 
-/** 특정 roomId의 최근 메시지 가져오기 */
-export async function fetchMessages(roomId, size = 30) {
-    const url = new URL(`${API_BASE}/api/chats/${roomId}/messages`);
-    url.searchParams.set("size", String(size));
-    const res = await fetch(url.toString(), { method: "GET", credentials: "include" });
-    if (!res.ok) throw new Error(`fetchMessages failed: ${res.status} ${await res.text().catch(()=> "")}`);
-    return res.json();
+export async function fetchRooms(userId) {
+    const { data } = await http.get("/api/chats/my-rooms", { params: { userId } });
+    return data;
 }
 
-/** ✅ 상품 상세 → 채팅하기 버튼 클릭 시 방 생성 or 재사용 */
-export async function openOrGetRoom({ buyerId, sellerId, productId, dealId = null }) {
-    const res = await fetch(`${API_BASE}/api/chats/open`, {
-        method: "POST",
-        credentials: "include", // ✅ 쿠키 세션 인증용
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ buyerId, sellerId, productId, dealId }),
+export async function fetchMessages(roomId, size = 30, before) {
+    const rid = normRoomId(roomId);
+    const { data } = await http.get(`/api/chats/${rid}/messages`, {
+        params: { size, before },
     });
-    if (!res.ok) {
-        const msg = await res.text().catch(() => "");
-        throw new Error(`openOrGetRoom failed: ${res.status} ${msg}`);
-    }
-    return res.json(); // { roomId, created, identifier }
+    return data;
+}
+
+export async function markRead(roomId, userId) {
+    const rid = normRoomId(roomId);
+    await http.post(`/api/chats/${rid}/read`, null, { params: { userId } });
 }
