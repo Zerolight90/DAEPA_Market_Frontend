@@ -38,20 +38,27 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-      // TODO: 백엔드 API 호출
-      console.log("관리자 로그인 시도:", formData);
-      
-      // 임시 로그인 처리 (실제로는 백엔드에서 처리)
-      setTimeout(() => {
-        if (formData.adminId === "admin" && formData.password === "admin123") {
-          // 로그인 성공
-          alert("로그인 성공!");
-          window.location.href = "/admin";
-        } else {
-          setError("관리자 ID 또는 비밀번호가 올바르지 않습니다.");
-        }
+      const res = await fetch("http://localhost:8080/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) {
+        setError("관리자 ID 또는 비밀번호가 올바르지 않습니다.");
         setIsSubmitting(false);
-      }, 1000);
+        return;
+      }
+
+      const data = await res.json();
+
+      // 로그인 정보 저장 (관리자 PK, 닉네임)
+      sessionStorage.setItem("adminIdx", data.adIdx);
+      sessionStorage.setItem("adminNick", data.adNick);
+
+      // 로그인 성공 후 페이지 이동
+      window.location.href = "/admin";
+
     } catch (error) {
       console.error("로그인 실패:", error);
       setError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
