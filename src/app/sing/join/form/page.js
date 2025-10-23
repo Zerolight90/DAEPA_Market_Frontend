@@ -332,7 +332,7 @@ export default function JoinFormPage() {
                         id="u_phone"
                         name="u_phone"
                         type="tel"
-                        placeholder="010-1234-5678"
+                        placeholder= "'-' 없이 숫자만 입력"
                         required
                         pattern={String.raw`^01[016789]-?\d{3,4}-?\d{4}$`}
                         value={vo.u_phone}

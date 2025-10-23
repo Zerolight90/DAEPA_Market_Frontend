@@ -155,9 +155,9 @@ export default function Page() {
 
                 {/* 아이디 / 비밀번호 찾기 */}
                 <div className={styles.links}>
-                    <Link href="/sing/find_id" className={styles.link}>아이디 찾기</Link>
+                    <Link href="/sing/login/find_id" className={styles.link}>아이디 찾기</Link>
                     <span className={styles.divider}>|</span>
-                    <Link href="/sing/find-password" className={styles.link}>비밀번호 찾기</Link>
+                    <Link href="/sing/login/find_password" className={styles.link}>비밀번호 찾기</Link>
                 </div>
 
                 {/* SNS 로그인 */}
