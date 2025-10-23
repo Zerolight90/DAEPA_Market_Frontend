@@ -30,6 +30,8 @@ coverage/
 # =========================
 # 기본적으로 모든 yml을 막되, CI 워크플로우만 허용
 *.yml
+!docker-compose.yml
+!conf/*.yml   # 혹시 conf 폴더에 추가 yml 있을 경우 대비
 !*.example.yml
 !.github/
 !.github/workflows/
