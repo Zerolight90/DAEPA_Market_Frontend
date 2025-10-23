@@ -27,9 +27,9 @@
 .categoryCard {
   text-align: center;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: 15px;
   border-color: rgba(0, 0, 0, 0.08);
-  background: #fff;
+  background: darkgrey;
   transition:
           transform 160ms ease,
           box-shadow 160ms ease,
