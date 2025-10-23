@@ -45,7 +45,7 @@ const fmtDateLine = (v) => {
 
 export default function MarketChat() {
     // ✅ DB와 맞추기 위해 여기 사용자 id를 7 또는 8로 맞춰야 실제 대화가 뜸
-    const me = { id: 7, name: "유저7", profile: "/images/avatar-me.png" }; // ← 필요시 8로 바꿔 테스트
+    const me = { id: 7, name: "유저7", profile: "/images/profile_img/sangjun.jpg" }; // ← 필요시 8로 바꿔 테스트
 
     // URL ?roomId=9021 지원
     const search = useSearchParams();
@@ -80,7 +80,7 @@ export default function MarketChat() {
     );
 
     const otherName = activeChat?.counterpartyName ?? "상대";
-    const otherAvatar = activeChat?.counterpartyProfile || "/images/avatar-default.png";
+    const otherAvatar = activeChat?.counterpartyProfile || "/images/profile_img/sangjun.jpg";
 
     // WS 훅 (WS baseUrl은 백엔드 주소 필요. 기본값 http://<host>:8080)
     const { connected, loaded, messages: wsMessages, sendText, sendRead } = useChatSocket({
@@ -192,7 +192,7 @@ export default function MarketChat() {
                             >
                                 <img
                                     className={s.thumb}
-                                    src={r.productThumb || "/images/placeholder.jpg"}
+                                    src={r.productThumb || "/images/profile_img/sangjun.jpg"}
                                     alt=""
                                 />
                                 <div className={s.itemMain}>
@@ -267,7 +267,7 @@ export default function MarketChat() {
                                 </div>
                                 <img
                                     className={s.headerThumb}
-                                    src={activeChat.productThumb || "/images/placeholder.jpg"}
+                                    src={activeChat.productThumb || "/images/profile_img/sangjun.jpg"}
                                     alt=""
                                 />
                             </>
