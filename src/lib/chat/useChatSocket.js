@@ -9,6 +9,7 @@ function normalizeMessage(raw) {
     if (!raw) return null;
     const messageId = raw.messageId ?? raw.cmIdx ?? raw.id ?? raw.cm_id ?? raw.cmidx;
     return {
+        type: raw.type || (raw.imageUrl ? "IMAGE" : "TEXT"),
         messageId,
         roomId: raw.roomId ?? raw.chIdx ?? raw.ch_idx,
         senderId: raw.senderId ?? raw.cmWriter ?? raw.writer ?? null,
@@ -21,7 +22,7 @@ function normalizeMessage(raw) {
 /**
  * roomId: number | string
  * me: { id: number, name: string }
- * baseUrl: 백엔드 실제 주소(WS용). 미지정 시 http://<host>:8080 추정
+ * baseUrl: 백엔드 WS 주소(예: http://localhost:8080). 미지정 시 호스트:8080 추정
  */
 export function useChatSocket({ roomId, me, baseUrl }) {
     const clientRef = useRef(null);
@@ -35,7 +36,6 @@ export function useChatSocket({ roomId, me, baseUrl }) {
     const liveQueueRef = useRef([]);
     const loadedRef = useRef(false);
 
-    // 방 바뀔 때 초기화
     useEffect(() => {
         setMessages([]);
         setLoaded(false);
@@ -45,9 +45,9 @@ export function useChatSocket({ roomId, me, baseUrl }) {
     }, [roomId]);
 
     const activate = useCallback(() => {
+        if (!me?.id) return;            // ✅ 로그인 유저 없으면 연결 안 함
         if (clientRef.current) return;
 
-        // WS는 프록시가 안 됨 → 백엔드 실주소 필요
         const urlBase =
             baseUrl ||
             (typeof window !== "undefined"
@@ -59,22 +59,17 @@ export function useChatSocket({ roomId, me, baseUrl }) {
         c.onConnect = async () => {
             setConnected(true);
 
-            // 기존 구독 해제
             if (subRef.current) {
-                try {
-                    subRef.current.unsubscribe();
-                } catch (_) {}
+                try { subRef.current.unsubscribe(); } catch (_) {}
                 subRef.current = null;
             }
 
-            // 실시간 구독
             subRef.current = c.subscribe(`/sub/chats/${roomId}`, (frame) => {
                 try {
-                    const msg = normalizeMessage(JSON.parse(frame.body));
-                    if (!msg?.messageId) {
-                        setMessages((prev) => [...prev, msg]);
-                        return;
-                    }
+                    const raw = JSON.parse(frame.body);
+                    if (raw && raw.type === "READ") return; // 읽음 ACK는 현재 UI 반영 안 함
+                    const msg = normalizeMessage(raw);
+                    if (!msg?.messageId) return;
                     if (!loadedRef.current) {
                         liveQueueRef.current.push(msg);
                         return;
@@ -88,12 +83,11 @@ export function useChatSocket({ roomId, me, baseUrl }) {
                 }
             });
 
-            // 초기 메시지 로드(REST) → 실시간 큐 병합
             try {
                 const arr = await fetchMessages(roomId, 30);
                 const baseList = (Array.isArray(arr) ? arr : [])
                     .map(normalizeMessage)
-                    .filter(Boolean);
+                    .filter((m) => m && m.messageId);
 
                 const next = [];
                 for (const m of baseList) {
@@ -125,19 +119,15 @@ export function useChatSocket({ roomId, me, baseUrl }) {
 
         c.activate();
         clientRef.current = c;
-    }, [roomId, me.id, me.name, baseUrl]);
+    }, [roomId, me?.id, me?.name, baseUrl]);
 
     const deactivate = useCallback(() => {
         if (subRef.current) {
-            try {
-                subRef.current.unsubscribe();
-            } catch (_) {}
+            try { subRef.current.unsubscribe(); } catch (_) {}
             subRef.current = null;
         }
         if (clientRef.current) {
-            try {
-                clientRef.current.deactivate();
-            } catch (_) {}
+            try { clientRef.current.deactivate(); } catch (_) {}
             clientRef.current = null;
         }
         setConnected(false);
@@ -151,6 +141,7 @@ export function useChatSocket({ roomId, me, baseUrl }) {
     const sendText = useCallback(
         (text, tempId) => {
             if (!clientRef.current || !clientRef.current.connected) return;
+            if (!me?.id) return;
             clientRef.current.publish({
                 destination: `/app/chats/${roomId}/send`,
                 headers: { "content-type": "application/json" },
@@ -158,28 +149,29 @@ export function useChatSocket({ roomId, me, baseUrl }) {
                     roomId,
                     text,
                     tempId,
-                    senderId: me.id,
+                    senderId: me.id, // ✅ 로그인 유저
                 }),
             });
         },
-        [roomId, me.id]
+        [roomId, me?.id]
     );
 
     const sendRead = useCallback(
         (lastSeenMessageId) => {
             if (!clientRef.current || !clientRef.current.connected) return;
+            if (!me?.id) return;
             clientRef.current.publish({
                 destination: `/app/chats/${roomId}/read`,
                 headers: { "content-type": "application/json" },
                 body: JSON.stringify({
                     type: "READ",
                     roomId,
-                    readerId: me.id,
+                    readerId: me.id, // ✅ 로그인 유저
                     lastSeenMessageId,
                 }),
             });
         },
-        [roomId, me.id]
+        [roomId, me?.id]
     );
 
     return { connected, loaded, messages, sendText, sendRead };
