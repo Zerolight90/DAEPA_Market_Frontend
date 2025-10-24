@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import s from "./MarketChat.module.css";
 import { useChatSocket } from "@/lib/chat/useChatSocket";
-import { fetchRooms } from "@/lib/chat/api";
+import { fetchMe, fetchRooms } from "@/lib/chat/api";
 import { useSearchParams } from "next/navigation";
 import { Box, styled } from "@mui/material";
 
@@ -26,11 +26,7 @@ const pad2 = (n) => String(n).padStart(2, "0");
 const toDate = (v) => (v instanceof Date ? v : new Date(v));
 const isToday = (d) => {
     const t = new Date();
-    return (
-        d.getFullYear() === t.getFullYear() &&
-        d.getMonth() === t.getMonth() &&
-        d.getDate() === t.getDate()
-    );
+    return d.getFullYear() === t.getFullYear() && d.getMonth() === t.getMonth() && d.getDate() === t.getDate();
 };
 const fmtHHMM = (v) => {
     const d = toDate(v);
@@ -44,132 +40,112 @@ const fmtDateLine = (v) => {
 };
 
 export default function MarketChat() {
-    // ✅ DB와 맞추기 위해 여기 사용자 id를 7 또는 8로 맞춰야 실제 대화가 뜸
-    const me = { id: 7, name: "유저7", profile: "/images/profile_img/sangjun.jpg" }; // ← 필요시 8로 바꿔 테스트
+    // 로그인 사용자: /api/auth/me → 없으면 데모 계정(7)
+    const [me, setMe] = useState({ id: 7, name: "유저7", profile: "/images/profile_img/sangjun.jpg" });
 
-    // URL ?roomId=9021 지원
+    useEffect(() => {
+        (async () => {
+            const m = await fetchMe();
+            if (m?.userId) {
+                setMe((prev) => ({ ...prev, id: m.userId }));
+            }
+        })();
+    }, []);
+
+    // URL ?roomId=9021
     const search = useSearchParams();
     const initialRoomId = search.get("roomId") ? Number(search.get("roomId")) : null;
 
     const [roomList, setRoomList] = useState([]);
     const [activeId, setActiveId] = useState(initialRoomId);
-    const [messagesByRoom, setMessagesByRoom] = useState({});
-    const [text, setText] = useState("");
     const scrollerRef = useRef(null);
+    const [text, setText] = useState("");
 
     // 방 목록 로드
-    const ready = useMemo(() => typeof window !== "undefined", []);
     useEffect(() => {
-        if (!ready) return;
         (async () => {
             try {
                 const list = await fetchRooms(me.id);
-                setRoomList(list);
-                if (!initialRoomId && list.length && !activeId) {
+                setRoomList(list || []);
+                if (!initialRoomId && list?.length && !activeId) {
                     setActiveId(list[0].roomId);
                 }
             } catch (e) {
                 console.error("load rooms failed", e);
             }
         })();
-    }, [me.id, initialRoomId, activeId, ready]);
+    }, [me.id, initialRoomId, activeId]);
 
     const activeChat = useMemo(
         () => roomList.find((r) => String(r.roomId) === String(activeId)),
         [roomList, activeId]
     );
-
     const otherName = activeChat?.counterpartyName ?? "상대";
     const otherAvatar = activeChat?.counterpartyProfile || "/images/profile_img/sangjun.jpg";
 
-    // WS 훅 (WS baseUrl은 백엔드 주소 필요. 기본값 http://<host>:8080)
-    const { connected, loaded, messages: wsMessages, sendText, sendRead } = useChatSocket({
+    // WS 훅
+    const { connected, loaded, messages, sendText, sendRead } = useChatSocket({
         roomId: activeId ?? 0,
         me,
-        // baseUrl: 'http://localhost:8080', // 필요하면 강제 지정
+        // baseUrl: 'http://localhost:8080', // 필요 시 강제 지정
     });
 
-    // WS 메시지를 화면 상태에 반영
-    useEffect(() => {
-        if (!Array.isArray(wsMessages) || activeId == null) return;
-        setMessagesByRoom((prev) => ({
-            ...prev,
-            [activeId]: wsMessages.map((m) => {
-                const fromMe = Number(m.senderId) === Number(me.id);
-                return {
-                    id: m.messageId || `${activeId}-${m.time || Date.now()}`,
-                    fromMe,
-                    senderName: fromMe ? me.name : otherName,
-                    avatar: fromMe ? me.profile : otherAvatar,
-                    text: m.text || m.content || "",
-                    ts: m.time ? new Date(m.time) : new Date(),
-                    read: false,
-                };
-            }),
-        }));
-    }, [wsMessages, activeId, me.name, me.profile, otherName, otherAvatar, me.id]);
+    // 날짜 구분선 적용된 메시지
+    const decorated = useMemo(() => {
+        const src = Array.isArray(messages) ? messages : [];
+        const ui = [];
+        for (let i = 0; i < src.length; i++) {
+            const m = src[i];
+            const prev = src[i - 1];
+            const curTs = new Date(m.time ?? Date.now());
+            const needDivider =
+                !prev ||
+                new Date(prev.time).getFullYear() !== curTs.getFullYear() ||
+                new Date(prev.time).getMonth() !== curTs.getMonth() ||
+                new Date(prev.time).getDate() !== curTs.getDate();
+
+            if (needDivider) {
+                ui.push({ __divider: true, key: `d-${m.messageId ?? m.tempId ?? i}`, label: fmtDateLine(curTs) });
+            }
+            ui.push({
+                key: m.messageId ?? m.tempId ?? `${activeId}-${i}`,
+                fromMe: Number(m.senderId) === Number(me.id),
+                senderName: Number(m.senderId) === Number(me.id) ? me.name : otherName,
+                avatar: Number(m.senderId) === Number(me.id) ? me.profile : otherAvatar,
+                text: m.text || "",
+                ts: curTs,
+            });
+        }
+        return ui;
+    }, [messages, activeId, me.id, me.name, me.profile, otherName, otherAvatar]);
 
     // 스크롤 하단 고정
-    const scrollToBottom = () => {
+    useEffect(() => {
         const el = scrollerRef.current;
         if (!el) return;
-        setTimeout(() => (el.scrollTop = el.scrollHeight), 0);
-    };
-    useEffect(() => {
-        scrollToBottom();
-    }, [messagesByRoom[activeId]?.length]);
+        el.scrollTop = el.scrollHeight;
+    }, [decorated.length]);
 
     // 전송
-    const sendMessage = () => {
+    const onSubmit = (e) => {
+        e.preventDefault();
         const trimmed = text.trim();
         if (!trimmed || !activeId) return;
-
-        // 낙관적 반영
-        const optimistic = {
-            id: `${activeId}-${Date.now()}`,
-            fromMe: true,
-            senderName: me.name,
-            avatar: me.profile,
-            text: trimmed,
-            ts: new Date(),
-            read: false,
-        };
-        setMessagesByRoom((prev) => ({
-            ...prev,
-            [activeId]: [...(prev[activeId] || []), optimistic],
-        }));
-
-        // 실제 전송
-        sendText(trimmed, optimistic.id);
+        const tempId = `tmp-${activeId}-${Date.now()}`;
+        sendText(trimmed, tempId);
         setText("");
     };
 
-    // 읽음 전송
+    // 읽음 전송: 화면에 보이는 “상대 메시지” 중 마지막 messageId를 찾아 전송
     useEffect(() => {
         if (!connected || !activeId) return;
-        const arr = messagesByRoom[activeId] || [];
-        const lastOther = [...arr].reverse().find((m) => !m.fromMe);
-        if (lastOther && lastOther.id) {
-            // 서버에서 필요한 포맷으로 수정 가능
-            const asNumber = Number(String(lastOther.id).split("-").pop());
-            if (Number.isFinite(asNumber)) sendRead(asNumber);
+        // messages는 정규화된 원본
+        const others = [...(messages || [])].filter((m) => Number(m.senderId) !== Number(me.id));
+        const last = others.length ? others[others.length - 1] : null;
+        if (last?.messageId) {
+            sendRead(last.messageId);
         }
-    }, [connected, activeId, messagesByRoom, sendRead]);
-
-    // 날짜 구분선 포함 리스트
-    const messages = (messagesByRoom[activeId] ?? []).reduce((acc, cur, idx, all) => {
-        const prev = all[idx - 1];
-        const needDivider =
-            !prev ||
-            prev.ts.getFullYear() !== cur.ts.getFullYear() ||
-            prev.ts.getMonth() !== cur.ts.getMonth() ||
-            prev.ts.getDate() !== cur.ts.getDate();
-        if (needDivider) {
-            acc.push({ __divider: true, label: fmtDateLine(cur.ts), key: `d-${cur.id}` });
-        }
-        acc.push(cur);
-        return acc;
-    }, []);
+    }, [connected, activeId, messages, me.id, sendRead]);
 
     return (
         <div className={s.wrap}>
@@ -177,9 +153,7 @@ export default function MarketChat() {
             <div className={s.box}>
                 {/* 좌측: 방 목록 */}
                 <aside className={s.list}>
-                    <h3 className={s.listTitle}>
-                        채팅 목록 {connected ? "(연결됨)" : "(연결 중…)"}
-                    </h3>
+                    <h3 className={s.listTitle}>채팅 목록 {connected ? "(연결됨)" : "(연결 중…)"}</h3>
 
                     {roomList.length === 0 && <div className={s.empty}>채팅방이 없습니다.</div>}
 
@@ -190,17 +164,11 @@ export default function MarketChat() {
                                 className={`${s.item} ${String(activeId) === String(r.roomId) ? s.active : ""}`}
                                 onClick={() => setActiveId(r.roomId)}
                             >
-                                <img
-                                    className={s.thumb}
-                                    src={r.productThumb || "/images/profile_img/sangjun.jpg"}
-                                    alt=""
-                                />
+                                <img className={s.thumb} src={r.productThumb || "/images/profile_img/sangjun.jpg"} alt="" />
                                 <div className={s.itemMain}>
                                     <div className={s.top}>
                                         <span className={s.name}>{r.counterpartyName ?? "-"}</span>
-                                        <span className={s.time}>
-                      {r.lastAt ? fmtHHMM(new Date(r.lastAt)) : "-"}
-                    </span>
+                                        <span className={s.time}>{r.lastAt ? fmtHHMM(new Date(r.lastAt)) : "-"}</span>
                                     </div>
                                     <div className={s.productRow}>
                     <span className={s.product} title={r.productTitle}>
@@ -208,11 +176,7 @@ export default function MarketChat() {
                     </span>
                                         <span
                                             className={`${s.status} ${
-                                                r.statusBadge === "거래완료"
-                                                    ? s.done
-                                                    : r.statusBadge === "예약중"
-                                                        ? s.reserved
-                                                        : s.progress
+                                                r.statusBadge === "거래완료" ? s.done : r.statusBadge === "예약중" ? s.reserved : s.progress
                                             }`}
                                         >
                       {r.statusBadge}
@@ -221,13 +185,7 @@ export default function MarketChat() {
                                     <div className={s.bottom}>
                                         <span className={s.last}>{r.lastMessage ?? ""}</span>
                                         {r.unread > 0 && <span className={s.unread}>{r.unread}</span>}
-                                        <span
-                                            className={`${s.role} ${
-                                                r.myRole === "판매자" ? s.seller : s.buyer
-                                            }`}
-                                        >
-                      {r.myRole}
-                    </span>
+                                        <span className={`${s.role} ${r.myRole === "판매자" ? s.seller : s.buyer}`}>{r.myRole}</span>
                                     </div>
                                 </div>
                             </li>
@@ -242,34 +200,20 @@ export default function MarketChat() {
                             <>
                                 <div className={s.meta}>
                                     <strong className={s.roomName}>{otherName}</strong>
-                                    <span
-                                        className={`${s.role} ${
-                                            activeChat.myRole === "판매자" ? s.seller : s.buyer
-                                        }`}
-                                    >
-                    {activeChat.myRole}
-                  </span>
+                                    <span className={`${s.role} ${activeChat.myRole === "판매자" ? s.seller : s.buyer}`}>{activeChat.myRole}</span>
                                     <span className={s.dot}>•</span>
                                     <span className={s.roomProduct} title={activeChat.productTitle}>
                     {activeChat.productTitle}
                   </span>
                                     <span
                                         className={`${s.status} ${
-                                            activeChat.statusBadge === "거래완료"
-                                                ? s.done
-                                                : activeChat.statusBadge === "예약중"
-                                                    ? s.reserved
-                                                    : s.progress
+                                            activeChat.statusBadge === "거래완료" ? s.done : activeChat.statusBadge === "예약중" ? s.reserved : s.progress
                                         }`}
                                     >
                     {activeChat.statusBadge}
                   </span>
                                 </div>
-                                <img
-                                    className={s.headerThumb}
-                                    src={activeChat.productThumb || "/images/profile_img/sangjun.jpg"}
-                                    alt=""
-                                />
+                                <img className={s.headerThumb} src={activeChat.productThumb || "/images/profile_img/sangjun.jpg"} alt="" />
                             </>
                         ) : (
                             <div className={s.meta}>
@@ -282,13 +226,13 @@ export default function MarketChat() {
                         {!activeId && <div className={s.empty}>방을 선택하세요.</div>}
                         {!!activeId && !loaded && <div className={s.empty}>서버에서 불러오는 중…</div>}
 
-                        {messages.map((m) =>
+                        {decorated.map((m) =>
                             m.__divider ? (
                                 <div key={m.key} className={s.dateDivider}>
                                     {m.label}
                                 </div>
                             ) : (
-                                <div key={m.id} className={`${s.msg} ${m.fromMe ? s.me : s.other}`}>
+                                <div key={m.key} className={`${s.msg} ${m.fromMe ? s.me : s.other}`}>
                                     {!m.fromMe && (
                                         <div className={s.senderRow}>
                                             <img className={s.avatar} src={m.avatar} alt="" />
@@ -299,7 +243,6 @@ export default function MarketChat() {
                                         <p className={s.bubble}>{m.text}</p>
                                         <span className={s.timeSmall}>{fmtHHMM(m.ts)}</span>
                                     </div>
-                                    {m.fromMe && m.read && <span className={s.readText}>읽음</span>}
                                 </div>
                             )
                         )}
@@ -308,10 +251,7 @@ export default function MarketChat() {
                     {/* 입력 */}
                     <form
                         className={s.inputBar}
-                        onSubmit={(e) => {
-                            e.preventDefault();
-                            sendMessage();
-                        }}
+                        onSubmit={onSubmit}
                     >
             <textarea
                 className={s.input}
@@ -321,7 +261,7 @@ export default function MarketChat() {
                 onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
-                        sendMessage();
+                        onSubmit(e);
                     }
                 }}
                 rows={1}
