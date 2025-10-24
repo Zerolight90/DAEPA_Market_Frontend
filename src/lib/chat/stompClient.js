@@ -1,4 +1,3 @@
-// /lib/chat/stompClient.js
 import { Client } from "@stomp/stompjs";
 import SockJS from "sockjs-client";
 
@@ -15,13 +14,12 @@ export function createChatClient({ baseUrl, userId, displayName }) {
         webSocketFactory: () => new SockJS(wsUrl),
         reconnectDelay: 3000,
         connectHeaders: {
-            "x-user-id": String(userId ?? ""),
+            "x-user-id": String(userId ?? ""),   // ✅ 서버가 이 값으로 유저 식별
             "x-user-name": displayName ?? "",
         },
-        debug:
-            process.env.NODE_ENV === "development"
-                ? (str) => console.log("[STOMP DEBUG]", str)
-                : () => {},
+        debug: process.env.NODE_ENV === "development"
+            ? (str) => console.log("[STOMP DEBUG]", str)
+            : () => {},
     });
 
     client.onStompError = (frame) => {
@@ -29,7 +27,6 @@ export function createChatClient({ baseUrl, userId, displayName }) {
         if (frame?.body) console.warn("[STOMP ERROR] body:", frame.body);
     };
 
-    // 개발중 overlay 방지
     client.onWebSocketError = (evt) => {
         if (!evt || (typeof evt === "object" && Object.keys(evt).length === 0)) {
             console.warn("[WS WARN] websocket error event (empty)");

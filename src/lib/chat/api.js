@@ -1,21 +1,38 @@
 // /lib/chat/api.js
 import axios from "axios";
 
-// Next rewrite가 /api/chats/** 를 백엔드로 프록시함
-const http = axios.create({
-    baseURL: "",
-    withCredentials: false,
+export const http = axios.create({
+    baseURL: "",            // Next.js rewrites로 /api/* → 백엔드 프록시
+    withCredentials: true,  // 쿠키(ACCESS_TOKEN) 전달
 });
 
-// roomId가 ["9021"]처럼 들어오는 경우 대비
+// /api/auth/me 는 만료/비로그인일 수 있으니 조용히 처리
+http.interceptors.response.use(
+    (res) => res,
+    (err) => {
+        const url = err?.config?.url || "";
+        if (url.startsWith("/api/auth/me")) {
+            return Promise.resolve({ data: null, status: 200, config: err.config });
+        }
+        return Promise.reject(err);
+    }
+);
+
 function normRoomId(id) {
     const raw = Array.isArray(id) ? id[0] : String(id);
-    const digits = raw.replace(/[^0-9]/g, "");
-    return digits;
+    return raw.replace(/[^0-9]/g, "");
+}
+
+export async function fetchMe() {
+    const { data } = await http.get("/api/auth/me");
+    // 기대 형태: { userId: 7, authenticated: true } 또는 null
+    return data;
 }
 
 export async function fetchRooms(userId) {
-    const { data } = await http.get("/api/chats/my-rooms", { params: { userId } });
+    // 백엔드가 쿠키에서 유저를 읽는 경우 userId 파라미터는 생략 가능
+    const params = userId ? { userId } : undefined;
+    const { data } = await http.get("/api/chats/my-rooms", { params });
     return data;
 }
 
@@ -25,9 +42,4 @@ export async function fetchMessages(roomId, size = 30, before) {
         params: { size, before },
     });
     return data;
-}
-
-export async function markRead(roomId, userId) {
-    const rid = normRoomId(roomId);
-    await http.post(`/api/chats/${rid}/read`, null, { params: { userId } });
 }

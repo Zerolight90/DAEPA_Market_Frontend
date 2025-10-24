@@ -22,6 +22,7 @@ export default function RightPanelClient({ itemId, title, price, wishCount = 0, 
         <ReportModal id={id} close={close} itemId={itemId} />
     ));
 
+
     const openChat = () => modal.open(({ id, close }) => (
         <ChatModal id={id} close={close} seller={seller} />
     ));
