@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useEffect } from "react";
 import { ArrowLeft, Save, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import styles from "../admin.module.css";
@@ -18,6 +19,27 @@ export default function AdminProfilePage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+      const adIdx = sessionStorage.getItem("adminIdx");
+      if (!adIdx) {
+          window.location.href = "/admin/login";
+          return;
+      }
+
+      fetch(`http://localhost:8080/api/admin/me?adIdx=${adIdx}`)
+          .then((res) => res.json())
+          .then((data) => {
+              setFormData((prev) => ({
+                  ...prev,
+                  nickname: data.adNick,
+                  name: data.adName,
+                  birthDate: data.adBirth,
+                  adminId: data.adId,
+              }));
+          })
+          .catch((err) => console.error("프로필 조회 실패:", err));
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -39,17 +61,33 @@ export default function AdminProfilePage() {
     setIsSubmitting(true);
 
     try {
-      // TODO: 백엔드 API 호출
-      console.log("관리자 정보 수정:", formData);
-      
-      // 임시 성공 처리
-      setTimeout(() => {
+        const adIdx = sessionStorage.getItem("adminIdx");
+        const res = await fetch("http://localhost:8080/api/admin/me", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                adIdx: adIdx,
+                adNick: formData.nickname,
+                adName: formData.name,
+                adBirth: formData.birthDate,
+                adPw: formData.password || null  // 빈 경우 null 로 전송
+            }),
+        });
+
+        if (!res.ok) throw new Error("수정 실패");
+        const data = await res.json();
+
+        // 1) sessionStorage 닉네임 갱신
+        sessionStorage.setItem("adminNick", data.adNick);
+
+        // 2) 완료 후 /admin 으로 이동
         alert("관리자 정보가 성공적으로 수정되었습니다!");
-        setIsSubmitting(false);
-      }, 1000);
+        window.location.href = "/admin";
+
     } catch (error) {
       console.error("정보 수정 실패:", error);
       alert("정보 수정에 실패했습니다.");
+    } finally {
       setIsSubmitting(false);
     }
   };
