@@ -53,20 +53,26 @@ export default function Page() {
                 content: form.content,
                 location: form.location,
                 pdStatus: form.pdStatus,
-                dDeal: form.dDeal,                               // ✅ 반드시 값 존재
+                dDeal: form.dDeal,
                 imageUrls: [],
             };
 
             const fd = new FormData();
-            // ✅ JSON 파트 이름은 컨트롤러의 @RequestPart("dto")와 동일하게
             fd.append("dto", new Blob([JSON.stringify(dto)], { type: "application/json" }));
             (form.files || []).forEach((f) => fd.append("images", f));
 
             const res = await fetch(`${API_BASE}${Endpoints.createProduct}`, {
                 method: "POST",
-                headers: { "X-USER-ID": "7" },                  // 로그인 연동 시 교체
-                body: fd,                                       // Content-Type 자동
+                // headers: {},                         // ❌ X-USER-ID 제거, Authorization 필요 없음
+                body: fd,
+                credentials: "include",                 // ✅ 로그인 쿠키 동봉
             });
+
+            // ✅ 미로그인/만료 시 로그인 페이지로 이동
+            if (res.status === 401) {
+                alert("판매하기는 로그인 후 이용할 수 있어요. 로그인 페이지로 이동합니다.");
+                return router.push(`/sing/login?next=${encodeURIComponent("/sell")}&reason=need_login`);
+            }
 
             if (!res.ok) {
                 const msg = await res.text();
@@ -76,10 +82,8 @@ export default function Page() {
             const id = await res.json();
             alert(`상품 등록 완료! (id=${id})`);
 
-            // ✅ 등록 성공 시 마이페이지로 이동
             router.push("/mypage");
 
-            // (원하면 이동 전에 폼 초기화)
             setForm({
                 upperId: null, middleId: null, lowId: null,
                 title: "", price: "", content: "", location: "",
@@ -90,6 +94,7 @@ export default function Page() {
             alert(err.message || "등록 중 오류가 발생했습니다.");
         }
     };
+
 
     return (
         <main className={styles.wrap}>
