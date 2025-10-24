@@ -215,9 +215,9 @@ export default function MyPage() {
     // 추가 버튼 클릭 시 실행될 함수
     const handleAddPick = async () => {
         // 1. 유효성 검사 (필수 값들이 모두 입력되었는지 확인)
-        console.log(upper, selectedMiddle.middleIdx, selectedLow.lowIdx, minPrice, maxPrice)
+        console.log(upper, selectedMiddle, selectedLow, minPrice, maxPrice)
 
-        if (!upper || !selectedMiddle.middleCt || !selectedLow.lowCt || !minPrice || !maxPrice) {
+        if (!upper || !selectedMiddle || !selectedLow || !minPrice || !maxPrice) {
             alert('모든 값을 입력해주세요.');
             return;
         }

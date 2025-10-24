@@ -1,3 +1,4 @@
+/* sticky 상단 바 */
 .wrap {
     position: sticky;
     top: 56px; /* 헤더 높이에 맞게 조정 */
@@ -6,16 +7,25 @@
     border-bottom: 1px solid #eee;
 }
 
+/* 컨테이너 */
 .inner {
     max-width: 1040px; /* .container 폭과 맞추면 더 깔끔 */
     margin: 0 auto;
     padding: 10px 12px;
     display: flex;
-    align-items: center;
+    align-items: flex-start; /* 칩이 여러 줄일 때 위쪽 정렬 */
     gap: 10px;
     justify-content: space-between;
 }
 
+/* 좌측: 브레드크럼 + 카테고리 칩 묶음 */
+.left {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 브레드크럼 */
 .breadcrumbs {
     display: flex;
     align-items: center;
@@ -29,14 +39,18 @@
 }
 .sep { color: #aaa; }
 
+/* 우측: 정렬 칩 */
 .actions {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
 }
 
+/* 정렬 칩 공통 */
 .chip {
-    display: inline-block;
+    display: inline-flex;          /* 중앙 정렬 + 아이콘 가능 */
+    align-items: center;
+    gap: 6px;
     padding: 6px 10px;
     border: 1px solid #e5e5e5;
     border-radius: 999px;
@@ -45,9 +59,95 @@
     background: #fff;
     text-decoration: none;
     cursor: pointer;
+    transition: background .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease;
 }
-.active {
-    border-color: #00a651;
-    color: #00a651;
-    background: #f6fffa;
+
+/* 기본 hover 효과 */
+.chip:hover {
+    background: #f8f8f8;
+    border-color: #dcdcdc;
+}
+
+/* 선택된 정렬 칩 강조 */
+.chip.active {
+    border-color: #22c55e;
+    background: #eafff2;
+    color: #089749;
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px #22c55e;
+}
+
+/* 선택된 칩 앞에 초록 점 표시 */
+.chip.active::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+}
+
+/* 접근성 - 포커스 시 외곽선 */
+.chip:focus-visible,
+.pill:focus-visible {
+    outline: 2px solid #22c55e;
+    outline-offset: 2px;
+    border-radius: 999px;
+}
+
+/* ====== 카테고리 칩 추가 ====== */
+
+/* 한 줄에 칩이 많아지면 자동 줄바꿈 */
+.pillsRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+/* 카테고리 pill 기본 */
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #e6e6e6;
+    border-radius: 999px;
+    background: #fff;
+    color: #333;
+    text-decoration: none;
+    font-size: 14px;
+    line-height: 1;
+    transition: background .12s ease, border-color .12s ease, color .12s ease, box-shadow .12s ease;
+}
+
+.pill:hover {
+    background: #f8f8f8;
+    border-color: #dcdcdc;
+}
+
+/* 선택된 카테고리 칩 강조 */
+.pill.active {
+    border-color: #22c55e;
+    background: #eafff2;
+    color: #089749;
+    font-weight: 700;
+    box-shadow: inset 0 0 0 1px #22c55e;
+}
+
+/* 선택된 카테고리 칩 앞에 점 표시 */
+.pill.active::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #22c55e;
+    display: inline-block;
+}
+
+/* pill 내부 텍스트(줄바꿈 방지) */
+.pillText { white-space: nowrap; }
+
+/* 카운트 뱃지 */
+.count {
+    font-size: 12px;
+    color: #888;
 }

@@ -22,6 +22,16 @@ export default function AdminLayout({ children }) {
     return <>{children}</>;
   }
 
+  // 로그인 체크: sessionStorage에 adminIdx 없으면 로그인 페이지로 강제 이동
+  if (typeof window !== "undefined") {
+    const isLoggedIn = sessionStorage.getItem("adminIdx");
+    if (!isLoggedIn) {
+      window.location.href = "/admin/login";
+      return null;
+    }
+  }
+
+
   // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -34,6 +44,12 @@ export default function AdminLayout({ children }) {
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, []);
+
+  // 로그인한 관리자 닉네임 읽어오기
+  useEffect(() => {
+    const nick = sessionStorage.getItem("adminNick");
+    if (nick) setAdminName(nick);
   }, []);
 
   const menuItems = [
@@ -75,7 +91,7 @@ export default function AdminLayout({ children }) {
               onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
             >
               <User className={styles.profileIcon} />
-              <span className={styles.profileText}>대파 관리자</span>
+              <span className={styles.profileText}>{adminName}</span>
               <ChevronDown
                 size={16}
                 className={`${styles.chevronIcon} ${profileDropdownOpen ? styles.chevronRotated : ""}`}
@@ -122,7 +138,14 @@ export default function AdminLayout({ children }) {
         </nav>
 
         <div className={styles.sidebarFooter}>
-          <button className={styles.logoutButton}>
+          <button
+              className={styles.logoutButton}
+              onClick={() => {
+                sessionStorage.removeItem("adminIdx");
+                sessionStorage.removeItem("adminNick");
+                window.location.href = "/admin/login";
+              }}
+          >
             <LogOut size={20} />
             <span>로그아웃</span>
           </button>

@@ -16,6 +16,7 @@ import TokeStore from "@/app/store/TokenStore";
 import styles from "./css/header.module.css";
 
 export default function Header() {
+    console.log(TokeStore.getState());
     function MyFormHelperText() { return null; }
 
     const router = useRouter();
