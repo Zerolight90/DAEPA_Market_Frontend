@@ -16,6 +16,9 @@ import TokeStore from "@/app/store/TokenStore";
 import styles from "./css/header.module.css";
 
 export default function Header() {
+    console.log(TokeStore.getState());
+    function MyFormHelperText() { return null; }
+
     const router = useRouter();
     const [me, setMe] = useState(null);
 
@@ -66,23 +69,11 @@ export default function Header() {
                 credentials: "include",
             });
         } finally {
-            clearToken();
-            localStorage.removeItem("accessToken");
-            setMe(null);
-            router.push("/");
+            clearToken();                         // Zustand 비우기
+            localStorage.removeItem("accessToken"); // 로컬스토리지 비우기
+            setMe(null);                          // UI 즉시 반영
+            router.push("/");                     // 홈으로 이동
         }
-    };
-
-    // ✅ 판매하기 클릭 시 로그인 확인
-    const onClickSell = (e) => {
-        e.preventDefault(); // 기본 링크 이동 막기
-        if (!me) {
-            alert("판매하기는 로그인 후 이용할 수 있어요. 로그인 페이지로 이동합니다.");
-            router.push(`/sing/login?next=${encodeURIComponent("/sell")}&reason=need_login`);
-            return;
-        }
-        // 로그인 상태면 정상 이동
-        router.push("/sell");
     };
 
     return (
@@ -146,6 +137,7 @@ export default function Header() {
                                     '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#000' },
                                 }}
                             />
+                            <MyFormHelperText />
                         </FormControl>
                     </form>
 
@@ -153,11 +145,7 @@ export default function Header() {
                         <Link href="/mypage" aria-label="내 정보"><AccountCircleIcon /></Link>
                         <Link href="/chat" aria-label="채팅"><ChatIcon /></Link>
                         <Link href="/wishlist" aria-label="찜 목록"><FavoriteBorderIcon /></Link>
-
-                        {/* ✅ 변경된 부분: 판매하기 클릭 시 로그인 확인 */}
-                        <a href="/sell" aria-label="판매하기" onClick={onClickSell}>
-                            <StorefrontIcon />
-                        </a>
+                        <Link href="/sell" aria-label="판매하기"><StorefrontIcon /></Link>
                     </div>
                 </div>
 
