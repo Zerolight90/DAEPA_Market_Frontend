@@ -50,7 +50,7 @@ export default function BuyModal({ id, close, itemId, title, price }) {
     }
 
     return (
-        <BaseModal id={id} close={close} title="일반결제">
+        <BaseModal id={id} close={close} title="안전결제">
             <div style={{ marginBottom: 10, fontWeight: 700 }}>{title}</div>
             <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom: 16 }}>
                 <span>수량</span>
