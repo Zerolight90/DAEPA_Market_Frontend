@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, Package, ShoppingCart, BarChart3,
-  Settings, Menu, X, LogOut, User, MessageSquare, ChevronDown,
+  Settings, Menu, X, LogOut, User, Image, ChevronDown,
   Edit, UserPlus
 } from "lucide-react";
 import styles from "./admin.module.css";
@@ -58,7 +58,7 @@ export default function AdminLayout({ children }) {
     { name: "거래 후기", href: "/admin/reviews", icon: ShoppingCart },
     { name: "배송 관리", href: "/admin/shipping", icon: Package },
     { name: "검수 관리", href: "/admin/inspection", icon: BarChart3 },
-    { name: "게시판 관리", href: "/admin/board", icon: MessageSquare },
+    { name: "배너 관리", href: "/admin/banner", icon: Image },
     { name: "설정", href: "/admin/settings", icon: Settings },
   ];
 

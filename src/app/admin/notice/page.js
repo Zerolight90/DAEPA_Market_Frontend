@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Plus, Edit, Trash2, Eye, Calendar, User, Filter } from "lucide-react";
+import { Search, Plus, Edit, Trash2, Calendar, User, Filter } from "lucide-react";
 import Link from "next/link";
 import styles from "../admin.module.css";
 
@@ -11,72 +11,54 @@ export default function NoticePage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
 
   useEffect(() => {
-    // Mock data
-    setNotices([
-      {
-        id: 1,
-        title: "대파마켓 서비스 점검 안내",
-        content: "더 나은 서비스를 위해 시스템 점검을 진행합니다. 점검 시간: 2024년 1월 25일 오전 2시 ~ 4시",
-        author: "관리자",
-        category: "공지",
-        views: 1234,
-        isImportant: true,
-        createdAt: "2024-01-20",
-        updatedAt: "2024-01-20"
-      },
-      {
-        id: 2,
-        title: "신규 기능 업데이트 소식",
-        content: "사용자 편의를 위한 새로운 기능들이 추가되었습니다. 채팅 기능, 실시간 알림 등",
-        author: "관리자",
-        category: "업데이트",
-        views: 856,
-        isImportant: false,
-        createdAt: "2024-01-19",
-        updatedAt: "2024-01-19"
-      },
-      {
-        id: 3,
-        title: "안전거래 가이드라인",
-        content: "안전한 거래를 위한 가이드라인을 안내드립니다. 직거래 시 주의사항 포함",
-        author: "관리자",
-        category: "안내",
-        views: 2341,
-        isImportant: true,
-        createdAt: "2024-01-18",
-        updatedAt: "2024-01-18"
-      },
-      {
-        id: 4,
-        title: "이벤트 당첨자 발표",
-        content: "신년 이벤트 당첨자를 발표합니다. 당첨자분들께는 개별 연락드리겠습니다.",
-        author: "관리자",
-        category: "이벤트",
-        views: 567,
-        isImportant: false,
-        createdAt: "2024-01-17",
-        updatedAt: "2024-01-17"
-      },
-      {
-        id: 5,
-        title: "정기 시스템 업데이트",
-        content: "매월 첫째 주 정기 시스템 업데이트가 완료되었습니다.",
-        author: "관리자",
-        category: "업데이트",
-        views: 432,
-        isImportant: false,
-        createdAt: "2024-01-15",
-        updatedAt: "2024-01-15"
+    const fetchNotices = async () => {
+      try {
+        const res = await fetch("http://localhost:8080/api/admin/notices");
+        if (!res.ok) throw new Error("공지 목록 불러오기 실패");
+
+        const data = await res.json();
+
+        // 백엔드 DTO -> UI 구조로 변환
+        const mapped = data.map(n => ({
+          id: n.nidx,
+          title: n.nsubject,
+          content: n.ncontent,
+          author: "관리자",     // 관리자 닉네임
+          category: convertCategory(n.ncategory), // 숫자 그대로 (UI 변환 필요)
+          createdAt: n.ndate,
+        }));
+
+        setNotices(mapped);
+      } catch (err) {
+        console.error(err);
+        alert("공지 목록을 가져오는 중 오류가 발생했습니다.");
       }
-    ]);
+    };
+
+    fetchNotices();
   }, []);
 
+
   const filteredNotices = notices.filter(notice => {
-    const matchesSearch = notice.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         notice.content.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || notice.category === selectedCategory;
+    const matchesSearch =
+        (notice.title ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (notice.content ?? "").toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesCategory =
+        selectedCategory === "all" || notice.category === selectedCategory;
+
     return matchesSearch && matchesCategory;
   });
+
+  const convertCategory = (num) => {
+    switch (num) {
+      case 1: return "공지";
+      case 2: return "업데이트";
+      case 3: return "안내";
+      case 4: return "이벤트";
+      default: return "기타";
+    }
+  };
 
   const getCategoryColor = (category) => {
     switch (category) {
@@ -164,7 +146,12 @@ export default function NoticePage() {
           {filteredNotices.map((notice) => {
             const categoryStyle = getCategoryColor(notice.category);
             return (
-              <div key={notice.id} className={styles.noticeItem}>
+              <div 
+                key={notice.id} 
+                className={styles.noticeItem}
+                style={{ cursor: "pointer" }}
+                onClick={() => window.location.href = `/admin/notice/${notice.id}`}
+              >
                 <div className={styles.noticeHeader}>
                   <div className={styles.noticeTitle}>
                     {notice.isImportant && (
@@ -203,17 +190,28 @@ export default function NoticePage() {
                       <Calendar size={14} />
                       <span>{notice.createdAt}</span>
                     </div>
-                    <div className={styles.viewsInfo}>
-                      <Eye size={14} />
-                      <span>{notice.views.toLocaleString()}</span>
-                    </div>
                   </div>
                   <div className={styles.noticeActions}>
-                    <button className={styles.actionButton}>
+                    <button 
+                      className={styles.actionButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.location.href = `/admin/notice/edit/${notice.id}`;
+                      }}
+                    >
                       <Edit size={16} />
                       수정
                     </button>
-                    <button className={styles.actionButton}>
+                    <button 
+                      className={styles.actionButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm("이 공지사항을 삭제하시겠습니까?")) {
+                          // 삭제 로직 구현
+                          console.log("삭제:", notice.id);
+                        }
+                      }}
+                    >
                       <Trash2 size={16} />
                       삭제
                     </button>
