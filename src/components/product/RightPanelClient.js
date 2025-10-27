@@ -8,6 +8,7 @@ import ReportModal from "@/components/product/modals/ReportModal";
 // ChatModal은 이번 흐름에선 사용 안 함. 유지하려면 주석 해제해서 쓰세요.
 // import ChatModal from "@/components/product/modals/ChatModal";
 import BuyModal from "@/components/product/modals/BuyModal";
+import BuySecModal from "@/components/product/modals/BuySecModal";
 
 import { useRouter } from "next/navigation";
 import { fetchMe, openChatRoom } from "@/lib/chat/api";
@@ -84,13 +85,18 @@ export default function RightPanelClient({
             <BuyModal id={id} close={close} itemId={itemId} title={title} price={price} />
         ));
 
+    const openSecBuy = () => modal.open(({ id, close }) => (
+        <BuySecModal id={id} close={close} itemId={itemId} title={title} price={price} />
+    ));
+
     return (
         <>
             <div className={styles.btnRow}>
-                <button className={styles.btnWish} onClick={addWish}>
-                    찜 {wishes}
-                </button>
+                <button className={styles.btnWish} onClick={addWish}>찜 {wishes}</button>
+                <button className={styles.btnChat} onClick={openChat}>채팅하기</button>
+            </div>
 
+            <div className={styles.btnRow}>
                 <button
                     className={styles.btnChat}
                     onClick={openChat}
@@ -99,12 +105,13 @@ export default function RightPanelClient({
                     {chatLoading ? "연결 중…" : "채팅하기"}
                 </button>
 
-                <button className={styles.btnBuy} onClick={openBuy}>
-                    구매하기
-                </button>
+                <div className={styles.btnRow}>
+                    <button className={styles.btnBuy} onClick={openBuy}>일반결제 구매</button>
+                    <button className={styles.btnBuy} onClick={openSecBuy}>안전결제 구매</button>
+                </div>
             </div>
 
-            <div className={styles.safe}>안전결제로 수수료 없이 거래해요</div>
+            <div className={styles.safe}>안전결제로 사기 걱정 없이 거래해요</div>
 
             <div className={styles.utils}>
                 <button className={styles.link} onClick={openShare}>공유</button>
