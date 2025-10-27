@@ -2,72 +2,149 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import styles from "@/app/sing/login/login.module.css";
 import axios from "axios";
 
 export default function FindPasswordPage() {
-    const [uId, setUId] = useState("");       // 이메일(아이디)
-    const [name, setName] = useState("");     // 이름
-    const [phone, setPhone] = useState("");   // 전화번호(숫자만)
-    const [result, setResult] = useState(null); // null | 'loading' | 'error' | { message: string }
+    const router = useRouter();
+
+    // 1) 본인 확인용 입력값
+    const [uId, setUId] = useState("");     // 이메일(아이디)
+    const [name, setName] = useState("");   // 이름
+    const [phone, setPhone] = useState(""); // 전화번호(숫자만)
+
+    // 2) 단계/오류 상태
+    // stage: "idle" | "loading" | "verified" | "resetting"
+    const [stage, setStage] = useState("idle");
     const [error, setError] = useState("");
 
+    // 3) 비밀번호 재설정 입력값
+    const [newPw, setNewPw] = useState("");
+    const [newPw2, setNewPw2] = useState("");
+
+    // 본인 확인 (아이디/이름/전화번호로 조회)
     const handleFindPassword = async (e) => {
         e.preventDefault();
-        setResult("loading");
+        setStage("loading");
         setError("");
 
         try {
-            //  엔드포인트 & 필드명은 백엔드에 맞춰 조정
-            // 예: POST /api/sing/find_password  body: { u_id, u_name, u_phone }
-            const response = await axios.post("/api/sing/find_password", {
+            const res = await axios.post("/api/sing/login/find_password", {
                 u_id: uId,
                 u_name: name,
                 u_phone: phone,
             });
 
-            // 응답 구조에 맞게 success/data/message 필드 확인
-            if (response.status === 200 && response.data?.success) {
-                // 백엔드가 내려주는 메시지를 그대로 노출하거나, 고정 문구로 안내
-                const msg = response.data?.message || "임시 비밀번호(또는 재설정 링크)를 전송했습니다.";
-                setResult({ message: msg });
+            const okByFlag = res.data && res.data.success === true;
+            const okByLoose200 = res.status === 200 && res.data; // 임시 호환
+
+            if (okByFlag || okByLoose200) {
+                // 본인 확인 성공 → 비밀번호 입력 단계로 전환
+                setStage("verified");
             } else {
-                setError(response.data?.message || "일치하는 회원 정보가 없습니다.");
-                setResult("error");
+                setError(res.data?.message || "일치하는 회원 정보가 없습니다.");
+                setStage("idle");
             }
         } catch (err) {
             setError(err.response?.data?.message || "비밀번호 찾기 중 오류가 발생했습니다.");
-            setResult("error");
+            setStage("idle");
         }
     };
 
-    // 결과 UI
-    if (result && result !== "loading" && result !== "error") {
+    // 비밀번호 재설정
+    const handleResetPassword = async () => {
+        setError("");
+
+        if (!newPw || !newPw2) {
+            setError("새 비밀번호와 확인 값을 모두 입력해주세요.");
+            return;
+        }
+        if (newPw !== newPw2) {
+            setError("비밀번호가 일치하지 않습니다.");
+            return;
+        }
+        // 기본 예시: 8~20자 가시 문자
+        if (!/^[\x21-\x7E]{8,20}$/.test(newPw)) {
+            setError("비밀번호는 8~20자 이내의 영문/숫자/특수문자를 사용해주세요.");
+            return;
+        }
+
+        try {
+            setStage("resetting");
+            // 백엔드: PUT /api/sing/find_password/reset  body: { u_id, new_password }
+            const res = await axios.put("/api/sing/find_password/reset", {
+                u_id: uId,
+                new_password: newPw,
+            });
+
+            if (res.status === 200) {
+                alert("비밀번호가 성공적으로 변경되었습니다!");
+                router.push("/sing/login");
+            } else {
+                setError(res.data?.message || "비밀번호 변경에 실패했습니다.");
+                setStage("verified");
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || "서버 오류가 발생했습니다.");
+            setStage("verified");
+        }
+    };
+
+    // ========================
+    // ① 비밀번호 재설정 단계 UI
+    // ========================
+    if (stage === "verified" || stage === "resetting") {
         return (
             <div className={styles.container}>
                 <div className={styles.card}>
-                    <h1 className={styles.title}>비밀번호 찾기 결과</h1>
+                    <h1 className={styles.title}>비밀번호 재설정</h1>
 
                     <div className={styles.resultBox}>
-                        <p className={styles.resultMessage}>
-                            {result.message || "요청이 완료되었습니다."}
-                        </p>
-                        <p className={styles.foundDate}>
-                            ※ 메일이 보이지 않으면 스팸함을 확인해 주세요.
-                        </p>
+                        <p className={styles.resultMessage}>새로운 비밀번호를 입력하세요.</p>
+
+                        <input
+                            type="password"
+                            placeholder="새 비밀번호 (8~20자)"
+                            className={styles.input}
+                            value={newPw}
+                            onChange={(e) => setNewPw(e.target.value)}
+                        />
+                        <input
+                            type="password"
+                            placeholder="비밀번호 확인"
+                            className={styles.input}
+                            value={newPw2}
+                            onChange={(e) => setNewPw2(e.target.value)}
+                        />
+
+                        {error && <p className={styles.error} style={{ marginTop: 12 }}>{error}</p>}
                     </div>
 
                     <div className={styles.actions}>
-                        <Link href="/sing/login" className={styles.submitBtn} style={{ textAlign: "center" }}>
-                            로그인 하러가기
-                        </Link>
+                        <button
+                            type="button"
+                            className={styles.submitBtn}
+                            onClick={handleResetPassword}
+                            disabled={stage === "resetting"}
+                        >
+                            {stage === "resetting" ? "변경 중..." : "비밀번호 변경"}
+                        </button>
+                    </div>
+
+                    <div className={styles.links}>
+                        <Link href="/sing/login" className={styles.link}>로그인</Link>
+                        <span className={styles.divider}>|</span>
+                        <Link href="/sing/login/find_id" className={styles.link}>아이디 찾기</Link>
                     </div>
                 </div>
             </div>
         );
     }
 
-    //  폼 UI
+    // ========================
+    // ② 본인 확인 단계 UI
+    // ========================
     return (
         <div className={styles.container}>
             <div className={styles.card}>
@@ -125,8 +202,8 @@ export default function FindPasswordPage() {
 
                     {/* 버튼 */}
                     <div className={styles.actions} style={{ marginTop: 24 }}>
-                        <button type="submit" className={styles.submitBtn} disabled={result === "loading"}>
-                            {result === "loading" ? "처리 중..." : "비밀번호 찾기"}
+                        <button type="submit" className={styles.submitBtn} disabled={stage === "loading"}>
+                            {stage === "loading" ? "확인 중..." : "비밀번호 재설정"}
                         </button>
                     </div>
                 </form>
@@ -135,7 +212,7 @@ export default function FindPasswordPage() {
                 <div className={styles.links}>
                     <Link href="/sing/login" className={styles.link}>로그인</Link>
                     <span className={styles.divider}>|</span>
-                    <Link href="/sing/find_id" className={styles.link}>아이디 찾기</Link>
+                    <Link href="/sing/login/find_id" className={styles.link}>아이디 찾기</Link>
                 </div>
             </div>
         </div>

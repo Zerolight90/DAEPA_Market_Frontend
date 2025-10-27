@@ -38,6 +38,7 @@ export default function Page() {
         if (!form.dDeal) { alert("거래 방식을 선택하세요."); return false; } // ✅ 추가 체크
         return true;
     };
+//
 
     const submit = async (e) => {
         e.preventDefault();

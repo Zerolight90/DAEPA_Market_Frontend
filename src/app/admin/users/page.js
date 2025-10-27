@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import styles from "../admin.module.css";
 
 export default function UsersPage() {
@@ -53,6 +53,33 @@ export default function UsersPage() {
     if (statusNum === 1) return <span className={styles.statusSuccess}>활성</span>;
     if (statusNum === 0) return <span className={styles.statusError}>정지</span>;
     return <span className={styles.statusWarning}>대기</span>;
+  };
+
+
+  const getVisiblePages = () => {
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+
+    for (let i = Math.max(2, currentPage - delta); i <= Math.min(totalPages - 1, currentPage + delta); i++) {
+      range.push(i);
+    }
+
+    if (currentPage - delta > 2) {
+      rangeWithDots.push(1, "...");
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    rangeWithDots.push(...range);
+
+    if (currentPage + delta < totalPages - 1) {
+      rangeWithDots.push("...", totalPages);
+    } else if (totalPages > 1) {
+      rangeWithDots.push(totalPages);
+    }
+
+    return rangeWithDots;
   };
 
   return (
@@ -127,20 +154,68 @@ export default function UsersPage() {
           </div>
         </div>
 
-        {/* Pagination */}
+        {/* Enhanced Pagination */}
         {totalPages > 1 && (
-            <div style={{ display: "flex", justifyContent: "center", gap: "0.5rem", marginTop: "2rem" }}>
-              <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
-                <ChevronLeft size={16} />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => (
-                  <button key={i} onClick={() => setCurrentPage(i + 1)}>
-                    {i + 1}
-                  </button>
-              ))}
-              <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}>
-                <ChevronRight size={16} />
-              </button>
+            <div className={styles.paginationContainer}>
+              <div className={styles.paginationWrapper}>
+                {/* First Page */}
+                <button
+                    className={styles.paginationNavButton}
+                    onClick={() => setCurrentPage(1)}
+                    disabled={currentPage === 1}
+                    title="첫 페이지"
+                >
+                  <ChevronsLeft size={16} />
+                </button>
+
+                {/* Previous Page */}
+                <button
+                    className={styles.paginationNavButton}
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    title="이전 페이지"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                {/* Page Numbers */}
+                {getVisiblePages().map((page, index) => (
+                    page === "..." ? (
+                        <span key={`dots-${index}`} className={styles.paginationButton} style={{ cursor: 'default' }}>
+                          ...
+                        </span>
+                    ) : (
+                        <button
+                            key={page}
+                            className={`${styles.paginationButton} ${currentPage === page ? styles.active : ''}`}
+                            onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </button>
+                    )
+                ))}
+
+                {/* Next Page */}
+                <button
+                    className={styles.paginationNavButton}
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    title="다음 페이지"
+                >
+                  <ChevronRight size={16} />
+                </button>
+
+                {/* Last Page */}
+                <button
+                    className={styles.paginationNavButton}
+                    onClick={() => setCurrentPage(totalPages)}
+                    disabled={currentPage === totalPages}
+                    title="마지막 페이지"
+                >
+                  <ChevronsRight size={16} />
+                </button>
+              </div>
+
             </div>
         )}
       </div>
