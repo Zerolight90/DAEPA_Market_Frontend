@@ -1,22 +1,78 @@
 .card {
-    border: 1px solid #eee;
-    border-radius: 12px;
-    overflow: hidden;
+    list-style: none;
+}
+
+.link {
+    display: block;
     background: #fff;
-    transition: transform .12s ease, box-shadow .12s ease;
+    border: 1px solid #eee;
+    border-radius: 14px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: box-shadow .2s ease;
 }
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0,0,0,.06);
+.link:hover {
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
 }
 
-.link { display: block; color: inherit; text-decoration: none; }
+/* ✅ 정사각형 썸네일 박스 */
+.thumbWrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+}
 
-.thumbWrap { position: relative; width: 100%; aspect-ratio: 1/1; background: #f8f8f8; }
-.thumb { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* ✅ 이미지 충돌 방지 (중요) */
+.thumb {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block;
+}
 
-.meta { padding: 10px 12px 12px; }
-.name { font-size: 15px; font-weight: 600; line-height: 1.35; margin: 0 0 6px; color: #222; }
-.price { font-size: 16px; font-weight: 700; color: #111; margin-bottom: 6px; }
-.sub { display: flex; gap: 6px; color: #777; font-size: 12px; }
-.dot { color: #c9c9c9; }
+/* 하트 버튼 (우하단) */
+.heartBtn {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255,255,255,0.9);
+    border: 0;
+    border-radius: 999px;
+    padding: 4px 8px;
+    cursor: pointer;
+}
+.heartOn { vertical-align: middle; }
+.heartOff { vertical-align: middle; }
+.heartCnt { font-size: 12px; font-weight: 600; }
+
+/* 메타 */
+.meta {
+    padding: 10px 12px 12px;
+}
+.name {
+    font-size: 15px;
+    line-height: 1.4;
+    font-weight: 700;
+    margin: 0 0 6px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+.price {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+.sub {
+    display: flex;
+    gap: 6px;
+    color: #888;
+    font-size: 12px;
+}
+.dot { opacity: .6; }
