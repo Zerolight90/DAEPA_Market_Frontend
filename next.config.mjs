@@ -12,7 +12,7 @@ const nextConfig = {
             { source: '/api/:path*', destination: `${BACKEND}/api/:path*` },
 
             // (선택) 업로드 이미지를 백엔드에서 서빙할 때
-            // { source: '/uploads/:path*', destination: `${BACKEND}/uploads/:path*` },
+            { source: '/uploads/:path*', destination: `${BACKEND}/uploads/:path*` },
         ];
     },
 };
