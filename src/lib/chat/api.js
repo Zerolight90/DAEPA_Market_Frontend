@@ -2,8 +2,8 @@
 import axios from "axios";
 
 export const http = axios.create({
-    baseURL: "",            // Next.js rewrites로 /api/* → 백엔드 프록시
-    withCredentials: true,  // 쿠키(ACCESS_TOKEN) 전달
+    baseURL: "/",              // /api/* 는 Next rewrites로 백엔드 프록시
+    withCredentials: true,     // 쿠키 전달
 });
 
 // /api/auth/me 는 만료/비로그인일 수 있으니 조용히 처리
@@ -25,12 +25,10 @@ function normRoomId(id) {
 
 export async function fetchMe() {
     const { data } = await http.get("/api/auth/me");
-    // 기대 형태: { userId: 7, authenticated: true } 또는 null
-    return data;
+    return data; // { userId } | null
 }
 
 export async function fetchRooms(userId) {
-    // 백엔드가 쿠키에서 유저를 읽는 경우 userId 파라미터는 생략 가능
     const params = userId ? { userId } : undefined;
     const { data } = await http.get("/api/chats/my-rooms", { params });
     return data;
@@ -47,6 +45,37 @@ export async function fetchMessages(roomId, size = 30, before) {
 // 채팅방 생성/재사용
 export async function openChatRoom({ productId, sellerId }) {
     const { data } = await http.post("/api/chats/open", { productId, sellerId });
-    // 응답: { roomId: number, created: boolean, identifier: string }
-    return data;
+    return data; // { roomId, created, identifier }
+}
+
+/** ✅ REST 폴백: 메시지 전송 */
+export async function sendMessageRest(roomId, { text, imageUrl = null, tempId = null, senderId }) {
+    const rid = normRoomId(roomId);
+    const { data } = await http.post(`/api/chats/${rid}/send`, {
+        roomId: Number(rid),
+        senderId: Number(senderId),
+        text,
+        imageUrl,
+        tempId,
+    });
+    return data; // ChatDto.MessageRes
+}
+
+/** ✅ REST 폴백: after 초과 메시지 증분 조회 */
+export async function fetchMessagesAfter(roomId, after, size = 50) {
+    const rid = normRoomId(roomId);
+    const { data } = await http.get(`/api/chats/${rid}/messages-after`, {
+        params: { after, size },
+    });
+    return data; // ChatDto.MessageRes[]
+}
+
+/** ✅ REST 폴백: 읽음 포인터 올리기 */
+export async function markReadUpTo(roomId, readerId, upTo) {
+    const rid = normRoomId(roomId);
+    const { data } = await http.post(`/api/chats/${rid}/read-up-to`, null, {
+        params: { upTo },
+        headers: readerId ? { "x-user-id": String(readerId) } : undefined,
+    });
+    return data; // ChatDto.ReadEvent
 }
