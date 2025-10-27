@@ -214,3 +214,36 @@
     /* 배경색을 녹색 계열로 유지하여 버튼의 연속성을 높임 */
     background-color: #4CAF50; /* 예시로 녹색 계열 사용 */
 }
+
+/* 메인 버튼 스타일 (로그인/회원가입/결과화면 공통) */
+.submitBtn {
+    width: 100%;
+    max-width: 380px;
+    height: 48px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #27ae60, #2ecc71); /* 💚 대파 그린 */
+    color: #fff;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    text-decoration: none; /* <Link>에서도 적용 */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(46, 204, 113, 0.25);
+    transition: all 0.25s ease;
+}
+
+.submitBtn:active {
+    transform: translateY(0);
+    box-shadow: 0 3px 8px rgba(46, 204, 113, 0.25);
+}
+
+/* 비밀번호 재설정 입력칸 간격 */
+.resultBox .input + .input {
+    margin-top: 12px; /* 두 입력칸 사이 여백 */
+}
+
+
+
