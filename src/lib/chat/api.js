@@ -43,3 +43,10 @@ export async function fetchMessages(roomId, size = 30, before) {
     });
     return data;
 }
+
+// 채팅방 생성/재사용
+export async function openChatRoom({ productId, sellerId }) {
+    const { data } = await http.post("/api/chats/open", { productId, sellerId });
+    // 응답: { roomId: number, created: boolean, identifier: string }
+    return data;
+}

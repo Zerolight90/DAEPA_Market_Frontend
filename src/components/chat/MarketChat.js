@@ -477,10 +477,12 @@ export default function MarketChat() {
                             <button className={s.sendBtn} type="submit" disabled={!text.trim() || !activeId}>
                                 보내기
                             </button>
+
                         </form>
                     </section>
                 </div>
             )}
+
         </div>
     );
 }
