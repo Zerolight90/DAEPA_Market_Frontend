@@ -1,4 +1,3 @@
-// /lib/chat/useChatSocket.js
 import { useEffect, useMemo, useRef, useState } from "react";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
@@ -12,9 +11,22 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
     const currentRoomRef = useRef(null);
 
     const url = useMemo(() => {
-        const origin = (baseUrl || "").replace(/\/+$/, "");
-        return `${origin}/ws-stomp`;
-    }, [baseUrl]);
+           // baseUrl 우선 사용. 없거나 localhost면 현재 호스트의 8080으로 대체
+          let base = (baseUrl || "").trim() || (process.env.NEXT_PUBLIC_API_BASE || "").trim();
+          const isLocalhost = base && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(base);
+        if (!base || isLocalhost) {
+          if (typeof window !== "undefined") {
+             const proto = window.location.protocol; // http: or https:
+             const host = window.location.hostname;  // e.g. 192.168.0.10
+             const port = (proto === "https:") ? "8443" : "8080"; // 필요에 맞게 조정
+               base = `${proto}//${host}:${port}`;
+              } else {
+               // SSR 경로 - 개발 기본값
+                   base = "http://localhost:8080";
+              }
+        }
+           return `${base.replace(/\/+$/, "")}/ws-stomp`;
+          }, [baseUrl]);
 
     // 1) 최초 연결/해제 (중복 activate 방지 가드)
     useEffect(() => {
