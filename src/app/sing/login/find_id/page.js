@@ -19,14 +19,14 @@ export default function FindIdPage() {
 
         try {
 
-            const response = await axios.post("/api/sing/find_id", {
-                u_name: name, // 백엔드 DTO 필드명에 맞게 조정
+            const response = await axios.post("/api/sing/login/find_id", {
+                u_name: name,
                 u_phone: phone
             });
 
-            if (response.status === 200 && response.data.success) {
+            if (response.status === 200 && response?.data?.uId) {
                 // 성공적으로 아이디를 찾았을 때
-                setResult({ uId: response.data.data.uId, uDate: response.data.data.uDate });
+                setResult({ uId: response.data.uId, uDate: response.data.uDate });
             } else {
                 // 백엔드에서 실패 응답을 보냈을 때
                 setError(response.data.message || "일치하는 회원 정보가 없습니다.");
@@ -34,8 +34,25 @@ export default function FindIdPage() {
             }
 
         } catch (err) {
-            // 네트워크 오류 또는 서버 에러
-            setError(err.response?.data?.message || "아이디 찾기 중 오류가 발생했습니다.");
+            // 💡 1. 디버깅: 콘솔에 전체 오류 객체 출력
+            console.error("아이디 찾기 요청 오류:", err);
+
+            // 💡 2. 서버에서 받은 상태 코드와 메시지 확인
+            const status = err.response?.status;
+            const serverMessage = err.response?.data?.message;
+
+            let displayError = "아이디 찾기 중 오류가 발생했습니다.";
+
+            if (status) {
+                // 상태 코드가 있을 경우, 404나 500 응답이 왔다는 뜻
+                displayError = `서버 응답 오류 (Status ${status}).`;
+                if (serverMessage) {
+                    // 서버가 구체적인 메시지를 보냈으면 그 메시지를 사용
+                    displayError = serverMessage;
+                }
+            }
+
+            setError(displayError);
             setResult('error');
         }
     };
@@ -121,7 +138,7 @@ export default function FindIdPage() {
                 <div className={styles.links}>
                     <Link href="/sing/login" className={styles.link}>로그인</Link>
                     <span className={styles.divider}>|</span>
-                    <Link href="/sing/find-password" className={styles.link}>비밀번호 찾기</Link>
+                    <Link href="/sing/login/find_password" className={styles.link}>비밀번호 찾기</Link>
                 </div>
             </div>
         </div>
