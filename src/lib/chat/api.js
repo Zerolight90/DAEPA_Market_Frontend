@@ -48,7 +48,7 @@ export async function openChatRoom({ productId, sellerId }) {
     return data; // { roomId, created, identifier }
 }
 
-/** ✅ REST 폴백: 메시지 전송 */
+/** ✅ REST 폴백: 메시지 전송 (WS 미연결시만 사용) */
 export async function sendMessageRest(roomId, { text, imageUrl = null, tempId = null, senderId }) {
     const rid = normRoomId(roomId);
     const { data } = await http.post(`/api/chats/${rid}/send`, {
@@ -61,16 +61,7 @@ export async function sendMessageRest(roomId, { text, imageUrl = null, tempId = 
     return data; // ChatDto.MessageRes
 }
 
-/** ✅ REST 폴백: after 초과 메시지 증분 조회 */
-export async function fetchMessagesAfter(roomId, after, size = 50) {
-    const rid = normRoomId(roomId);
-    const { data } = await http.get(`/api/chats/${rid}/messages-after`, {
-        params: { after, size },
-    });
-    return data; // ChatDto.MessageRes[]
-}
-
-/** ✅ REST 폴백: 읽음 포인터 올리기 */
+/** ✅ REST 폴백: 읽음 포인터 올리기 (WS 미연결시만 사용) */
 export async function markReadUpTo(roomId, readerId, upTo) {
     const rid = normRoomId(roomId);
     const { data } = await http.post(`/api/chats/${rid}/read-up-to`, null, {
@@ -78,4 +69,45 @@ export async function markReadUpTo(roomId, readerId, upTo) {
         headers: readerId ? { "x-user-id": String(readerId) } : undefined,
     });
     return data; // ChatDto.ReadEvent
+}
+
+import { Client } from "@stomp/stompjs";
+import SockJS from "sockjs-client";
+
+/**
+ * WebSocket은 Next rewrite가 프록시하지 못하므로
+ * baseUrl에는 반드시 백엔드 실제 주소를 넣어야 함. (예: http://localhost:8080)
+ * 단일 도메인 배포면 상대경로 "/ws-stomp" 가능.
+ */
+export function createChatClient({ baseUrl, userId, displayName }) {
+    const clean = (baseUrl || "").replace(/\/+$/, "");
+    const wsUrl = clean ? `${clean}/ws-stomp` : "/ws-stomp";
+
+    const client = new Client({
+        brokerURL: undefined, // SockJS 사용
+        webSocketFactory: () => new SockJS(wsUrl),
+        reconnectDelay: 3000,
+        connectHeaders: {
+            "x-user-id": String(userId ?? ""),   // ✅ 서버가 이 값으로 유저 식별
+            "x-user-name": displayName ?? "",
+        },
+        debug: process.env.NODE_ENV === "development"
+            ? (str) => console.log("[STOMP DEBUG]", str)
+            : () => {},
+    });
+
+    client.onStompError = (frame) => {
+        console.warn("[STOMP ERROR] message:", frame?.headers?.message);
+        if (frame?.body) console.warn("[STOMP ERROR] body:", frame.body);
+    };
+
+    client.onWebSocketError = (evt) => {
+        console.warn("[WS ERROR]", evt?.message || evt);
+    };
+
+    client.onWebSocketClose = (evt) => {
+        console.warn("[WS CLOSE]", evt?.code, evt?.reason);
+    };
+
+    return client;
 }

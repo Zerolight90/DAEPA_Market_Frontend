@@ -1,50 +1,36 @@
 // /lib/chat/useChatSocket.js
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
-/**
- * WebSocket은 Next rewrites가 프록시하지 않음.
- * - 프로덕션(단일 도메인)에서는 상대경로 "/ws-stomp"
- * - 개발/다PC 테스트에서는 NEXT_PUBLIC_API_BASE 사용 + localhost → 현재 호스트 치환
- */
+const HEARTBEAT_MS = 10000;
+
+function resolveWsUrl(baseUrl) {
+    // baseUrl이 있으면 절대경로, 없으면 상대경로 (/ws-stomp)
+    if (!baseUrl && typeof window !== "undefined") return "/ws-stomp";
+    if (!baseUrl) return "/ws-stomp";
+    try {
+        const u = new URL(baseUrl);
+        return `${u.protocol}//${u.hostname}${u.port ? ":" + u.port : ""}/ws-stomp`;
+    } catch {
+        return "/ws-stomp";
+    }
+}
+
 export function useChatSocket({ roomId, me, baseUrl = "" }) {
     const [connected, setConnected] = useState(false);
     const [messages, setMessages] = useState([]);
 
     const clientRef = useRef(null);
-    const subIdRef = useRef(null);
+    const subRef = useRef(null);
     const currentRoomRef = useRef(null);
 
-    const url = useMemo(() => {
-        // 1) 환경변수/prop 우선
-        let base = (process.env.NEXT_PUBLIC_API_BASE || baseUrl || "").trim();
+    const url = resolveWsUrl(baseUrl);
 
-        if (typeof window !== "undefined") {
-            if (!base) {
-                // 단일 도메인 배포라면 상대경로 사용
-                return "/ws-stomp";
-            }
-            try {
-                const u = new URL(base);
-                // localhost면 접속한 브라우저의 호스트로 치환 (다른 PC 접속 지원)
-                if (u.hostname === "localhost" || u.hostname === "127.0.0.1") {
-                    const proto = window.location.protocol;
-                    const host = window.location.hostname;
-                    const port = u.port || (proto === "https:" ? "8443" : "8080");
-                    base = `${proto}//${host}:${port}`;
-                } else {
-                    base = `${u.protocol}//${u.hostname}${u.port ? ":" + u.port : ""}`;
-                }
-            } catch {
-                // 무시하고 상대경로로
-                return "/ws-stomp";
-            }
-            return `${base.replace(/\/+$/, "")}/ws-stomp`;
-        }
-        // SSR 안전 기본값
-        return "/ws-stomp";
-    }, [baseUrl]);
+    const setOnServerMessage = useCallback((fn) => {
+        useChatSocket._onMsg = fn || (() => {});
+    }, []);
+    useChatSocket._onMsg = useChatSocket._onMsg || (() => {});
 
     // 최초 연결/해제
     useEffect(() => {
@@ -54,6 +40,8 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
             brokerURL: undefined, // SockJS 사용
             webSocketFactory: () => new SockJS(url),
             reconnectDelay: 3000,
+            heartbeatIncoming: HEARTBEAT_MS,
+            heartbeatOutgoing: HEARTBEAT_MS,
             connectHeaders: me?.id ? { "x-user-id": String(me.id) } : {},
             debug: () => {},
             onConnect: () => setConnected(true),
@@ -65,16 +53,10 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
         clientRef.current = client;
 
         return () => {
-            try {
-                if (clientRef.current && subIdRef.current) {
-                    clientRef.current.unsubscribe(subIdRef.current);
-                }
-            } catch {}
-            try {
-                clientRef.current?.deactivate();
-            } catch {}
+            try { if (subRef.current) subRef.current.unsubscribe(); } catch {}
+            try { clientRef.current?.deactivate(); } catch {}
             clientRef.current = null;
-            subIdRef.current = null;
+            subRef.current = null;
             currentRoomRef.current = null;
             setConnected(false);
             setMessages([]);
@@ -86,9 +68,9 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
         const client = clientRef.current;
         if (!client || !connected) return;
 
-        if (subIdRef.current) {
-            try { client.unsubscribe(subIdRef.current); } catch {}
-            subIdRef.current = null;
+        if (subRef.current) {
+            try { subRef.current.unsubscribe(); } catch {}
+            subRef.current = null;
         }
 
         if (!roomId || Number(roomId) <= 0) {
@@ -101,39 +83,33 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
         setMessages([]);
 
         const dest = `/sub/chats/${roomId}`;
-        const subId = `sub-${roomId}-${Date.now()}`;
-        subIdRef.current = subId;
         const headers = me?.id ? { "x-user-id": String(me.id) } : {};
 
-        const subscription = client.subscribe(
-            dest,
-            (frame) => {
-                try {
-                    const payload = JSON.parse(frame.body);
-                    if (
-                        payload?.roomId != null &&
-                        Number(payload.roomId) !== Number(currentRoomRef.current)
-                    ) {
-                        return;
-                    }
-                    setMessages((prev) => [...prev, payload]);
-                } catch {}
-            },
-            headers
-        );
+        const subscription = client.subscribe(dest, (frame) => {
+            try {
+                const payload = JSON.parse(frame.body);
+                if (
+                    payload?.roomId != null &&
+                    Number(payload.roomId) !== Number(currentRoomRef.current)
+                ) return;
 
-        if (!subIdRef.current) {
-            subIdRef.current = (subscription && subscription.id) || subId;
-        }
+                // 훅 내부 state도 유지
+                setMessages((prev) => [...prev, payload]);
+                // 외부 핸들러 등록돼 있으면 콜백
+                useChatSocket._onMsg?.(payload);
+            } catch {}
+        }, headers);
+
+        subRef.current = subscription;
 
         return () => {
-            try { if (client && subIdRef.current) client.unsubscribe(subIdRef.current); } catch {}
-            subIdRef.current = null;
+            try { if (subRef.current) subRef.current.unsubscribe(); } catch {}
+            subRef.current = null;
         };
     }, [connected, roomId, me?.id]);
 
     // 발송 함수
-    const sendText = (text, tempId) => {
+    const sendText = useCallback((text, tempId) => {
         const client = clientRef.current;
         if (!client || !connected || !roomId || !me?.id) return;
 
@@ -153,17 +129,17 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
             },
             body,
         });
-    };
+    }, [connected, roomId, me?.id]);
 
-    const sendRead = (lastSeenMessageId) => {
+    const sendRead = useCallback((lastSeenMessageId) => {
         const client = clientRef.current;
-        if (!client || !connected || !roomId || !me?.id) return;
+        if (!client || !connected || !roomId || !me?.id || !lastSeenMessageId) return;
 
         const body = JSON.stringify({
             type: "READ",
             roomId: Number(roomId),
             readerId: Number(me.id),
-            lastSeenMessageId: lastSeenMessageId ?? null,
+            lastSeenMessageId: lastSeenMessageId,
         });
 
         client.publish({
@@ -174,7 +150,7 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
             },
             body,
         });
-    };
+    }, [connected, roomId, me?.id]);
 
-    return { connected, messages, sendText, sendRead };
+    return { connected, messages, sendText, sendRead, setOnServerMessage };
 }

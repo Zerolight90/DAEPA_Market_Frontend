@@ -2,13 +2,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import s from "./MarketChat.module.css";
 import { useChatSocket } from "@/lib/chat/useChatSocket";
-import { fetchRooms, fetchMe, fetchMessages } from "@/lib/chat/api";
+import { fetchRooms, fetchMe, fetchMessages, sendMessageRest, markReadUpTo } from "@/lib/chat/api";
 import { useSearchParams } from "next/navigation";
 import { Box, styled } from "@mui/material";
 
 /** ===== 로그 스위치 ===== */
 const LOG = false;
 const log = (...a) => LOG && console.log("[CHAT]", ...a);
+
+// ✅ READ 스로틀 간격 (정의 누락으로 발생했던 ReferenceError 방지)
+const READ_SEND_MINIMUM_INTERVAL = 1500;
 
 const ScrollArea = styled(Box)(({ theme }) => ({
     overflowY: "auto",
@@ -44,48 +47,6 @@ const fmtDateLine = (v) => {
     return `${d.getFullYear()}.${pad2(d.getMonth() + 1)}.${pad2(d.getDate())} (${yo})`;
 };
 
-/** ---------- REST 폴백 헬퍼들 ---------- **/
-async function sendMessageRest(roomId, { text, imageUrl = null, tempId = null, senderId }) {
-    const res = await fetch(`/api/chats/${roomId}/send`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-            roomId: Number(roomId),
-            senderId: Number(senderId),
-            text,
-            imageUrl,
-            tempId,
-        }),
-    });
-    if (!res.ok) throw new Error(`sendMessageRest failed: ${res.status}`);
-    return res.json(); // ChatDto.MessageRes
-}
-
-async function fetchMessagesAfter(roomId, after, size = 50) {
-    const url = `/api/chats/${roomId}/messages-after?after=${encodeURIComponent(after)}&size=${size}`;
-    const res = await fetch(url, { credentials: "include" });
-    if (!res.ok) throw new Error(`fetchMessagesAfter failed: ${res.status}`);
-    return res.json(); // ChatDto.MessageRes[]
-}
-
-async function markReadUpToRest(roomId, upTo, readerId) {
-    const res = await fetch(`/api/chats/${roomId}/read-up-to?upTo=${upTo ?? ""}`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-            type: "READ",
-            roomId: Number(roomId),
-            readerId: Number(readerId),
-            lastSeenMessageId: upTo ?? null,
-        }),
-    });
-    if (!res.ok) throw new Error(`markReadUpToRest failed: ${res.status}`);
-    return res.json(); // ChatDto.ReadEvent
-}
-
-/** ---------- 컴포넌트 ---------- **/
 export default function MarketChat() {
     const search = useSearchParams();
     const initialRoomId = search.get("roomId") ? Number(search.get("roomId")) : null;
@@ -98,19 +59,12 @@ export default function MarketChat() {
 
     const scrollerRef = useRef(null);
 
-    // WS 이벤트 증분 처리용 커서
+    // WS 이벤트 스트림 커서
     const wsCursorRef = useRef(0);
-    // 방별로 마지막으로 보낸 READ ID를 기억 → 같은 값은 보내지 않음(루프 방지)
+
+    // 읽음 중복/과속 방지
     const lastReadSentRef = useRef({}); // { [roomId]: lastId }
-
-    // 폴링용: 방별 마지막 받은 메시지ID 기억
-    const pollLastIdRef = useRef({}); // { [roomId]: number }
-    const pollTimerRef = useRef(null);
-
-    // 워치독: 마지막 WS 활동 시각, WS가 살아있어도 정적이면 폴링 병행
-    const lastWsActivityRef = useRef(0);
-    const WATCHDOG_MS = 5000;   // WS 무활동 5초 → 폴링 가동
-    const POLL_MS = 2000;       // 폴링 간격 2초
+    const lastReadSentAtRef = useRef(0);
 
     const ready = useMemo(() => typeof window !== "undefined", []);
 
@@ -175,14 +129,21 @@ export default function MarketChat() {
     const otherName = activeChat?.counterpartyName ?? "상대";
     const otherAvatar = activeChat?.counterpartyProfile || "/images/profile_img/sangjun.jpg";
 
-    // 3) WebSocket
-    const { connected, messages: wsMessages, sendText, sendRead } = useChatSocket({
+    // 3) WebSocket (WS 전용, 폴링 없음)
+    const { connected, messages: wsMessages, sendText, sendRead, setOnServerMessage } = useChatSocket({
         roomId: me?.id ? (activeId ?? 0) : 0, // 로그인 전에는 0으로 미연결
-        me: me ?? undefined, // 로그인 전에는 undefined
+        me: me ?? undefined,                   // 로그인 전에는 undefined
         baseUrl: process.env.NEXT_PUBLIC_API_BASE,
     });
 
-    // 방 전환 시: 히스토리 로드 + WS 커서/폴링 커서 리셋
+    // 서버 푸시 메시지 추가 시 커스텀 처리 필요하면 등록 (선택)
+    useEffect(() => {
+        setOnServerMessage((payload) => {
+            // 필요시 글로벌 핸들러 (예: 사운드, 브라우저 알림 등)
+        });
+    }, [setOnServerMessage]);
+
+    // 방 전환 시: 히스토리 로드 + 커서 리셋
     useEffect(() => {
         if (!activeId || !me?.id) return;
         wsCursorRef.current = 0;
@@ -192,15 +153,9 @@ export default function MarketChat() {
                 const list = await fetchMessages(activeId, 30 /* size */);
                 const mapped = (list || []).map((m) => mapMessageToUi(m, me, otherName, otherAvatar));
                 setMessagesByRoom((prev) => ({ ...prev, [activeId]: mapped }));
-
-                // 폴링 시작점: 현재 히스토리의 마지막 서버 ID
-                const lastServer = [...mapped].reverse().find((x) => typeof x.id === "number");
-                pollLastIdRef.current[activeId] = lastServer ? lastServer.id : 0;
-                log("init history room", activeId, "lastId", pollLastIdRef.current[activeId]);
             } catch (e) {
                 console.error("load history failed", e);
                 setMessagesByRoom((prev) => ({ ...prev, [activeId]: [] }));
-                pollLastIdRef.current[activeId] = 0;
             }
         })();
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -212,8 +167,6 @@ export default function MarketChat() {
 
         const delta = wsMessages.slice(wsCursorRef.current);
         wsCursorRef.current = wsMessages.length;
-
-        if (delta.length > 0) lastWsActivityRef.current = Date.now(); // 워치독 리셋
 
         setMessagesByRoom((prev) => {
             const cur = [...(prev[activeId] || [])];
@@ -255,10 +208,6 @@ export default function MarketChat() {
 
                 cur.push(next);
             }
-
-            // 폴링 기준점도 갱신(WS로 들어온 마지막 서버 ID)
-            const lastServer = [...cur].reverse().find((x) => typeof x.id === "number");
-            if (lastServer) pollLastIdRef.current[activeId] = lastServer.id;
 
             return { ...prev, [activeId]: cur };
         });
@@ -320,13 +269,6 @@ export default function MarketChat() {
                     const mapped = mapMessageToUi(res, me, otherName, otherAvatar);
                     if (idx >= 0) cur[idx] = { ...mapped, tempId: undefined };
                     else cur.push(mapped);
-
-                    if (typeof mapped.id === "number") {
-                        pollLastIdRef.current[activeId] = Math.max(
-                            pollLastIdRef.current[activeId] || 0,
-                            mapped.id
-                        );
-                    }
                     return { ...prev, [activeId]: cur };
                 });
             }
@@ -343,7 +285,7 @@ export default function MarketChat() {
         }
     };
 
-    // ✅ 읽음 전송 (WS 또는 REST 폴백 + 좌측 목록 배지 0)
+    // ✅ 읽음 전송 (WS 또는 REST 폴백) — 스로틀 적용
     useEffect(() => {
         if (!activeId || !me?.id) return;
 
@@ -355,14 +297,19 @@ export default function MarketChat() {
         if (!lastOtherReal) return;
 
         const prevSent = lastReadSentRef.current[activeId] ?? 0;
-        if (lastOtherReal.id > prevSent) {
+        const now = Date.now();
+        if (lastOtherReal.id > prevSent && now - (lastReadSentAtRef.current || 0) >= READ_SEND_MINIMUM_INTERVAL) {
             lastReadSentRef.current[activeId] = lastOtherReal.id;
+            lastReadSentAtRef.current = now;
+
             if (connected) {
                 sendRead(lastOtherReal.id);
             } else {
-                markReadUpToRest(activeId, lastOtherReal.id, me.id).catch(() => {});
+                // REST 폴백
+                markReadUpTo(activeId, me.id, lastOtherReal.id).catch(() => {});
             }
 
+            // 좌측 목록 배지 0 처리
             setRoomList((prev) =>
                 Array.isArray(prev)
                     ? prev.map((r) =>
@@ -395,68 +342,6 @@ export default function MarketChat() {
         return acc;
     }, []);
 
-    /** ---------- 폴링(REST) : 워치독 적용 (WS가 꺼져있거나, 살아있어도 무활동이면 가동) ---------- **/
-    useEffect(() => {
-        if (!me?.id || !activeId) return;
-
-        // 기존 타이머 정리
-        if (pollTimerRef.current) {
-            clearInterval(pollTimerRef.current);
-            pollTimerRef.current = null;
-        }
-
-        const tick = async () => {
-            const now = Date.now();
-            const noWsRecently = !connected || now - (lastWsActivityRef.current || 0) >= WATCHDOG_MS;
-
-            if (!noWsRecently) {
-                // WS가 최근에도 이벤트를 잘 받는 중 → 폴링 skip
-                return;
-            }
-
-            try {
-                const after = pollLastIdRef.current[activeId] ?? 0;
-                const delta = await fetchMessagesAfter(activeId, after, 50);
-                if (Array.isArray(delta) && delta.length > 0) {
-                    setMessagesByRoom((prev) => {
-                        const cur = [...(prev[activeId] || [])];
-                        for (const m of delta) {
-                            const mapped = mapMessageToUi(m, me, otherName, otherAvatar);
-                            if (typeof mapped.id === "number" && cur.some((x) => x.id === mapped.id)) {
-                                continue;
-                            }
-                            cur.push(mapped);
-                        }
-                        // 기준점 갱신
-                        const last = delta[delta.length - 1];
-                        const lastId = last?.messageId ?? 0;
-                        if (lastId) {
-                            pollLastIdRef.current[activeId] = Math.max(
-                                pollLastIdRef.current[activeId] || 0,
-                                lastId
-                            );
-                        }
-                        return { ...prev, [activeId]: cur };
-                    });
-                }
-            } catch (e) {
-                // 네트워크 에러는 조용히
-            }
-        };
-
-        // 즉시 1회 + 주기
-        tick();
-        pollTimerRef.current = setInterval(tick, POLL_MS);
-
-        return () => {
-            if (pollTimerRef.current) {
-                clearInterval(pollTimerRef.current);
-                pollTimerRef.current = null;
-            }
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [connected, activeId, me?.id, otherName, otherAvatar]);
-
     return (
         <div className={s.wrap}>
             <h2 className={s.title}>채팅</h2>
@@ -476,10 +361,7 @@ export default function MarketChat() {
                     {/* 좌측: 방 목록 */}
                     <aside className={s.list}>
                         <h3 className={s.listTitle}>
-                            채팅 목록{" "}
-                            {connected
-                                ? "(연결됨)"
-                                : "(연결 중… / 폴링 중)"}
+                            채팅 목록 {connected ? "(연결됨)" : "(연결 중…)"}
                         </h3>
 
                         {rooms.length === 0 && <div className={s.empty}>채팅방이 없습니다.</div>}
