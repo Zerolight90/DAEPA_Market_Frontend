@@ -23,8 +23,8 @@ export default function NoticePage() {
           id: n.nidx,
           title: n.nsubject,
           content: n.ncontent,
-          author: "관리자",     // 관리자 닉네임
-          category: convertCategory(n.ncategory), // 숫자 그대로 (UI 변환 필요)
+          author: n.adminNick,
+          category: convertCategory(n.ncategory),
           createdAt: n.ndate,
         }));
 
@@ -37,7 +37,6 @@ export default function NoticePage() {
 
     fetchNotices();
   }, []);
-
 
   const filteredNotices = notices.filter(notice => {
     const matchesSearch =
@@ -154,9 +153,6 @@ export default function NoticePage() {
               >
                 <div className={styles.noticeHeader}>
                   <div className={styles.noticeTitle}>
-                    {notice.isImportant && (
-                      <span className={styles.importantBadge}>중요</span>
-                    )}
                     <h4 style={{ margin: 0, fontSize: "1.125rem", fontWeight: "600", color: "#1e293b" }}>
                       {notice.title}
                     </h4>
@@ -202,15 +198,28 @@ export default function NoticePage() {
                       <Edit size={16} />
                       수정
                     </button>
-                    <button 
-                      className={styles.actionButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (confirm("이 공지사항을 삭제하시겠습니까?")) {
-                          // 삭제 로직 구현
-                          console.log("삭제:", notice.id);
-                        }
-                      }}
+                    <button
+                        className={styles.actionButton}
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (!confirm("이 공지사항을 삭제하시겠습니까?")) return;
+
+                          try {
+                            const res = await fetch(`http://localhost:8080/api/admin/notices/${notice.id}`, {
+                              method: "DELETE",
+                            });
+
+                            if (!res.ok) throw new Error("삭제 실패");
+
+                            alert("삭제가 완료되었습니다.");
+
+                            setNotices(prev => prev.filter(n => n.id !== notice.id));
+
+                          } catch (err) {
+                            console.error(err);
+                            alert("삭제 중 오류 발생");
+                          }
+                        }}
                     >
                       <Trash2 size={16} />
                       삭제
