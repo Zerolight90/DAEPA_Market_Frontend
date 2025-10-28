@@ -73,7 +73,7 @@ export default function FindPasswordPage() {
         try {
             setStage("resetting");
             // 백엔드: PUT /api/sing/find_password/reset  body: { u_id, new_password }
-            const res = await axios.put("/api/sing/find_password/reset", {
+            const res = await axios.put("/api/sing/login/find_password/reset", {
                 u_id: uId,
                 new_password: newPw,
             });

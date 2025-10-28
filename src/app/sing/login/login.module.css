@@ -47,6 +47,7 @@
 
 .input {
     width: 100%;
+    height: 44px;            /* ← 높이 통일 */
     padding: 12px 14px;
     font-size: 15px;
     border: 1px solid var(--border);
@@ -54,11 +55,34 @@
     outline: none;
     transition: border-color .2s, box-shadow .2s;
 }
-
 .input:focus {
     border-color: var(--brand);
     box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.15);
 }
+
+/* 인풋 + 버튼이 같은 줄에 오는 행 (이메일/인증코드/주소 등) */
+.inlineRow {                 /* JSX에 className="inlineRow" 쓰면 가장 깔끔 */
+    display: grid;
+    grid-template-columns: 1fr 100px; /* 입력칸은 꽉 차고, 버튼은 고정폭 */
+    gap: 10px;
+    align-items: center;
+}
+.inlineRow .input { flex: 1; }
+.inlineRow .inlineBtn {
+    height: 44px;            /* ← 인풋과 동일 */
+    border-radius: 10px;     /* ← 인풋과 동일 */
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* 기존 JSX를 못 바꿀 경우(스타일 속성으로 flex 준 줄)도 커버 */
+.row div[style*="display: flex"] { display:flex; gap:8px; align-items:center; }
+.row div[style*="display: flex"] .input { flex:1; }
+.row .addrBtn, .row .verifyBtn { height:44px; padding:0 14px; border-radius:10px; }
 
 /* 옵션 (아이디 저장 / 자동 로그인) */
 .options {
@@ -67,183 +91,75 @@
     gap: 18px;
     margin: 8px 0 4px;
 }
-
-.checkItem {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-    color: var(--text);
-    user-select: none;
-}
-
-.checkItem input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--brand);
-}
-
-.optionNote {
-    margin: 0 0 10px;
-    font-size: 12px;
-    color: var(--muted);
-}
+.checkItem { display:inline-flex; align-items:center; gap:6px; font-size:14px; color:var(--text); user-select:none; }
+.checkItem input[type="checkbox"] { width:16px; height:16px; accent-color: var(--brand); }
+.optionNote { margin:0 0 10px; font-size:12px; color:var(--muted); }
 
 /* 버튼/액션 */
-.actions {
-    margin-top: 6px;
-}
+.actions { margin-top: 6px; }
 
-.submitBtn {
-    width: 100%;
-    height: 44px;
-    border: 0;
-    border-radius: 10px;
-    background: var(--brand);
-    color: #fff;
-    font-weight: 700;
-    font-size: 15px;
-    cursor: pointer;
-    transition: transform .04s ease;
-}
-
-.submitBtn:active {
-    transform: translateY(1px);
-}
-
-/* 찾기 링크 */
-.links {
-    margin-top: 14px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 10px;
-    font-size: 14px;
-}
-
-.link {
-    color: #2f6feb;
-    text-decoration: none;
-}
-
-.link:hover {
-    text-decoration: underline;
-}
-
-.divider {
-    color: #ccc;
-}
-
-/* SNS 로그인 */
-.snsWrap {
-    margin-top: 18px;
-    display: grid;
-    gap: 10px;
-}
-
-.snsBtn {
-    width: 100%;
-    height: 44px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 15px;
-    cursor: pointer;
-    background: #fff;
-}
-
-/* 브랜드 컬러 */
-.kakao {
-    background: #FEE500;
-    border-color: #F4D600;
-}
-
-.naver {
-    background: #03C75A;
-    color: #fff;
-    border-color: #03C75A;
-}
-
-/* /app/sing/login/login.module.css 파일에 다음 내용 추가 */
-
-/* 에러 메시지 스타일 */
-.error {
-    color: #ff4d4f; /* 붉은색 */
-    font-size: 0.9em;
-    text-align: center;
-    margin-top: 10px;
-}
-
-/* 아이디 찾기 결과 박스 스타일 */
-.resultBox {
-    background-color: #f7f7f7;
-    border: 1px solid #ddd;
-    padding: 20px;
-    margin-bottom: 30px;
-    border-radius: 8px;
-    text-align: center;
-}
-
-/* 결과 메시지 */
-.resultMessage {
-    font-size: 1.1em;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 15px;
-}
-
-/* 찾은 아이디 */
-.foundId {
-    font-size: 1.2em;
-    color: #007bff; /* 대파마켓의 메인 컬러로 사용했던 녹색 계열을 사용해도 좋습니다. */
-    margin-bottom: 5px;
-}
-
-.foundId strong {
-    font-weight: 700;
-}
-
-/* 가입일자 */
-.foundDate {
-    font-size: 0.9em;
-    color: #666;
-}
-
-/* 로그인 버튼 (결과 창에서 재사용) */
-.resultBox + .actions .submitBtn {
-    /* 배경색을 녹색 계열로 유지하여 버튼의 연속성을 높임 */
-    background-color: #4CAF50; /* 예시로 녹색 계열 사용 */
-}
-
-/* 메인 버튼 스타일 (로그인/회원가입/결과화면 공통) */
+/* ▶ 메인 버튼(로그인/회원가입/결과화면 공통) — hover 효과/색 변화 없음 */
 .submitBtn {
     width: 100%;
     max-width: 380px;
     height: 48px;
     border: none;
     border-radius: 12px;
-    background: linear-gradient(135deg, #27ae60, #2ecc71); /* 💚 대파 그린 */
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
     color: #fff;
     font-weight: 700;
     font-size: 16px;
     cursor: pointer;
-    text-decoration: none; /* <Link>에서도 적용 */
+    text-decoration: none;     /* <Link>에도 적용 */
     display: inline-flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 10px rgba(46, 204, 113, 0.25);
-    transition: all 0.25s ease;
+    transition: none;          /* ▶ 마우스 올려도 변화 없음 */
 }
+.submitBtn:hover { filter:none; transform:none; }   /* 안전장치 */
+.submitBtn:active { transform:none; box-shadow:0 4px 10px rgba(46,204,113,0.25); }
 
-.submitBtn:active {
-    transform: translateY(0);
-    box-shadow: 0 3px 8px rgba(46, 204, 113, 0.25);
+/* 찾기 링크 */
+.links { margin-top:14px; display:flex; justify-content:center; align-items:center; gap:10px; font-size:14px; }
+.link { color:#2f6feb; text-decoration:none; }
+.link:hover { text-decoration:underline; }
+.divider { color:#ccc; }
+
+/* SNS 로그인 */
+.snsWrap { margin-top:18px; display:grid; gap:10px; }
+.snsBtn {
+    width:100%;
+    height:44px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+    background:#fff;
 }
+.kakao { background:#FEE500; border-color:#F4D600; }
+.naver { background:#03C75A; color:#fff; border-color:#03C75A; }
+
+/* 에러 메시지 */
+.error { color:#ff4d4f; font-size:0.9em; text-align:center; margin-top:10px; }
+
+/* 결과 박스 */
+.resultBox {
+    background-color:#f7f7f7;
+    border:1px solid #ddd;
+    padding:20px;
+    margin-bottom:30px;
+    border-radius:8px;
+    text-align:center;
+}
+.resultMessage { font-size:1.1em; font-weight:600; color:#333; margin-bottom:15px; }
+.foundId { font-size:1.2em; color:#007bff; margin-bottom:5px; }
+.foundId strong { font-weight:700; }
+.foundDate { font-size:0.9em; color:#666; }
+
+/* 결과 화면의 버튼도 동일 스타일 사용 */
+.resultBox + .actions .submitBtn { background: linear-gradient(135deg, #27ae60, #2ecc71); }
 
 /* 비밀번호 재설정 입력칸 간격 */
-.resultBox .input + .input {
-    margin-top: 12px; /* 두 입력칸 사이 여백 */
-}
-
-
-
+.resultBox .input + .input { margin-top: 12px; }
