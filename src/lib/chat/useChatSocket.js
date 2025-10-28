@@ -1,173 +1,143 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+// /lib/chat/useChatSocket.js
+import { useEffect, useRef, useState, useCallback } from "react";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
 
+const HEARTBEAT_MS = 10000;
+
+function resolveWsUrl(baseUrl) {
+    if (!baseUrl && typeof window !== "undefined") return "/ws-stomp";
+    if (!baseUrl) return "/ws-stomp";
+    try {
+        const u = new URL(baseUrl);
+        return `${u.protocol}//${u.hostname}${u.port ? ":" + u.port : ""}/ws-stomp`;
+    } catch {
+        return "/ws-stomp";
+    }
+}
+
 export function useChatSocket({ roomId, me, baseUrl = "" }) {
     const [connected, setConnected] = useState(false);
-    const [messages, setMessages] = useState([]); // 현재 방의 WS 이벤트만 저장
+    const [messages, setMessages] = useState([]);
 
     const clientRef = useRef(null);
-    const subIdRef = useRef(null);
+    const subRef = useRef(null);
     const currentRoomRef = useRef(null);
 
-    const url = useMemo(() => {
-           // baseUrl 우선 사용. 없거나 localhost면 현재 호스트의 8080으로 대체
-          let base = (baseUrl || "").trim() || (process.env.NEXT_PUBLIC_API_BASE || "").trim();
-          const isLocalhost = base && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i.test(base);
-        if (!base || isLocalhost) {
-          if (typeof window !== "undefined") {
-             const proto = window.location.protocol; // http: or https:
-             const host = window.location.hostname;  // e.g. 192.168.0.10
-             const port = (proto === "https:") ? "8443" : "8080"; // 필요에 맞게 조정
-               base = `${proto}//${host}:${port}`;
-              } else {
-               // SSR 경로 - 개발 기본값
-                   base = "http://localhost:8080";
-              }
-        }
-           return `${base.replace(/\/+$/, "")}/ws-stomp`;
-          }, [baseUrl]);
+    const url = resolveWsUrl(baseUrl);
 
-    // 1) 최초 연결/해제 (중복 activate 방지 가드)
+    const setOnServerMessage = useCallback((fn) => {
+        useChatSocket._onMsg = fn || (() => {});
+    }, []);
+    useChatSocket._onMsg = useChatSocket._onMsg || (() => {});
+
     useEffect(() => {
-        if (clientRef.current) return; // ✅ 이미 연결되어 있으면 재활성화 금지
-
+        if (clientRef.current) return;
         const client = new Client({
-            brokerURL: undefined, // SockJS 사용
+            brokerURL: undefined,
             webSocketFactory: () => new SockJS(url),
             reconnectDelay: 3000,
+            heartbeatIncoming: HEARTBEAT_MS,
+            heartbeatOutgoing: HEARTBEAT_MS,
             connectHeaders: me?.id ? { "x-user-id": String(me.id) } : {},
             debug: () => {},
             onConnect: () => setConnected(true),
             onStompError: () => setConnected(false),
             onWebSocketClose: () => setConnected(false),
         });
-
         client.activate();
         clientRef.current = client;
 
         return () => {
-            try {
-                if (clientRef.current && subIdRef.current) {
-                    clientRef.current.unsubscribe(subIdRef.current);
-                }
-            } catch {}
-            try {
-                clientRef.current?.deactivate();
-            } catch {}
+            try { subRef.current?.unsubscribe(); } catch {}
+            try { clientRef.current?.deactivate(); } catch {}
             clientRef.current = null;
-            subIdRef.current = null;
+            subRef.current = null;
             currentRoomRef.current = null;
             setConnected(false);
             setMessages([]);
         };
     }, [url, me?.id]);
 
-    // 2) 방이 바뀔 때: 이전 구독 해제 → 새 방 구독
     useEffect(() => {
         const client = clientRef.current;
         if (!client || !connected) return;
 
-        // 이전 구독 해제
-        if (subIdRef.current) {
-            try {
-                client.unsubscribe(subIdRef.current);
-            } catch {}
-            subIdRef.current = null;
+        if (subRef.current) {
+            try { subRef.current.unsubscribe(); } catch {}
+            subRef.current = null;
         }
 
-        // 유효하지 않은 roomId면 리셋
         if (!roomId || Number(roomId) <= 0) {
             currentRoomRef.current = null;
             setMessages([]);
             return;
         }
 
-        // 새 방으로 초기화
         currentRoomRef.current = Number(roomId);
         setMessages([]);
 
         const dest = `/sub/chats/${roomId}`;
-        const subId = `sub-${roomId}-${Date.now()}`;
-        subIdRef.current = subId;
-
         const headers = me?.id ? { "x-user-id": String(me.id) } : {};
 
-        const subscription = client.subscribe(
-            dest,
-            (frame) => {
-                try {
-                    const payload = JSON.parse(frame.body);
-                    // 다른 방 메시지는 무시
-                    if (
-                        payload?.roomId != null &&
-                        Number(payload.roomId) !== Number(currentRoomRef.current)
-                    ) {
-                        return;
-                    }
-                    setMessages((prev) => [...prev, payload]);
-                } catch {
-                    // ignore
-                }
-            },
-            headers
-        );
-
-        if (!subIdRef.current) {
-            subIdRef.current = (subscription && subscription.id) || subId;
-        }
-
-        return () => {
+        const subscription = client.subscribe(dest, (frame) => {
             try {
-                if (client && subIdRef.current) client.unsubscribe(subIdRef.current);
+                const payload = JSON.parse(frame.body);
+                if (payload?.roomId != null && Number(payload.roomId) !== Number(currentRoomRef.current)) return;
+                setMessages((prev) => [...prev, payload]);
+                useChatSocket._onMsg?.(payload);
             } catch {}
-            subIdRef.current = null;
+        }, headers);
+
+        subRef.current = subscription;
+        return () => {
+            try { subRef.current?.unsubscribe(); } catch {}
+            subRef.current = null;
         };
     }, [connected, roomId, me?.id]);
 
-    // 3) 발송 함수
-    const sendText = (text, tempId) => {
+    const publishJson = useCallback((destination, body) => {
         const client = clientRef.current;
-        if (!client || !connected || !roomId || !me?.id) return;
+        if (!client || !connected) return;
+        client.publish({
+            destination,
+            headers: { "content-type": "application/json", ...(me?.id ? { "x-user-id": String(me.id) } : {}) },
+            body: JSON.stringify(body),
+        });
+    }, [connected, me?.id]);
 
-        const body = JSON.stringify({
+    const sendText = useCallback((text, tempId) => {
+        if (!connected || !roomId || !me?.id) return;
+        publishJson(`/app/chats/${roomId}/send`, {
             roomId: Number(roomId),
             senderId: Number(me.id),
             text,
             imageUrl: null,
             tempId: tempId || null,
         });
+    }, [connected, roomId, me?.id, publishJson]);
 
-        client.publish({
-            destination: `/app/chats/${roomId}/send`,
-            headers: {
-                "content-type": "application/json",
-                ...(me?.id ? { "x-user-id": String(me.id) } : {}),
-            },
-            body,
+    /** ✅ 이미지 전송 (이미 업로드 완료된 URL 사용) */
+    const sendImage = useCallback((imageUrl, tempId) => {
+        if (!connected || !roomId || !me?.id) return;
+        publishJson(`/app/chats/${roomId}/send`, {
+            roomId: Number(roomId),
+            senderId: Number(me.id),
+            text: null,
+            imageUrl,
+            tempId: tempId || null,
         });
-    };
+    }, [connected, roomId, me?.id, publishJson]);
 
-    const sendRead = (lastSeenMessageId) => {
-        const client = clientRef.current;
-        if (!client || !connected || !roomId || !me?.id) return;
-
-        const body = JSON.stringify({
+    const sendRead = useCallback((lastSeenMessageId) => {
+        if (!connected || !roomId || !me?.id || !lastSeenMessageId) return;
+        publishJson(`/app/chats/${roomId}/read`, {
             type: "READ",
             roomId: Number(roomId),
             readerId: Number(me.id),
-            lastSeenMessageId: lastSeenMessageId ?? null,
+            lastSeenMessageId,
         });
+    }, [connected, roomId, me?.id, publishJson]);
 
-        client.publish({
-            destination: `/app/chats/${roomId}/read`,
-            headers: {
-                "content-type": "application/json",
-                ...(me?.id ? { "x-user-id": String(me.id) } : {}),
-            },
-            body,
-        });
-    };
-
-    return { connected, messages, sendText, sendRead };
+    return { connected, messages, sendText, sendImage, sendRead, setOnServerMessage };
 }

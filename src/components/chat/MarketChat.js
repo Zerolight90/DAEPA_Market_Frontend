@@ -1,11 +1,25 @@
-// /components/chat/MarketChat.js
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import s from "./MarketChat.module.css";
 import { useChatSocket } from "@/lib/chat/useChatSocket";
-import { fetchRooms, fetchMe, fetchMessages } from "@/lib/chat/api";
+import {
+    fetchRooms,
+    fetchMe,
+    fetchMessages,
+    sendMessageRest,
+    markReadUpTo,
+    uploadChatImage,
+} from "@/lib/chat/api";
 import { useSearchParams } from "next/navigation";
-import { Box, styled } from "@mui/material";
+import { Box, styled, IconButton, Tooltip } from "@mui/material";
+import InsertEmoticonIcon from "@mui/icons-material/InsertEmoticon";
+import ImageIcon from "@mui/icons-material/Image";
+import EmojiPicker from "emoji-picker-react";
+
+const LOG = false;
+const log = (...a) => LOG && console.log("[CHAT]", ...a);
+const READ_SEND_MINIMUM_INTERVAL = 1500;
 
 const ScrollArea = styled(Box)(({ theme }) => ({
     overflowY: "auto",
@@ -38,33 +52,49 @@ const fmtDateLine = (v) => {
     const d = toDate(v);
     if (isToday(d)) return "오늘";
     const yo = ["일", "월", "화", "수", "목", "금", "토"][d.getDay()];
-    return `${d.getFullYear()}.${pad2(d.getMonth() + 1)}.${pad2(d.getDate())} (${yo})`;
+    return `${d.getFullYear()}.${pad2(d.getMonth() + 1)}.${pad2(
+        d.getDate()
+    )} (${yo})`;
 };
 
 export default function MarketChat() {
     const search = useSearchParams();
-    const initialRoomId = search.get("roomId") ? Number(search.get("roomId")) : null;
+    const initialRoomId = search.get("roomId")
+        ? Number(search.get("roomId"))
+        : null;
 
-    const [me, setMe] = useState(null);               // { id, name, profile } | null
-    const [roomList, setRoomList] = useState([]);     // 방 목록
+    const [me, setMe] = useState(null);
+    const [roomList, setRoomList] = useState([]);
     const [activeId, setActiveId] = useState(initialRoomId);
     const [messagesByRoom, setMessagesByRoom] = useState({});
     const [text, setText] = useState("");
+    const [emojiOpen, setEmojiOpen] = useState(false);
+    const [pendingImage, setPendingImage] = useState(null);
+    const fileInputRef = useRef(null);
+    const textAreaRef = useRef(null);
+
     const scrollerRef = useRef(null);
-
-    // WS 이벤트 증분 처리용 커서
     const wsCursorRef = useRef(0);
-    // 방별로 마지막으로 보낸 READ ID를 기억 → 같은 값은 보내지 않음(루프 방지)
-    const lastReadSentRef = useRef({}); // { [roomId]: lastId }
-
+    const lastReadSentRef = useRef({});
+    const lastReadSentAtRef = useRef(0);
     const ready = useMemo(() => typeof window !== "undefined", []);
 
-    // 1) 내 정보 로드
+    // ✅ ESC 누르면 이모지창 닫기
+    useEffect(() => {
+        if (!emojiOpen) return;
+        const handleEsc = (e) => {
+            if (e.key === "Escape") setEmojiOpen(false);
+        };
+        window.addEventListener("keydown", handleEsc);
+        return () => window.removeEventListener("keydown", handleEsc);
+    }, [emojiOpen]);
+
+    // 내 정보
     useEffect(() => {
         if (!ready) return;
         (async () => {
             try {
-                const res = await fetchMe(); // { userId } | null
+                const res = await fetchMe();
                 if (res?.userId) {
                     setMe({
                         id: res.userId,
@@ -80,30 +110,26 @@ export default function MarketChat() {
         })();
     }, [ready]);
 
-    // 2) 방 목록 로드 (로그인 상태에서만)
+    // 방 목록
     useEffect(() => {
         if (!ready || !me?.id) return;
         (async () => {
             try {
-                const list = await fetchRooms(); // 서버가 쿠키에서 유저 식별
+                const list = await fetchRooms();
                 const safe = Array.isArray(list) ? list : [];
                 setRoomList(safe);
-
-                // dedupe 후 첫 방 자동 선택
                 const deduped = Array.from(
                     new Map(safe.filter(Boolean).map((r) => [String(r.roomId), r])).values()
                 );
                 if (!initialRoomId && deduped.length && !activeId) {
                     setActiveId(deduped[0].roomId);
                 }
-            } catch (e) {
-                console.error("load rooms failed", e);
+            } catch {
                 setRoomList([]);
             }
         })();
     }, [ready, me?.id, initialRoomId, activeId]);
 
-    // roomId 기준 중복 제거
     const rooms = useMemo(() => {
         const map = new Map();
         for (const r of roomList || []) {
@@ -119,106 +145,73 @@ export default function MarketChat() {
     );
 
     const otherName = activeChat?.counterpartyName ?? "상대";
-    const otherAvatar = activeChat?.counterpartyProfile || "/images/profile_img/sangjun.jpg";
+    const otherAvatar =
+        activeChat?.counterpartyProfile || "/images/profile_img/sangjun.jpg";
 
-    // 3) WebSocket
-    const { connected, messages: wsMessages, sendText, sendRead } = useChatSocket({
-        roomId: me?.id ? (activeId ?? 0) : 0,  // 로그인 전에는 0으로 미연결
-        me: me ?? undefined,                   // 로그인 전에는 undefined
-        baseUrl: process.env.NEXT_PUBLIC_API_BASE,
-    });
+    // ✅ WebSocket 연결
+    const { connected, messages: wsMessages, sendText, sendRead, setOnServerMessage } =
+        useChatSocket({
+            roomId: me?.id ? activeId ?? 0 : 0,
+            me: me ?? undefined,
+            baseUrl: process.env.NEXT_PUBLIC_API_BASE,
+        });
 
-    // 방 전환 시: 히스토리 로드 + WS 커서 리셋
+    useEffect(() => {
+        setOnServerMessage(() => {});
+    }, [setOnServerMessage]);
+
+    // ✅ 채팅 내역
     useEffect(() => {
         if (!activeId || !me?.id) return;
         wsCursorRef.current = 0;
-        // lastReadSentRef.current[activeId] = 0; // 필요 시 초기화
-
         (async () => {
             try {
-                const list = await fetchMessages(activeId, 30 /* size */);
-                const mapped = (list || []).map((m) => {
-                    const fromMe = Number(m.senderId) === Number(me.id);
-                    return {
-                        id: m.messageId,                 // 숫자 id (서버)
-                        type: m.type || "TEXT",          // "TEXT" | "IMAGE" | "SYSTEM"
-                        fromMe,
-                        senderName: fromMe ? me.name : otherName,
-                        avatar: fromMe ? me.profile : otherAvatar,
-                        text: m.content || "",
-                        imageUrl: m.imageUrl || null,
-                        ts: m.time ? new Date(m.time) : new Date(),
-                        read: false,
-                    };
-                });
+                const list = await fetchMessages(activeId, 30);
+                const mapped = (list || []).map((m) =>
+                    mapMessageToUi(m, me, otherName, otherAvatar)
+                );
                 setMessagesByRoom((prev) => ({ ...prev, [activeId]: mapped }));
-            } catch (e) {
-                console.error("load history failed", e);
+            } catch {
                 setMessagesByRoom((prev) => ({ ...prev, [activeId]: [] }));
             }
         })();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeId, me?.id]);
 
-    // WS 메시지 반영 (증분 처리 + READ/SYSTEM 분기 + tempId 치환 + 중복 방지)
+    // WS 메시지 반영
     useEffect(() => {
         if (!Array.isArray(wsMessages) || activeId == null || !me?.id) return;
-
         const delta = wsMessages.slice(wsCursorRef.current);
         wsCursorRef.current = wsMessages.length;
-
         setMessagesByRoom((prev) => {
             const cur = [...(prev[activeId] || [])];
-
             for (const m of delta) {
                 const msgType = m.type || "TEXT";
-
-                // READ 이벤트: 상대가 읽은 범위(lastSeenMessageId)까지 내 메시지 모두 읽음 처리
                 if (msgType === "READ") {
                     if (Number(m.readerId) !== Number(me.id)) {
                         const upTo = Number(m.lastSeenMessageId);
                         for (let i = 0; i < cur.length; i++) {
                             const it = cur[i];
-                            if (it.fromMe && typeof it.id === "number") {
-                                if (!Number.isNaN(upTo) && it.id <= upTo && !it.read) {
-                                    cur[i] = { ...it, read: true };
-                                }
+                            if (it.fromMe && typeof it.id === "number" && it.id <= upTo && !it.read) {
+                                cur[i] = { ...it, read: true };
                             }
                         }
                     }
-                    continue; // READ 자체는 렌더하지 않음
-                }
-
-                const fromMe = Number(m.senderId) === Number(me.id);
-                const next = {
-                    id: m.messageId || `tmp-echo-${activeId}-${m.time || Date.now()}`,
-                    type: msgType,
-                    fromMe,
-                    senderName: fromMe ? me.name : otherName,
-                    avatar: fromMe ? me.profile : otherAvatar,
-                    text: m.content || "",
-                    imageUrl: m.imageUrl || null,
-                    ts: m.time ? new Date(m.time) : new Date(),
-                    read: false,
-                };
-
-                // 낙관 치환
-                if (m.tempId) {
-                    const idx = cur.findIndex((x) => x.tempId === m.tempId);
-                    if (idx >= 0) { cur[idx] = { ...next, tempId: undefined }; continue; }
-                }
-
-                // 서버 messageId 중복 guard
-                if (typeof m.messageId === "number" && cur.some((x) => x.id === m.messageId)) {
                     continue;
                 }
-
+                const next = mapMessageToUi(m, me, otherName, otherAvatar);
+                if (m.tempId) {
+                    const idx = cur.findIndex((x) => x.tempId === m.tempId);
+                    if (idx >= 0) {
+                        cur[idx] = { ...next, tempId: undefined };
+                        continue;
+                    }
+                }
+                if (typeof m.messageId === "number" && cur.some((x) => x.id === m.messageId))
+                    continue;
                 cur.push(next);
             }
-
             return { ...prev, [activeId]: cur };
         });
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [wsMessages, activeId, me?.id]);
 
     // 스크롤 하단 고정
@@ -229,24 +222,46 @@ export default function MarketChat() {
     };
     useEffect(() => {
         scrollToBottom();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [messagesByRoom[activeId]?.length]);
 
-    // 전송 (낙관 업데이트 + tempId는 문자열 prefix로 충돌 방지)
-    const doSendMessage = () => {
-        if (!me?.id) return;
-        const trimmed = text.trim();
-        if (!trimmed || !activeId) return;
+    // ✅ 이미지 전송
+    const onFileChange = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const previewUrl = URL.createObjectURL(file);
+        setPendingImage({ file, previewUrl });
+    };
 
-        const tempId = `tmp-${activeId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    // ✅ 붙여넣기 전송
+    const onPaste = (e) => {
+        const item = Array.from(e.clipboardData.items).find((x) =>
+            x.type.startsWith("image/")
+        );
+        if (item) {
+            const file = item.getAsFile();
+            if (file) {
+                const previewUrl = URL.createObjectURL(file);
+                setPendingImage({ file, previewUrl });
+            }
+        }
+    };
+
+    // ✅ 전송
+    const doSendMessage = async () => {
+        if (!me?.id || !activeId) return;
+        const trimmed = text.trim();
+        if (!trimmed && !pendingImage) return;
+
+        const tempId = `tmp-${activeId}-${Date.now()}`;
         const optimistic = {
-            id: tempId,                 // 문자열 key (서버 숫자 id와 구분)
+            id: tempId,
             tempId,
             fromMe: true,
             senderName: me.name,
             avatar: me.profile,
             text: trimmed,
-            type: "TEXT",
+            imageUrl: pendingImage?.previewUrl || null,
+            type: pendingImage ? "IMAGE" : "TEXT",
             ts: new Date(),
             read: false,
         };
@@ -255,45 +270,45 @@ export default function MarketChat() {
             [activeId]: [...(prev[activeId] || []), optimistic],
         }));
 
-        sendText(trimmed, tempId);
         setText("");
+        setPendingImage(null);
+
+        try {
+            let imageUrl = null;
+            if (pendingImage) {
+                const form = new FormData();
+                form.append("file", pendingImage.file);
+                const res = await uploadChatImage(form);
+                imageUrl = res?.url || null;
+            }
+
+            if (connected) {
+                sendText(trimmed, tempId, imageUrl);
+            } else {
+                await sendMessageRest(activeId, {
+                    text: trimmed,
+                    imageUrl,
+                    tempId,
+                    senderId: me.id,
+                });
+            }
+        } catch (err) {
+            console.error("send failed", err);
+        }
     };
 
-    // ✅ 읽음 전송 (같은 ID 재전송 방지 + 좌측 목록 배지 0으로)
-    useEffect(() => {
-        if (!connected || !activeId || !me?.id) return;
-
-        const arr = messagesByRoom[activeId] || [];
-        const lastOtherReal = [...arr]
-            .filter((m) => !m.fromMe && typeof m.id === "number" && m.type !== "SYSTEM")
-            .pop();
-
-        if (!lastOtherReal) return;
-
-        const prevSent = lastReadSentRef.current[activeId] ?? 0;
-        if (lastOtherReal.id > prevSent) {
-            lastReadSentRef.current[activeId] = lastOtherReal.id; // ✅ 먼저 기록해서 루프 차단
-            sendRead(lastOtherReal.id);
-
-            // 좌측 목록 배지 즉시 0으로 낙관 갱신
-            setRoomList((prev) =>
-                Array.isArray(prev)
-                    ? prev.map((r) =>
-                        String(r?.roomId) === String(activeId) ? { ...r, unread: 0 } : r
-                    )
-                    : prev
-            );
+    const insertEmoji = (emoji) => {
+        const ta = textAreaRef.current;
+        if (!ta) {
+            setText((t) => (t || "") + emoji);
+            return;
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [connected, activeId, messagesByRoom, me?.id]);
+        const start = ta.selectionStart || 0;
+        const end = ta.selectionEnd || 0;
+        const next = text.slice(0, start) + emoji + text.slice(end);
+        setText(next);
+    };
 
-    // 히스토리 로드 여부로 로딩 표시 제어
-    const historyLoaded = useMemo(
-        () => activeId != null && Array.isArray(messagesByRoom[activeId]),
-        [activeId, messagesByRoom]
-    );
-
-    // 날짜 구분선 포함 리스트
     const messages = (messagesByRoom[activeId] ?? []).reduce((acc, cur, idx, all) => {
         const prev = all[idx - 1];
         const needDivider =
@@ -301,9 +316,8 @@ export default function MarketChat() {
             prev.ts.getFullYear() !== cur.ts.getFullYear() ||
             prev.ts.getMonth() !== cur.ts.getMonth() ||
             prev.ts.getDate() !== cur.ts.getDate();
-        if (needDivider) {
+        if (needDivider)
             acc.push({ __divider: true, label: fmtDateLine(cur.ts), key: `d-${cur.id}` });
-        }
         acc.push(cur);
         return acc;
     }, []);
@@ -311,178 +325,178 @@ export default function MarketChat() {
     return (
         <div className={s.wrap}>
             <h2 className={s.title}>채팅</h2>
-
-            {/* 비로그인 UI */}
-            {!me?.id && (
-                <div className={s.box}>
-                    <section className={s.room}>
-                        <div className={s.empty}>로그인이 필요합니다.</div>
-                    </section>
-                </div>
-            )}
-
-            {/* 로그인 상태 UI */}
-            {!!me?.id && (
-                <div className={s.box}>
-                    {/* 좌측: 방 목록 */}
-                    <aside className={s.list}>
-                        <h3 className={s.listTitle}>
-                            채팅 목록 {connected ? "(연결됨)" : "(연결 중…)"}
-                        </h3>
-
-                        {rooms.length === 0 && <div className={s.empty}>채팅방이 없습니다.</div>}
-
-                        <ScrollArea className={s.ul} component="ul" sx={{ maxHeight: "600px" }}>
-                            {rooms.map((r) => (
-                                <li
-                                    key={`${r.roomId}:${r.counterpartyId ?? "x"}`}
-                                    className={`${s.item} ${String(activeId) === String(r.roomId) ? s.active : ""}`}
-                                    onClick={() => setActiveId(r.roomId)}
-                                >
-                                    <img
-                                        className={s.thumb}
-                                        src={r.productThumb || "/images/profile_img/sangjun.jpg"}
-                                        alt=""
-                                    />
-                                    <div className={s.itemMain}>
-                                        <div className={s.top}>
-                                            <span className={s.name}>{r.counterpartyName ?? "-"}</span>
-                                            <span className={s.time}>
-                        {r.lastAt ? fmtHHMM(new Date(r.lastAt)) : "-"}
-                      </span>
-                                        </div>
-                                        <div className={s.productRow}>
-                      <span className={s.product} title={r.productTitle}>
-                        {r.productTitle}
-                      </span>
-                                            <span
-                                                className={`${s.status} ${
-                                                    r.statusBadge === "거래완료"
-                                                        ? s.done
-                                                        : r.statusBadge === "예약중"
-                                                            ? s.reserved
-                                                            : s.progress
-                                                }`}
-                                            >
-                        {r.statusBadge}
-                      </span>
-                                        </div>
-                                        <div className={s.bottom}>
-                                            <span className={s.last}>{r.lastMessage ?? ""}</span>
-                                            {r.unread > 0 && <span className={s.unread}>{r.unread}</span>}
-                                            <span className={`${s.role} ${r.myRole === "판매자" ? s.seller : s.buyer}`}>
-                        {r.myRole}
-                      </span>
-                                        </div>
-                                    </div>
-                                </li>
-                            ))}
-                        </ScrollArea>
-                    </aside>
-
-                    {/* 우측: 채팅방 */}
-                    <section className={s.room}>
-                        <header className={s.header}>
-                            {activeChat ? (
-                                <>
-                                    <div className={s.meta}>
-                                        <strong className={s.roomName}>{otherName}</strong>
-                                        <span className={`${s.role} ${activeChat.myRole === "판매자" ? s.seller : s.buyer}`}>
-                      {activeChat.myRole}
-                    </span>
-                                        <span className={s.dot}>•</span>
-                                        <span className={s.roomProduct} title={activeChat.productTitle}>
-                      {activeChat.productTitle}
-                    </span>
-                                        <span
-                                            className={`${s.status} ${
-                                                activeChat.statusBadge === "거래완료"
-                                                    ? s.done
-                                                    : activeChat.statusBadge === "예약중"
-                                                        ? s.reserved
-                                                        : s.progress
-                                            }`}
-                                        >
-                      {activeChat.statusBadge}
+            <div className={s.box}>
+                <aside className={s.list}>
+                    <h3 className={s.listTitle}>
+                        채팅 목록 {connected ? "(연결됨)" : "(연결 중…)"}
+                    </h3>
+                    <ScrollArea className={s.ul} component="ul" sx={{ maxHeight: "600px" }}>
+                        {rooms.map((r) => (
+                            <li
+                                key={r.roomId}
+                                className={`${s.item} ${
+                                    String(activeId) === String(r.roomId) ? s.active : ""
+                                }`}
+                                onClick={() => setActiveId(r.roomId)}
+                            >
+                                <img className={s.thumb} src={r.productThumb} alt="" />
+                                <div className={s.itemMain}>
+                                    <div className={s.top}>
+                                        <span className={s.name}>{r.counterpartyName}</span>
+                                        <span className={s.time}>
+                      {r.lastAt ? fmtHHMM(new Date(r.lastAt)) : "-"}
                     </span>
                                     </div>
-                                    <img
-                                        className={s.headerThumb}
-                                        src={activeChat.productThumb || "/images/profile_img/sangjun.jpg"}
-                                        alt=""
-                                    />
-                                </>
-                            ) : (
-                                <div className={s.meta}>
-                                    <strong>-</strong>
+                                    <div className={s.productRow}>
+                                        <span className={s.product}>{r.productTitle}</span>
+                                    </div>
                                 </div>
-                            )}
-                        </header>
+                            </li>
+                        ))}
+                    </ScrollArea>
+                </aside>
 
-                        <ScrollArea ref={scrollerRef} className={s.messages} sx={{ maxHeight: "600px" }}>
-                            {!activeId && <div className={s.empty}>방을 선택하세요.</div>}
-                            {!!activeId && !historyLoaded && (
-                                <div className={s.empty}>서버에서 불러오는 중…</div>
-                            )}
-
-                            {messages.map((m) =>
-                                m.__divider ? (
-                                    <div key={m.key} className={s.dateDivider}>
-                                        {m.label}
-                                    </div>
-                                ) : m.type === "SYSTEM" ? (
-                                    <div key={m.id} className={s.systemMsg}>{m.text}</div>
-                                ) : (
-                                    <div key={m.id} className={`${s.msg} ${m.fromMe ? s.me : s.other}`}>
-                                        {!m.fromMe && (
-                                            <div className={s.senderRow}>
-                                                <img className={s.avatar} src={m.avatar} alt="" />
-                                                <span className={s.senderName}>{m.senderName}</span>
-                                            </div>
-                                        )}
-                                        <div className={s.bubbleRow}>
-                                            {m.imageUrl ? (
-                                                <img className={s.image} src={m.imageUrl} alt="" />
-                                            ) : (
-                                                <p className={s.bubble}>{m.text}</p>
-                                            )}
-                                            <span className={s.timeSmall}>{fmtHHMM(m.ts)}</span>
+                <section className={s.room}>
+                    <ScrollArea ref={scrollerRef} className={s.messages} sx={{ maxHeight: "600px" }}>
+                        {messages.map((m) =>
+                            m.__divider ? (
+                                <div key={m.key} className={s.dateDivider}>
+                                    {m.label}
+                                </div>
+                            ) : (
+                                <div key={m.id} className={`${s.msg} ${m.fromMe ? s.me : s.other}`}>
+                                    {!m.fromMe && (
+                                        <div className={s.senderRow}>
+                                            <img className={s.avatar} src={m.avatar} alt="" />
+                                            <span className={s.senderName}>{m.senderName}</span>
                                         </div>
-                                        {m.fromMe && m.read && <span className={s.readText}>읽음</span>}
+                                    )}
+                                    <div className={s.bubbleRow}>
+                                        {m.imageUrl ? (
+                                            <img className={s.image} src={m.imageUrl} alt="" />
+                                        ) : (
+                                            <p className={s.bubble}>{m.text}</p>
+                                        )}
+                                        <span className={s.timeSmall}>{fmtHHMM(m.ts)}</span>
                                     </div>
-                                )
-                            )}
-                        </ScrollArea>
+                                    {m.fromMe && m.read && <span className={s.readText}>읽음</span>}
+                                </div>
+                            )
+                        )}
+                    </ScrollArea>
 
-                        <form
-                            className={s.inputBar}
-                            onSubmit={(e) => {
-                                e.preventDefault();
-                                doSendMessage();
-                            }}
+                    {/* ✅ 입력 바 */}
+                    <form
+                        className={s.inputBar}
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            doSendMessage();
+                        }}
+                        onPaste={onPaste}
+                    >
+                        <div className={s.composer}>
+                            <div className={s.inputTools}>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    hidden
+                                    onChange={onFileChange}
+                                />
+                                <Tooltip title="이미지 보내기">
+                                    <IconButton size="small" onClick={() => fileInputRef.current?.click()}>
+                                        <ImageIcon />
+                                    </IconButton>
+                                </Tooltip>
+                                <Tooltip title="이모지">
+                                    <IconButton size="small" onClick={() => setEmojiOpen((v) => !v)}>
+                                        <InsertEmoticonIcon />
+                                    </IconButton>
+                                </Tooltip>
+                            </div>
+
+                            <div className={s.inputMain}>
+                                {emojiOpen && (
+                                    <div
+                                        style={{
+                                            position: "absolute",
+                                            bottom: "100%",
+                                            left: 0,
+                                            marginBottom: 10,
+                                            zIndex: 10,
+                                        }}
+                                    >
+                                        <EmojiPicker
+                                            onEmojiClick={(emojiData) => insertEmoji(emojiData.emoji)}
+                                            previewConfig={{ showPreview: false }}
+                                            searchDisabled={true}
+                                            lazyLoadEmojis
+                                            height={340}
+                                            width={320}
+                                        />
+                                    </div>
+                                )}
+
+                                {!!pendingImage && (
+                                    <div className={s.imagePreview}>
+                                        <img src={pendingImage.previewUrl} alt="" />
+                                        <button
+                                            type="button"
+                                            className={s.removePreview}
+                                            onClick={() => {
+                                                setPendingImage(null);
+                                                if (fileInputRef.current) fileInputRef.current.value = "";
+                                            }}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                )}
+
+                                <textarea
+                                    ref={textAreaRef}
+                                    className={s.input}
+                                    value={text}
+                                    onChange={(e) => setText(e.target.value)}
+                                    placeholder="메시지를 입력하세요 (Enter: 전송, Shift+Enter: 줄바꿈) — 이미지 드래그·붙여넣기 가능"
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter" && !e.shiftKey) {
+                                            e.preventDefault();
+                                            doSendMessage();
+                                        }
+                                    }}
+                                    rows={1}
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            className={s.sendBtn}
+                            type="submit"
+                            disabled={!text.trim() && !pendingImage}
                         >
-              <textarea
-                  className={s.input}
-                  value={text}
-                  onChange={(e) => setText(e.target.value)}
-                  placeholder="메시지를 입력하세요 (Enter: 전송, Shift+Enter: 줄바꿈)"
-                  onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          doSendMessage();
-                      }
-                  }}
-                  rows={1}
-              />
-                            <button className={s.sendBtn} type="submit" disabled={!text.trim() || !activeId}>
-                                보내기
-                            </button>
-
-                        </form>
-                    </section>
-                </div>
-            )}
-
+                            보내기
+                        </button>
+                    </form>
+                </section>
+            </div>
         </div>
     );
+}
+
+/** ---------- 유틸: 서버 DTO -> UI ---------- **/
+function mapMessageToUi(m, me, otherName, otherAvatar) {
+    const type = m.type || (m.imageUrl ? "IMAGE" : "TEXT");
+    const fromMe = Number(m.senderId) === Number(me.id);
+    return {
+        id: m.messageId ?? `tmp-echo-${m.roomId || "r"}-${m.time || Date.now()}`,
+        type,
+        fromMe,
+        senderName: fromMe ? me.name : otherName,
+        avatar: fromMe ? me.profile : otherAvatar,
+        text: m.content || m.text || "",
+        imageUrl: m.imageUrl || null,
+        ts: m.time ? new Date(m.time) : new Date(),
+        read: false,
+    };
 }

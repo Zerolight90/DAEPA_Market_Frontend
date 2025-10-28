@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { FormControl, OutlinedInput, InputAdornment, Divider } from "@mui/material";
+import { FormControl, OutlinedInput, InputAdornment, Divider, Badge } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -18,6 +18,11 @@ import styles from "./css/header.module.css";
 export default function Header() {
     const router = useRouter();
     const [me, setMe] = useState(null);
+
+    // ✅ 채팅 미읽음 전체 개수 (좌측 리스트의 unread 합계)
+    const [chatUnread, setChatUnread] = useState(0);
+    const fetchingRef = useRef(false);
+    const timerRef = useRef(null);
 
     // 전역 토큰 구독
     const { accessToken, setToken, clearToken } = TokeStore();
@@ -56,6 +61,76 @@ export default function Header() {
         })();
     }, [accessToken]);
 
+    // ✅ 미읽음 합계 가져오기
+    const refreshUnread = async () => {
+        if (!me) {
+            setChatUnread(0);
+            return;
+        }
+        if (fetchingRef.current) return;
+        fetchingRef.current = true;
+        try {
+            const res = await fetch("/api/chats/my-rooms", {
+                method: "GET",
+                credentials: "include", // ACCESS_TOKEN 쿠키 전달
+                cache: "no-store",
+            });
+            if (!res.ok) throw new Error("rooms fetch failed");
+            const list = await res.json();
+            const total = Array.isArray(list)
+                ? list.reduce((acc, r) => acc + (Number(r?.unread) || 0), 0)
+                : 0;
+            setChatUnread(total);
+        } catch {
+            // 조용히 0 (네트워크 실패 등)
+            setChatUnread((v) => v || 0);
+        } finally {
+            fetchingRef.current = false;
+        }
+    };
+
+    // ✅ 로그인 상태에서 배지 주기/포커스/가시성 갱신
+    useEffect(() => {
+        if (!me) {
+            setChatUnread(0);
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+            return;
+        }
+
+        // 즉시 1회
+        refreshUnread();
+
+        // 20초 주기
+        timerRef.current = setInterval(() => {
+            if (document.visibilityState === "visible") refreshUnread();
+        }, 20000);
+
+        // 포커스 / 가시성 변경 시 갱신
+        const onFocus = () => refreshUnread();
+        const onVis = () => { if (document.visibilityState === "visible") refreshUnread(); };
+        window.addEventListener("focus", onFocus);
+        document.addEventListener("visibilitychange", onVis);
+
+        // 다른 탭에서 읽음 처리했을 때 동기화용(선택)
+        const onStorage = (e) => {
+            if (e.key === "chat:touch") refreshUnread();
+        };
+        window.addEventListener("storage", onStorage);
+
+        return () => {
+            window.removeEventListener("focus", onFocus);
+            document.removeEventListener("visibilitychange", onVis);
+            window.removeEventListener("storage", onStorage);
+            if (timerRef.current) {
+                clearInterval(timerRef.current);
+                timerRef.current = null;
+            }
+        };
+    }, [me]);
+
     // 로그아웃
     const onLogout = async () => {
         if (!confirm("로그아웃 하시겠습니까?")) return;
@@ -69,6 +144,7 @@ export default function Header() {
             clearToken();
             localStorage.removeItem("accessToken");
             setMe(null);
+            setChatUnread(0);
             router.push("/");
         }
     };
@@ -151,10 +227,22 @@ export default function Header() {
 
                     <div className={styles.icon}>
                         <Link href="/mypage" aria-label="내 정보"><AccountCircleIcon /></Link>
-                        <Link href="/chat" aria-label="채팅"><ChatIcon /></Link>
+
+                        {/* ✅ 채팅 배지: 미읽음 합계 표시(0이면 자동 숨김) */}
+                        <Link href="/chat" aria-label="채팅" className={styles.chatBadgeWrap}>
+                            <Badge
+                                badgeContent={chatUnread}
+                                color="error"
+                                invisible={!chatUnread}
+                                overlap="circular"
+                            >
+                                <ChatIcon />
+                            </Badge>
+                        </Link>
+
                         <Link href="/wishlist" aria-label="찜 목록"><FavoriteBorderIcon /></Link>
 
-                        {/* ✅ 변경된 부분: 판매하기 클릭 시 로그인 확인 */}
+                        {/* ✅ 판매하기 클릭 시 로그인 확인 */}
                         <a href="/sell" aria-label="판매하기" onClick={onClickSell}>
                             <StorefrontIcon />
                         </a>
