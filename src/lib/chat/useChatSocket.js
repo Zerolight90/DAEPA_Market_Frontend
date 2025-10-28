@@ -6,7 +6,6 @@ import { Client } from "@stomp/stompjs";
 const HEARTBEAT_MS = 10000;
 
 function resolveWsUrl(baseUrl) {
-    // baseUrl이 있으면 절대경로, 없으면 상대경로 (/ws-stomp)
     if (!baseUrl && typeof window !== "undefined") return "/ws-stomp";
     if (!baseUrl) return "/ws-stomp";
     try {
@@ -32,12 +31,10 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
     }, []);
     useChatSocket._onMsg = useChatSocket._onMsg || (() => {});
 
-    // 최초 연결/해제
     useEffect(() => {
         if (clientRef.current) return;
-
         const client = new Client({
-            brokerURL: undefined, // SockJS 사용
+            brokerURL: undefined,
             webSocketFactory: () => new SockJS(url),
             reconnectDelay: 3000,
             heartbeatIncoming: HEARTBEAT_MS,
@@ -48,12 +45,11 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
             onStompError: () => setConnected(false),
             onWebSocketClose: () => setConnected(false),
         });
-
         client.activate();
         clientRef.current = client;
 
         return () => {
-            try { if (subRef.current) subRef.current.unsubscribe(); } catch {}
+            try { subRef.current?.unsubscribe(); } catch {}
             try { clientRef.current?.deactivate(); } catch {}
             clientRef.current = null;
             subRef.current = null;
@@ -63,7 +59,6 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
         };
     }, [url, me?.id]);
 
-    // 방 전환 시 구독 스위치
     useEffect(() => {
         const client = clientRef.current;
         if (!client || !connected) return;
@@ -88,69 +83,61 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
         const subscription = client.subscribe(dest, (frame) => {
             try {
                 const payload = JSON.parse(frame.body);
-                if (
-                    payload?.roomId != null &&
-                    Number(payload.roomId) !== Number(currentRoomRef.current)
-                ) return;
-
-                // 훅 내부 state도 유지
+                if (payload?.roomId != null && Number(payload.roomId) !== Number(currentRoomRef.current)) return;
                 setMessages((prev) => [...prev, payload]);
-                // 외부 핸들러 등록돼 있으면 콜백
                 useChatSocket._onMsg?.(payload);
             } catch {}
         }, headers);
 
         subRef.current = subscription;
-
         return () => {
-            try { if (subRef.current) subRef.current.unsubscribe(); } catch {}
+            try { subRef.current?.unsubscribe(); } catch {}
             subRef.current = null;
         };
     }, [connected, roomId, me?.id]);
 
-    // 발송 함수
-    const sendText = useCallback((text, tempId) => {
+    const publishJson = useCallback((destination, body) => {
         const client = clientRef.current;
-        if (!client || !connected || !roomId || !me?.id) return;
+        if (!client || !connected) return;
+        client.publish({
+            destination,
+            headers: { "content-type": "application/json", ...(me?.id ? { "x-user-id": String(me.id) } : {}) },
+            body: JSON.stringify(body),
+        });
+    }, [connected, me?.id]);
 
-        const body = JSON.stringify({
+    const sendText = useCallback((text, tempId) => {
+        if (!connected || !roomId || !me?.id) return;
+        publishJson(`/app/chats/${roomId}/send`, {
             roomId: Number(roomId),
             senderId: Number(me.id),
             text,
             imageUrl: null,
             tempId: tempId || null,
         });
+    }, [connected, roomId, me?.id, publishJson]);
 
-        client.publish({
-            destination: `/app/chats/${roomId}/send`,
-            headers: {
-                "content-type": "application/json",
-                ...(me?.id ? { "x-user-id": String(me.id) } : {}),
-            },
-            body,
+    /** ✅ 이미지 전송 (이미 업로드 완료된 URL 사용) */
+    const sendImage = useCallback((imageUrl, tempId) => {
+        if (!connected || !roomId || !me?.id) return;
+        publishJson(`/app/chats/${roomId}/send`, {
+            roomId: Number(roomId),
+            senderId: Number(me.id),
+            text: null,
+            imageUrl,
+            tempId: tempId || null,
         });
-    }, [connected, roomId, me?.id]);
+    }, [connected, roomId, me?.id, publishJson]);
 
     const sendRead = useCallback((lastSeenMessageId) => {
-        const client = clientRef.current;
-        if (!client || !connected || !roomId || !me?.id || !lastSeenMessageId) return;
-
-        const body = JSON.stringify({
+        if (!connected || !roomId || !me?.id || !lastSeenMessageId) return;
+        publishJson(`/app/chats/${roomId}/read`, {
             type: "READ",
             roomId: Number(roomId),
             readerId: Number(me.id),
-            lastSeenMessageId: lastSeenMessageId,
+            lastSeenMessageId,
         });
+    }, [connected, roomId, me?.id, publishJson]);
 
-        client.publish({
-            destination: `/app/chats/${roomId}/read`,
-            headers: {
-                "content-type": "application/json",
-                ...(me?.id ? { "x-user-id": String(me.id) } : {}),
-            },
-            body,
-        });
-    }, [connected, roomId, me?.id]);
-
-    return { connected, messages, sendText, sendRead, setOnServerMessage };
+    return { connected, messages, sendText, sendImage, sendRead, setOnServerMessage };
 }
