@@ -3,14 +3,18 @@
 import { useState } from "react";
 import BaseModal from "@/components/ui/modal/BaseModal";
 
+import { useModal } from "@/components/ui/modal/ModalProvider"; // ✅ useModal 임포트
+import PayWithPointModal from "./PayWithPointModal";
+
 import { loadTossPayments } from '@tosspayments/payment-sdk';
 import { v4 as uuidv4 } from 'uuid';
 
 export default function BuyModal({ id, close, itemId, title, price }) {
     const [qty, setQty] = useState(1);
     const total = (Number(price) || 0) * qty;
+    const modal = useModal(); // ✅ modal 훅
 
-    const pay = async () => {
+    const purchase = async () => {
         // TODO: 결제/주문 API
         // console.log("BUY", { itemId, qty, total });
         // alert("주문이 생성되었습니다. (모의)");
@@ -49,6 +53,23 @@ export default function BuyModal({ id, close, itemId, title, price }) {
 
     }
 
+    // --- 페이 결제 모달 열기 함수 ---
+    const openPayWithPointModal = () => {
+        // 현재 모달을 닫고 새 모달 열기 (선택 사항)
+        // close();
+
+        modal.open(({ id: newModalId, close: newModalClose }) => (
+            <PayWithPointModal
+                id={newModalId}
+                close={newModalClose}
+                itemId={itemId}
+                title={title}
+                qty={qty} // ✅ 수량 전달
+                total={total} // ✅ 총액 전달
+            />
+        ));
+    };
+
     return (
         <BaseModal id={id} close={close} title="일반결제">
             <div style={{ marginBottom: 10, fontWeight: 700 }}>{title}</div>
@@ -66,7 +87,8 @@ export default function BuyModal({ id, close, itemId, title, price }) {
                 결제금액: {total.toLocaleString()} 원
             </div>
             <div>
-                <button onClick={pay} style={primaryBtn}>결제하기</button>
+                <button onClick={purchase} style={primaryBtn}>결제하기</button>
+                <button onClick={openPayWithPointModal} style={primaryBtn}>페이로 결제하기</button>
                 <button onClick={close} style={ghostBtn}>취소</button>
             </div>
         </BaseModal>

@@ -37,7 +37,7 @@ export default function BuyModal({ id, close, itemId, title, price }) {
             // ✅ 주문명 동적으로 생성
             orderName: title || '상품 구매',
             customerName: "id", // 실제 유저 이름으로 변경 필요
-            successUrl: `http://localhost:8080/api/pay/success`,
+            successUrl: `http://localhost:8080/api/secPay/success`,
             failUrl: `${window.location.origin}/pay/fail`,
         }).catch(error => {
             // ✅ 결제창 호출 실패 또는 사용자 취소 시 에러 처리

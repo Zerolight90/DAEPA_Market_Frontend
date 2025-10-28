@@ -92,11 +92,10 @@ export default function RightPanelClient({
     return (
         <>
             <div className={styles.btnRow}>
-                <button className={styles.btnWish} onClick={addWish}>찜 {wishes}</button>
-                <button className={styles.btnChat} onClick={openChat}>채팅하기</button>
-            </div>
+                <button className={styles.btnWish} onClick={addWish}>
+                    찜 {wishes}
+                </button>
 
-            <div className={styles.btnRow}>
                 <button
                     className={styles.btnChat}
                     onClick={openChat}
@@ -104,11 +103,11 @@ export default function RightPanelClient({
                 >
                     {chatLoading ? "연결 중…" : "채팅하기"}
                 </button>
+            </div>
 
-                <div className={styles.btnRow}>
-                    <button className={styles.btnBuy} onClick={openBuy}>일반결제 구매</button>
-                    <button className={styles.btnBuy} onClick={openSecBuy}>안전결제 구매</button>
-                </div>
+            <div className={styles.btnRow}>
+                <button className={styles.btnBuy} onClick={openBuy}>일반결제 구매</button>
+                <button className={styles.btnBuy} onClick={openSecBuy}>안전결제 구매</button>
             </div>
 
             <div className={styles.safe}>안전결제로 사기 걱정 없이 거래해요</div>
