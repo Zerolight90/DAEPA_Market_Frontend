@@ -181,3 +181,9 @@
     color: #1db954;
     font-weight: 600;
 }
+
+/* 2. 그 div 안에 있는 input (이메일, 인증코드)에 flex-grow 적용 */
+.row > div:nth-child(2) > .input {
+    flex-grow: 1; /* 남은 공간을 모두 차지하여, 그룹 전체 너비가 100%가 되도록 함 */
+    /* 이메일 입력 칸과 비밀번호 입력 칸이 동일한 너비를 가집니다. */
+}
