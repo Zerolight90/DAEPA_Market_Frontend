@@ -9,27 +9,25 @@ export default function JoinFormPage() {
     const router = useRouter();
     const api_url = "/api/sing/join/signup";
 
-    //아이디, 별명, 전화번호 중복 확인
-    const check_id = "/api/sing/join/check_id"
-    const check_nickname = "/api/sing/join/check_nickname"
-    const check_phone = "/api/sing/join/check_phone"
+    // 중복확인 API
+    const check_id = "/api/sing/join/check_id";
+    const check_nickname = "/api/sing/join/check_nickname";
+    const check_phone = "/api/sing/join/check_phone";
 
+    // ✅ 이메일 인증 API (백엔드 경로 맞게 바꿔도 됨)
+    const send_code_api = "/api/mail/send";
+    const verify_code_api = "/api/mail/verify";
 
-    // 2단계에서 전달받은 이메일 (필요 시 초기값으로 세팅 가능)
     const params = useSearchParams();
     const email = params.get("email") || "";
-
-    //선택사항 param으로 가지고 오기
     const agreeparam = params.get("agree");
 
-    //아이디, 별명, 전화번호 중복 관련 메시지
     const [checkMsg, setCheckMsg] = useState({
-        u_id: { text: '', color: ''},
-        u_nickname: { text: '', color: '' },
-        u_phone: { text: '', color: '' },
+        u_id: { text: "", color: "" },
+        u_nickname: { text: "", color: "" },
+        u_phone: { text: "", color: "" },
     });
 
-    // 모든 입력값을 한 state로 관리
     const [vo, setVO] = useState({
         u_id: email || "",
         u_pw: "",
@@ -37,23 +35,114 @@ export default function JoinFormPage() {
         u_name: "",
         u_nickname: "",
         u_phone: "",
-        u_address: "",            // 우편번호
-        u_location: "",           // 도로명
+        u_address: "",
+        u_location: "",
         u_location_detail: "",
         u_birth: "",
         u_gender: "",
         u_agree: agreeparam,
     });
 
-    // 공통 입력 핸들러
-    const onChangeVO = (e) => {
-        const {name, value} = e.target;
-        setVO((prev) => ({...prev, [name]: value}));
+    // =========================
+    // 이메일 인증 관련 상태
+    // =========================
+    const [isSending, setIsSending] = useState(false);
+    const [codeBoxOpen, setCodeBoxOpen] = useState(false);
+    const [authCode, setAuthCode] = useState("");
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [isEmailVerified, setIsEmailVerified] = useState(false);
+    const [timer, setTimer] = useState(0); // 초 단위 (5분 = 300초)
+    const [emailErr, setEmailErr] = useState(""); // 이메일 인증 관련 메시지
 
-        setCheckMsg((prev) => ({...prev, [name]: { text: '', color: ''}}));
+    // 5분 카운트다운
+    useEffect(() => {
+        if (!codeBoxOpen || timer <= 0 || isEmailVerified) return;
+        const t = setInterval(() => setTimer((s) => s - 1), 1000);
+        return () => clearInterval(t);
+    }, [codeBoxOpen, timer, isEmailVerified]);
+
+    const formatTimer = (s) => {
+        const m = Math.floor(s / 60)
+            .toString()
+            .padStart(2, "0");
+        const ss = (s % 60).toString().padStart(2, "0");
+        return `${m}:${ss}`;
     };
 
-    // 카카오(다음) 우편번호 스크립트 로드
+    // 이메일 코드 발송
+    const onSendEmailCode = async () => {
+        setEmailErr("");
+        if (!vo.u_id) {
+            setEmailErr("이메일을 입력해 주세요.");
+            return;
+        }
+        // 간단한 이메일 패턴 체크
+        const re = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/;
+        if (!re.test(vo.u_id)) {
+            setEmailErr("올바른 이메일 형식이 아닙니다.");
+            return;
+        }
+        try {
+            setIsSending(true);
+            // 백엔드로 인증코드 발송 요청
+            await axios.post(send_code_api, { email: vo.u_id });
+            setCodeBoxOpen(true);
+            setTimer(300); // 5분
+            setEmailErr("인증코드를 보냈습니다. 메일함을 확인해 주세요.");
+        } catch (e) {
+            setEmailErr(e?.response?.data?.message || "인증코드 발송에 실패했습니다.");
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+    // 인증코드 확인
+    const onVerifyCode = async () => {
+        setEmailErr("");
+        if (!authCode) {
+            setEmailErr("인증코드를 입력해 주세요.");
+            return;
+        }
+        if (timer <= 0) {
+            setEmailErr("인증 유효 시간이 만료되었습니다. 다시 요청해 주세요.");
+            return;
+        }
+        try {
+            setIsVerifying(true);
+            const res = await axios.post(verify_code_api, {
+                email: vo.u_id,
+                code: authCode,
+            });
+            // 성공 기준은 백엔드 응답에 맞추세요 (여기선 200만 성공으로 처리)
+            if (res.status === 200) {
+                setIsEmailVerified(true);
+                setEmailErr("이메일 인증이 완료되었습니다.");
+            } else {
+                setEmailErr(res.data?.message || "인증에 실패했습니다.");
+            }
+        } catch (e) {
+            setEmailErr(e?.response?.data?.message || "인증에 실패했습니다.");
+        } finally {
+            setIsVerifying(false);
+        }
+    };
+
+    // 공통 입력
+    const onChangeVO = (e) => {
+        const { name, value } = e.target;
+        setVO((prev) => ({ ...prev, [name]: value }));
+        setCheckMsg((prev) => ({ ...prev, [name]: { text: "", color: "" } }));
+        if (name === "u_id") {
+            // 이메일 변경 시 인증 초기화
+            setIsEmailVerified(false);
+            setCodeBoxOpen(false);
+            setTimer(0);
+            setAuthCode("");
+            setEmailErr("");
+        }
+    };
+
+    // 카카오 우편번호 스크립트 로드
     useEffect(() => {
         const id = "daum-postcode-script";
         if (document.getElementById(id)) return;
@@ -73,7 +162,6 @@ export default function JoinFormPage() {
         new window.daum.Postcode({
             oncomplete: (data) => {
                 const addr = data.roadAddress || data.jibunAddress || "";
-                // 우편번호/도로명을 vo에도 즉시 반영
                 setVO((prev) => ({
                     ...prev,
                     u_address: data.zonecode || "",
@@ -84,62 +172,90 @@ export default function JoinFormPage() {
         }).open();
     };
 
+    // 중복 체크
     const handleBlur = async (field) => {
-        try{
+        try {
             let url = "";
             let params = {};
             let value = vo[field];
 
-            if(field === "u_id" && vo.u_id){
+            if (field === "u_id" && vo.u_id) {
                 url = check_id;
-                params = {u_id: value}
-            }
-            else if(field === "u_nickname" && vo.u_nickname){
+                params = { u_id: value };
+            } else if (field === "u_nickname" && vo.u_nickname) {
                 url = check_nickname;
-                params = {u_nickname: value}
-            }
-            else if(field === "u_phone" && vo.u_phone){
+                params = { u_nickname: value };
+            } else if (field === "u_phone" && vo.u_phone) {
                 url = check_phone;
-                params = {u_phone: value}
+                params = { u_phone: value };
+            } else return;
+
+            const res = await axios.get(url, { params });
+
+            if (res.data === true) {
+                setCheckMsg((prev) => ({
+                    ...prev,
+                    [field]: { text: "이미 사용 중입니다.", color: "red" },
+                }));
+                // 이메일일 경우 인증창 닫기
+                if (field === "u_id") {
+                    setCodeBoxOpen(false);
+                    setIsEmailVerified(false);
+                    setTimer(0);
+                    setAuthCode("");
+                }
+            } else {
+                setCheckMsg((prev) => ({
+                    ...prev,
+                    [field]: { text: "사용 가능합니다.", color: "green" },
+                }));
+
+                // ✅ 이메일이 사용 가능하면 자동으로 인증창 열기
+                if (field === "u_id") {
+                    setCodeBoxOpen(true);   // 인증코드 입력칸 표시
+                    setTimer(300);          // 5분 타이머
+                    setEmailErr("이메일 인증코드를 입력해주세요.");
+                }
             }
-            else
-                return;
-
-            const res = await axios.get(url, {params});
-
-                    if(res.data === true) {
-                        setCheckMsg((prev) => ({...prev, [field]: { text: '이미 사용 중입니다.', color: 'red' }}));
-                    }
-                    else {
-                        setCheckMsg((prev) => ({...prev, [field]: { text: '사용 가능합니다.', color: 'green' }}));
-                    }
-        }
-        catch (err) {
+        } catch (err) {
             console.error(err);
             alert("중복 확인 중 오류가 발생했습니다.");
         }
+    };
 
-    }
 
     // 제출
     function saveData(e) {
         e.preventDefault();
 
-        if (checkMsg.u_id.color === 'red') {
+        // ✅ 이메일 인증 강제
+        if (!isEmailVerified) {
+            alert("이메일 인증을 완료해 주세요.");
+            return;
+        }
+
+        if (checkMsg.u_id.color === "red") {
             alert("이미 사용 중인 이메일입니다. 수정 후 다시 확인해주세요.");
             return;
         }
-        if (checkMsg.u_nickname.color === 'red') {
+        if (checkMsg.u_nickname.color === "red") {
             alert("이미 사용 중인 별명입니다. 수정 후 다시 확인해주세요.");
             return;
         }
-        if (checkMsg.u_phone.color === 'red') {
+        if (checkMsg.u_phone.color === "red") {
             alert("이미 사용 중인 전화번호입니다. 수정 후 다시 확인해주세요.");
             return;
         }
 
-
-        if (!vo.u_id || !vo.u_pw || !vo.u_name || !vo.u_nickname || !vo.u_phone || !vo.u_birth || !vo.u_gender) {
+        if (
+            !vo.u_id ||
+            !vo.u_pw ||
+            !vo.u_name ||
+            !vo.u_nickname ||
+            !vo.u_phone ||
+            !vo.u_birth ||
+            !vo.u_gender
+        ) {
             alert("필수 항목을 모두 입력해주세요.");
             return;
         }
@@ -170,16 +286,9 @@ export default function JoinFormPage() {
             u_agree: vo.u_agree,
         };
 
-
-        console.log("API URL:", api_url);
-        console.log("Payload:", payload);
-
-        //비동기식 통신
         axios
             .post(api_url, payload)
             .then((res) => {
-                // 서버 응답 확인
-                console.log(res.data);
                 alert(res.data || "회원가입 성공!");
                 router.push("/");
             })
@@ -189,35 +298,104 @@ export default function JoinFormPage() {
             });
     }
 
-
     return (
         <main className={styles.container}>
             <h2 className={styles.title}>회원가입 - 정보 입력</h2>
 
             <form className={styles.form} onSubmit={saveData}>
-                {/* 이메일 */}
+                {/* 이메일 + 인증하기 */}
                 <div className={styles.row}>
-                    <label htmlFor="u_id" className={styles.label}>이메일</label>
-                    <input
-                        id="u_id"
-                        name="u_id"
-                        type="email"
-                        placeholder="example@gmail.com"
-                        required
-                        pattern={String.raw`^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$`}
-                        value={vo.u_id}
-                        onChange={onChangeVO}
-                        onBlur={() => handleBlur("u_id")}
-                        className={styles.input}
-                    />
-                    <div style={{ color: checkMsg.u_id.color, fontSize: '0.9em', marginTop: '5px' }}>
+                    <label htmlFor="u_id" className={styles.label}>
+                        이메일
+                    </label>
+
+                    <div style={{ display: "flex", gap: 8 }}>
+                        <input
+                            id="u_id"
+                            name="u_id"
+                            type="email"
+                            placeholder="example@gmail.com"
+                            required
+                            pattern={String.raw`^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$`}
+                            value={vo.u_id}
+                            onChange={onChangeVO}
+                            onBlur={() => handleBlur("u_id")}
+                            className={styles.input}
+                            disabled={isEmailVerified}
+                        />
+                        <button
+                            type="button"
+                            className={styles.addrBtn}
+                            onClick={onSendEmailCode}
+                            disabled={isSending || isEmailVerified}
+                            aria-label="이메일 인증코드 발송"
+                        >
+                            {isEmailVerified ? "인증완료" : isSending ? "발송중..." : "인증하기"}
+                        </button>
+                    </div>
+
+                    {/* 중복 메시지 */}
+                    <div
+                        style={{
+                            color: checkMsg.u_id.color,
+                            fontSize: "0.9em",
+                            marginTop: 5,
+                        }}
+                    >
                         {checkMsg.u_id.text}
                     </div>
+
+                    {/* 인증코드 입력 박스 + 5분 타이머 */}
+                    {codeBoxOpen && !isEmailVerified && (
+                        <div style={{ marginTop: 10 }}>
+                            <div style={{ display: "flex", gap: 8 }}>
+                                <input
+                                    type="text"
+                                    placeholder="인증코드 6자리"
+                                    className={styles.input}
+                                    value={authCode}
+                                    onChange={(e) => setAuthCode(e.target.value)}
+                                    maxLength={8}
+                                />
+                                <button
+                                    type="button"
+                                    className={styles.addrBtn}
+                                    onClick={onVerifyCode}
+                                    disabled={isVerifying || timer <= 0}
+                                >
+                                    {isVerifying ? "확인 중..." : "확인"}
+                                </button>
+                            </div>
+                            <div style={{ marginTop: 6, fontSize: 13 }}>
+                                {timer > 0 ? (
+                                    <span>남은 시간: {formatTimer(timer)}</span>
+                                ) : (
+                                    <span style={{ color: "crimson" }}>
+                    유효 시간이 만료되었습니다. 다시 인증을 요청해 주세요.
+                  </span>
+                                )}
+                            </div>
+                            {emailErr && (
+                                <div style={{ marginTop: 6, color: "#ff4d4f", fontSize: 13 }}>
+                                    {emailErr}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* 인증 완료 메시지 */}
+                    {isEmailVerified && (
+                        <div style={{ marginTop: 6, color: "#2ecc71", fontSize: 13 }}>
+                            이메일 인증이 완료되었습니다.
+                        </div>
+                    )}
                 </div>
 
                 {/* 비밀번호 */}
                 <div className={styles.row}>
-                    <label htmlFor="u_pw" className={styles.label}>비밀번호</label>
+                    <label htmlFor="u_pw" className={styles.label}>
+                        비밀번호
+                    </label>
                     <input
                         id="u_pw"
                         name="u_pw"
@@ -234,7 +412,9 @@ export default function JoinFormPage() {
 
                 {/* 비밀번호 확인 */}
                 <div className={styles.row}>
-                    <label htmlFor="u_pw2" className={styles.label}>비밀번호 확인</label>
+                    <label htmlFor="u_pw2" className={styles.label}>
+                        비밀번호 확인
+                    </label>
                     <input
                         id="u_pw2"
                         name="u_pw2"
@@ -249,7 +429,9 @@ export default function JoinFormPage() {
 
                 {/* 이름 */}
                 <div className={styles.row}>
-                    <label htmlFor="u_name" className={styles.label}>이름</label>
+                    <label htmlFor="u_name" className={styles.label}>
+                        이름
+                    </label>
                     <input
                         id="u_name"
                         name="u_name"
@@ -264,7 +446,9 @@ export default function JoinFormPage() {
 
                 {/* 별명 */}
                 <div className={styles.row}>
-                    <label htmlFor="u_nickname" className={styles.label}>별명</label>
+                    <label htmlFor="u_nickname" className={styles.label}>
+                        별명
+                    </label>
                     <input
                         id="u_nickname"
                         name="u_nickname"
@@ -276,7 +460,13 @@ export default function JoinFormPage() {
                         onBlur={() => handleBlur("u_nickname")}
                         className={styles.input}
                     />
-                    <div style={{ color: checkMsg.u_nickname.color, fontSize: '0.9em', marginTop: '5px' }}>
+                    <div
+                        style={{
+                            color: checkMsg.u_nickname.color,
+                            fontSize: "0.9em",
+                            marginTop: 5,
+                        }}
+                    >
                         {checkMsg.u_nickname.text}
                     </div>
                 </div>
@@ -311,7 +501,9 @@ export default function JoinFormPage() {
 
                 {/* 생년월일 */}
                 <div className={styles.row}>
-                    <label htmlFor="u_birth" className={styles.label}>생년월일</label>
+                    <label htmlFor="u_birth" className={styles.label}>
+                        생년월일
+                    </label>
                     <input
                         id="u_birth"
                         name="u_birth"
@@ -327,12 +519,14 @@ export default function JoinFormPage() {
 
                 {/* 전화번호 */}
                 <div className={styles.row}>
-                    <label htmlFor="u_phone" className={styles.label}>전화번호</label>
+                    <label htmlFor="u_phone" className={styles.label}>
+                        전화번호
+                    </label>
                     <input
                         id="u_phone"
                         name="u_phone"
                         type="tel"
-                        placeholder= "'-' 없이 숫자만 입력"
+                        placeholder="'-' 없이 숫자만 입력"
                         required
                         pattern={String.raw`^01[016789]-?\d{3,4}-?\d{4}$`}
                         value={vo.u_phone}
@@ -341,12 +535,14 @@ export default function JoinFormPage() {
                         autoComplete="tel"
                         className={styles.input}
                     />
-                    <div style={{ color: checkMsg.u_phone.color, fontSize: '0.9em', marginTop: '5px' }}>
+                    <div
+                        style={{ color: checkMsg.u_phone.color, fontSize: "0.9em", marginTop: 5 }}
+                    >
                         {checkMsg.u_phone.text}
                     </div>
                 </div>
 
-                {/* 주소 (카카오 우편번호 API) */}
+                {/* 주소 */}
                 <div className={styles.row}>
                     <span className={styles.label}>주소</span>
 
@@ -395,7 +591,9 @@ export default function JoinFormPage() {
                     </div>
                 </div>
 
-                <button type="submit" className={styles.submit}>회원가입 완료</button>
+                <button type="submit" className={styles.submit}>
+                    회원가입 완료
+                </button>
             </form>
         </main>
     );
