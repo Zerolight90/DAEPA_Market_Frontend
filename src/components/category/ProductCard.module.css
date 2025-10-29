@@ -32,23 +32,12 @@
     display: block;
 }
 
-/* 하트 버튼 (우하단) */
-.heartBtn {
-    position: absolute;
-    right: 8px;
-    bottom: 8px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    background: rgba(255,255,255,0.9);
-    border: 0;
-    border-radius: 999px;
-    padding: 4px 8px;
-    cursor: pointer;
-}
-.heartOn { vertical-align: middle; }
-.heartOff { vertical-align: middle; }
-.heartCnt { font-size: 12px; font-weight: 600; }
+.heartBtn { position:absolute; right:8px; bottom:8px; display:flex; align-items:center; gap:6px;
+    background: rgba(255,255,255,.9); border:1px solid #eee; border-radius:999px; padding:6px 10px; cursor:pointer; }
+.heartOn { color:#e53935; }
+.heartOff { color:#9aa0a6; }   /* 회색 하트 */
+.heartCnt { font-size:12px; color:#333; }
+
 
 /* 메타 */
 .meta {

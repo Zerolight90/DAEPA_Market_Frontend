@@ -11,7 +11,6 @@ const SIDE_SECTIONS = [
             { href: "/mypage/sell", label: "판매내역" },
             { href: "/mypage/buy", label: "구매내역" },
             { href: "/mypage/shipping", label: "택배" },
-            { href: "/mypage/like", label: "찜한 상품" },
             { href: "/mypage/matching", label: "관심 상품 매칭" },
             { href: "/mypage/safe-settle", label: "안심결제 정산내역" },
         ],
@@ -137,11 +136,10 @@ export default function MyPage() {
                     </div>
 
                     <div className={styles.headerRight}>
-                        <Link href="/mypage/connect-cafe" className={styles.bannerCard}>
+                        <Link href="/payCharge" className={styles.bannerCard}>
                             <div className={styles.bannerIcon} aria-hidden />
                             <div className={styles.bannerText}>
-                                <strong>내 상품 2배로 노출시키기</strong>
-                                <span>카페에 상품 자동 등록하기</span>
+                                <strong>대파 페이 충전하기</strong>
                             </div>
                             <span className={styles.bannerArrow} aria-hidden>›</span>
                         </Link>
