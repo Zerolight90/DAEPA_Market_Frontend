@@ -149,7 +149,7 @@ export default function MarketChat() {
         activeChat?.counterpartyProfile || "/images/profile_img/sangjun.jpg";
 
     // ✅ WebSocket 연결
-    const { connected, messages: wsMessages, sendText, sendRead, setOnServerMessage } =
+    const { connected, messages: wsMessages, sendText, sendImage, sendRead, setOnServerMessage } =
         useChatSocket({
             roomId: me?.id ? activeId ?? 0 : 0,
             me: me ?? undefined,
@@ -276,14 +276,13 @@ export default function MarketChat() {
         try {
             let imageUrl = null;
             if (pendingImage) {
-                const form = new FormData();
-                form.append("file", pendingImage.file);
-                const res = await uploadChatImage(form);
+                const res = await uploadChatImage(pendingImage.file); // ✅ File만 전달
                 imageUrl = res?.url || null;
             }
 
             if (connected) {
-                sendText(trimmed, tempId, imageUrl);
+                if (imageUrl) sendImage(imageUrl, tempId);   // ✅ 이미지 전송
+                if (trimmed)  sendText(trimmed, tempId);     // ✅ 텍스트 전송(있을 때만)
             } else {
                 await sendMessageRest(activeId, {
                     text: trimmed,
