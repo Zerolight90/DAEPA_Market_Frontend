@@ -16,6 +16,7 @@ import InsertEmoticonIcon from "@mui/icons-material/InsertEmoticon";
 import ImageIcon from "@mui/icons-material/Image";
 import EmojiPicker from "emoji-picker-react";
 
+// ✅ ScrollArea
 const ScrollArea = styled(Box)(({ theme }) => ({
     overflowY: "auto",
     overscrollBehavior: "contain",
@@ -29,6 +30,7 @@ const ScrollArea = styled(Box)(({ theme }) => ({
     "&::-webkit-scrollbar-track": { background: "transparent" },
 }));
 
+// ===== 날짜/시간 유틸 =====
 const pad2 = (n) => String(n).padStart(2, "0");
 const toDate = (v) => (v instanceof Date ? v : new Date(v));
 const isToday = (d) => {
@@ -50,13 +52,13 @@ const fmtDateLine = (v) => {
     return `${d.getFullYear()}.${pad2(d.getMonth() + 1)}.${pad2(d.getDate())} (${yo})`;
 };
 
-/** ✅ 상단 고정 시스템 안내(클라에서만 렌더, DB 저장 안함) */
+/** 상단 고정 시스템 안내(클라에서만 렌더, DB 저장 안함) */
 function createSystemIntro(roomId) {
     return {
         id: `sys-${roomId}`,
         type: "SYSTEM",
         text: "안전한 거래를 위해 개인정보를 포함한 내용은 채팅에서 삼가해주세요.",
-        ts: new Date(0), // 항상 최상단에 위치
+        ts: new Date(0),
         fromMe: false,
         senderName: "system",
         avatar: null,
@@ -65,13 +67,13 @@ function createSystemIntro(roomId) {
     };
 }
 
-/** ✅ 방에서 내 역할 계산 */
+/** 방에서 내 역할 계산 */
 function resolveRole(room, meId) {
     if (room?.sellerId != null) {
         return Number(room.sellerId) === Number(meId) ? "판매자" : "구매자";
     }
     if (typeof room?.isSeller === "boolean") return room.isSeller ? "판매자" : "구매자";
-    if (typeof room?.role === "string") return room.role; // 이미 "판매자"/"구매자"로 제공 시
+    if (typeof room?.role === "string") return room.role;
     return null;
 }
 
@@ -88,12 +90,20 @@ export default function MarketChat() {
     const [pendingImage, setPendingImage] = useState(null);
     const fileInputRef = useRef(null);
     const textAreaRef = useRef(null);
-
     const scrollerRef = useRef(null);
     const wsCursorRef = useRef(0);
+    const defaultPickedRef = useRef(false);
     const ready = useMemo(() => typeof window !== "undefined", []);
 
-    // ESC → 이모지 닫기
+    // 이름/아바타 ref (ws 반영 효과 안정화)
+    const [otherNameState, setOtherNameState] = useState("상대");
+    const [otherAvatarState, setOtherAvatarState] = useState("/images/profile_img/sangjun.jpg");
+    const otherNameRef = useRef(otherNameState);
+    const otherAvatarRef = useRef(otherAvatarState);
+    useEffect(() => { otherNameRef.current = otherNameState; }, [otherNameState]);
+    useEffect(() => { otherAvatarRef.current = otherAvatarState; }, [otherAvatarState]);
+
+    // ESC로 이모지 닫기
     useEffect(() => {
         if (!emojiOpen) return;
         const onEsc = (e) => e.key === "Escape" && setEmojiOpen(false);
@@ -128,17 +138,22 @@ export default function MarketChat() {
                 const list = await fetchRooms();
                 const safe = Array.isArray(list) ? list : [];
                 setRoomList(safe);
-                const deduped = Array.from(
-                    new Map(safe.filter(Boolean).map((r) => [String(r.roomId), r])).values()
-                );
-                if (!initialRoomId && deduped.length && !activeId) {
-                    setActiveId(deduped[0].roomId);
+
+                // 기본 방 선택: 최초 1회만
+                if (!defaultPickedRef.current) {
+                    const deduped = Array.from(
+                        new Map(safe.filter(Boolean).map((r) => [String(r.roomId), r])).values()
+                    );
+                    if (!initialRoomId && deduped.length) {
+                        setActiveId(deduped[0].roomId);
+                    }
+                    defaultPickedRef.current = true;
                 }
             } catch {
                 setRoomList([]);
             }
         })();
-    }, [ready, me?.id, initialRoomId, activeId]);
+    }, [ready, me?.id, initialRoomId]);
 
     const rooms = useMemo(() => {
         const map = new Map();
@@ -157,6 +172,12 @@ export default function MarketChat() {
     const otherName = activeChat?.counterpartyName ?? "상대";
     const otherAvatar = activeChat?.counterpartyProfile || "/images/profile_img/sangjun.jpg";
 
+    // ref 동기화
+    useEffect(() => {
+        setOtherNameState(otherName);
+        setOtherAvatarState(otherAvatar);
+    }, [otherName, otherAvatar]);
+
     // WebSocket
     const { connected, messages: wsMessages, sendText, sendImage } = useChatSocket({
         roomId: me?.id ? activeId ?? 0 : 0,
@@ -164,7 +185,7 @@ export default function MarketChat() {
         baseUrl: process.env.NEXT_PUBLIC_API_BASE,
     });
 
-    // 메시지 로드 (서버 SYSTEM은 무시하고, 클라 고정 1개만 상단에)
+    // 메시지 로드 (초기)
     useEffect(() => {
         if (!activeId || !me?.id) return;
         wsCursorRef.current = 0;
@@ -185,9 +206,9 @@ export default function MarketChat() {
                 }));
             }
         })();
-    }, [activeId, me?.id, otherName, otherAvatar]);
+    }, [activeId, me?.id]); // ← 의존성 축소
 
-    // WS 메시지 반영 (SYSTEM 무시)
+    // WS 메시지 반영
     useEffect(() => {
         if (!Array.isArray(wsMessages) || activeId == null || !me?.id) return;
         const delta = wsMessages.slice(wsCursorRef.current);
@@ -196,9 +217,8 @@ export default function MarketChat() {
         setMessagesByRoom((prev) => {
             const cur = [...(prev[activeId] || [])];
             for (const m of delta) {
-                const next = mapMessageToUi(m, me, otherName, otherAvatar);
-                if (next.type === "SYSTEM") continue; // 서버 시스템 메세지는 버림
-
+                const next = mapMessageToUi(m, me, otherNameRef.current, otherAvatarRef.current);
+                if (next.type === "SYSTEM") continue;
                 if (m.tempId) {
                     const idx = cur.findIndex((x) => x.tempId === m.tempId);
                     if (idx >= 0) {
@@ -211,9 +231,9 @@ export default function MarketChat() {
             }
             return { ...prev, [activeId]: cur };
         });
-    }, [wsMessages, activeId, me?.id, otherName, otherAvatar]);
+    }, [wsMessages, activeId, me?.id]);
 
-    /** ✅ 하단 스크롤 (컨테이너 직접 — window는 건드리지 않음) */
+    // 스크롤 제어
     const scrollToBottom = useCallback((smooth = false) => {
         const el = scrollerRef.current;
         if (!el) return;
@@ -224,22 +244,15 @@ export default function MarketChat() {
                 el.scrollTop = el.scrollHeight;
             }
         };
-        requestAnimationFrame(doScroll); // 레이아웃 확정 이후 실행
+        requestAnimationFrame(doScroll);
     }, []);
 
-    // 방 전환/첫 진입 시
-    useEffect(() => {
-        if (!activeId) return;
-        requestAnimationFrame(() => scrollToBottom(false));
-    }, [activeId, scrollToBottom]);
-
-    // 메시지 수 변화 시
     useEffect(() => {
         if (!activeId) return;
         scrollToBottom(false);
     }, [activeId, messagesByRoom[activeId]?.length, scrollToBottom]);
 
-    /** ✅ 전송 */
+    // 메시지 전송
     const doSendMessage = async () => {
         if (!me?.id || !activeId) return;
         const trimmed = text.trim();
@@ -287,7 +300,7 @@ export default function MarketChat() {
         }
     };
 
-    // 파일/붙여넣기
+    // 파일 업로드 / 붙여넣기
     const onFileChange = (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -313,7 +326,6 @@ export default function MarketChat() {
         setText(text.slice(0, start) + emoji + text.slice(end));
     };
 
-    // 날짜 구분자 (SYSTEM 제외)
     const messages = (messagesByRoom[activeId] ?? []).reduce((acc, cur, idx, all) => {
         if (cur.type === "SYSTEM") {
             acc.push(cur);
@@ -326,7 +338,8 @@ export default function MarketChat() {
             prevTs.getFullYear() !== cur.ts.getFullYear() ||
             prevTs.getMonth() !== cur.ts.getMonth() ||
             prevTs.getDate() !== cur.ts.getDate();
-        if (needDivider) acc.push({ __divider: true, label: fmtDateLine(cur.ts), key: `d-${cur.id}` });
+        if (needDivider)
+            acc.push({ __divider: true, label: fmtDateLine(cur.ts), key: `d-${cur.id}` });
         acc.push(cur);
         return acc;
     }, []);
@@ -337,7 +350,9 @@ export default function MarketChat() {
             <div className={s.box}>
                 {/* ===== 좌측 목록 ===== */}
                 <aside className={s.list}>
-                    <h3 className={s.listTitle}>채팅 목록 {connected ? "(연결됨)" : "(연결 중…)"}</h3>
+                    <h3 className={s.listTitle}>
+                        채팅 목록 {connected ? "(연결됨)" : "(연결 중…)"}
+                    </h3>
                     <ScrollArea className={s.ul} component="ul" sx={{ maxHeight: "600px" }}>
                         {rooms.map((r) => {
                             const role = resolveRole(r, me?.id);
@@ -351,15 +366,15 @@ export default function MarketChat() {
                                     <div className={s.itemMain}>
                                         <div className={s.top}>
                                             <span className={s.name}>{r.counterpartyName}</span>
-                                            <span className={s.time}>{r.lastAt ? fmtHHMM(new Date(r.lastAt)) : "-"}</span>
+                                            <span className={s.time}>
+                        {r.lastAt ? fmtHHMM(new Date(r.lastAt)) : "-"}
+                      </span>
                                         </div>
                                         <div className={s.productRow}>
                                             <span className={s.product}>{r.productTitle}</span>
                                             {role && (
                                                 <span
-                                                    className={`${s.roleBadge} ${
-                                                        role === "판매자" ? s.roleSeller : s.roleBuyer
-                                                    }`}
+                                                    className={`${s.roleBadge} ${role === "판매자" ? s.roleSeller : s.roleBuyer}`}
                                                 >
                           {role}
                         </span>
@@ -374,18 +389,17 @@ export default function MarketChat() {
 
                 {/* ===== 우측 채팅 ===== */}
                 <section className={s.room}>
-                    {/* 상단 헤더: 상품/상대/내 역할 */}
                     {activeChat && (
                         <div className={s.roomHeader}>
                             <img className={s.roomThumb} src={activeChat.productThumb} alt="" />
                             <div className={s.roomMeta}>
                                 <div className={s.roomTitleRow}>
-                                    <span className={s.roomProduct}>{activeChat.productTitle}</span>
+                  <span className={s.roomProduct}>
+                    {activeChat.productTitle}
+                  </span>
                                     {myRole && (
                                         <span
-                                            className={`${s.roleBadge} ${
-                                                myRole === "판매자" ? s.roleSeller : s.roleBuyer
-                                            }`}
+                                            className={`${s.roleBadge} ${myRole === "판매자" ? s.roleSeller : s.roleBuyer}`}
                                         >
                       {myRole}
                     </span>
@@ -398,42 +412,46 @@ export default function MarketChat() {
                         </div>
                     )}
 
-                    {/* 메시지 영역 */}
-                    <ScrollArea ref={scrollerRef} className={s.messages} sx={{ maxHeight: "600px" }}>
+                    {/* 메시지 목록 */}
+                    <ScrollArea ref={scrollerRef} className={s.messages}>
                         {messages.map((m) =>
-                            m.__divider ? (
-                                <div key={m.key} className={s.dateDivider}>
-                                    {m.label}
-                                </div>
-                            ) : m.type === "SYSTEM" ? (
-                                <div key={m.id} className={s.systemNotice}>
-                                    <span className={s.systemBadge}>SYSTEM</span>
-                                    <p className={s.systemText}>{m.text}</p>
-                                </div>
-                            ) : (
-                                <div key={m.id} className={`${s.msg} ${m.fromMe ? s.me : s.other}`}>
-                                    {!m.fromMe && (
-                                        <div className={s.senderRow}>
-                                            <img className={s.avatar} src={otherAvatar} alt="" />
-                                            <span className={s.senderName}>{m.senderName}</span>
-                                        </div>
-                                    )}
-                                    <div className={s.bubbleRow}>
-                                        {m.imageUrl ? (
-                                            <img
-                                                className={s.image}
-                                                src={m.imageUrl}
-                                                alt=""
-                                                onLoad={() => scrollToBottom(false)} // 이미지 지연 로드시 보정
-                                            />
-                                        ) : (
-                                            <p className={s.bubble}>{m.text}</p>
-                                        )}
-                                        <span className={s.timeSmall}>{fmtHHMM(m.ts)}</span>
+                                m.__divider ? (
+                                    <div key={m.key} className={s.dateDivider}>
+                                        {m.label}
                                     </div>
-                                    {m.fromMe && m.read && <span className={s.readText}>읽음</span>}
-                                </div>
-                            )
+                                ) : m.type === "SYSTEM" ? (
+                                    <div key={m.id} className={s.systemNotice}>
+                                        <span className={s.systemBadge}>SYSTEM</span>
+                                        <p className={s.systemText}>{m.text}</p>
+                                    </div>
+                                ) : (
+                                    <div key={m.id} className={`${s.msg} ${m.fromMe ? s.me : s.other}`}>
+                                        {!m.fromMe && (
+                                            <div className={s.senderRow}>
+                                                <img className={s.avatar} src={otherAvatar} alt="" />
+                                                <span className={s.senderName}>{otherName}</span>
+                                            </div>
+                                        )}
+                                        <div className={s.bubbleRow}>
+                                            {m.imageUrl ? (
+                                                <img
+                                                    className={s.image}
+                                                    src={m.imageUrl}
+                                                    alt=""
+                                                    onLoad={() => scrollToBottom(false)}
+                                                />
+                                            ) : (
+                                                <p className={s.bubble}>{m.text}</p>
+                                            )}
+                                            <span className={s.timeSmall}>
+                      {fmtHHMM(m.ts)}
+                    </span>
+                                        </div>
+                                        {m.fromMe && m.read && (
+                                            <span className={s.readText}>읽음</span>
+                                        )}
+                                    </div>
+                                )
                         )}
                     </ScrollArea>
 
@@ -442,7 +460,7 @@ export default function MarketChat() {
                         className={s.inputBar}
                         onSubmit={(e) => {
                             e.preventDefault();
-                            e.stopPropagation(); // window로 버블링 방지
+                            e.stopPropagation();
                             doSendMessage();
                         }}
                         onPaste={onPaste}
@@ -457,12 +475,18 @@ export default function MarketChat() {
                                     onChange={onFileChange}
                                 />
                                 <Tooltip title="이미지 보내기">
-                                    <IconButton size="small" onClick={() => fileInputRef.current?.click()}>
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => fileInputRef.current?.click()}
+                                    >
                                         <ImageIcon />
                                     </IconButton>
                                 </Tooltip>
                                 <Tooltip title="이모지">
-                                    <IconButton size="small" onClick={() => setEmojiOpen((v) => !v)}>
+                                    <IconButton
+                                        size="small"
+                                        onClick={() => setEmojiOpen((v) => !v)}
+                                    >
                                         <InsertEmoticonIcon />
                                     </IconButton>
                                 </Tooltip>
@@ -482,7 +506,7 @@ export default function MarketChat() {
                                         <EmojiPicker
                                             onEmojiClick={(emojiData) => insertEmoji(emojiData.emoji)}
                                             previewConfig={{ showPreview: false }}
-                                            searchDisabled={true}
+                                            searchDisabled
                                             lazyLoadEmojis
                                             height={340}
                                             width={320}
@@ -515,11 +539,11 @@ export default function MarketChat() {
                                     className={s.input}
                                     value={text}
                                     onChange={(e) => setText(e.target.value)}
-                                    placeholder="메시지를 입력하세요 (Enter: 전송, Shift+Enter: 줄바꿈) — 이미지 드래그·붙여넣기 가능"
+                                    placeholder="메시지를 입력하세요 (Enter: 전송, Shift+Enter: 줄바꿈)"
                                     onKeyDown={(e) => {
                                         if (e.key === "Enter" && !e.shiftKey) {
                                             e.preventDefault();
-                                            e.stopPropagation(); // window로 버블링 방지
+                                            e.stopPropagation();
                                             doSendMessage();
                                         }
                                     }}
@@ -528,7 +552,11 @@ export default function MarketChat() {
                             </div>
                         </div>
 
-                        <button className={s.sendBtn} type="submit" disabled={!text.trim() && !pendingImage}>
+                        <button
+                            className={s.sendBtn}
+                            type="submit"
+                            disabled={!text.trim() && !pendingImage}
+                        >
                             보내기
                         </button>
                     </form>
@@ -547,10 +575,7 @@ function mapMessageToUi(m, me, otherName, otherAvatar) {
         return {
             id: m.messageId ?? `sys-${m.roomId || "r"}-${m.time || Date.now()}`,
             type: "SYSTEM",
-            text:
-                m.content ||
-                m.text ||
-                "안전한 거래를 위해 개인정보를 포함한 내용은 채팅에서 삼가해주세요.",
+            text: m.content || m.text || "안전한 거래를 위해 개인정보를 포함한 내용은 채팅에서 삼가해주세요.",
             ts: m.time ? new Date(m.time) : new Date(0),
             fromMe: false,
             senderName: "system",
