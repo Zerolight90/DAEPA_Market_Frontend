@@ -11,7 +11,6 @@ const SIDE_SECTIONS = [
             { href: "/mypage/sell", label: "판매내역" },
             { href: "/mypage/buy", label: "구매내역" },
             { href: "/mypage/shipping", label: "택배" },
-            { href: "/mypage/like", label: "찜한 상품" },
             { href: "/mypage/matching", label: "관심 상품 매칭" },
             { href: "/mypage/safe-settle", label: "안심결제 정산내역" },
         ],

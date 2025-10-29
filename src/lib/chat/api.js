@@ -1,7 +1,5 @@
 // src/lib/chat/api.js
 import axios from "axios";
-import { Client } from "@stomp/stompjs";
-import SockJS from "sockjs-client";
 
 export const http = axios.create({
     baseURL: "/",
@@ -27,7 +25,7 @@ function normRoomId(id) {
 
 export async function fetchMe() {
     const { data } = await http.get("/api/auth/me");
-    return data; // { userId } | null
+    return data;
 }
 
 export async function fetchRooms(userId) {
@@ -44,23 +42,22 @@ export async function fetchMessages(roomId, size = 30, before) {
     return data;
 }
 
-// 채팅방 생성/재사용
 export async function openChatRoom({ productId, sellerId }) {
     const { data } = await http.post("/api/chats/open", { productId, sellerId });
     return data; // { roomId, created, identifier }
 }
 
-/** ✅ 이미지 업로드(멀티파트) → { url } */
+/** ✅ 이미지 업로드(멀티파트) → { url } — 인자로 "File"만 넘겨주세요! */
 export async function uploadChatImage(file) {
     const form = new FormData();
     form.append("file", file);
     const { data } = await http.post("/api/chats/upload", form, {
         headers: { "Content-Type": "multipart/form-data" },
     });
-    return data;
+    return data; // { url, ... }
 }
 
-/** ✅ REST 폴백: 메시지 전송 (WS 미연결시만 사용) */
+/** ✅ REST 폴백: 메시지 전송 */
 export async function sendMessageRest(roomId, { text, imageUrl = null, tempId = null, senderId }) {
     const rid = normRoomId(roomId);
     const { data } = await http.post(`/api/chats/${rid}/send`, {
@@ -70,10 +67,10 @@ export async function sendMessageRest(roomId, { text, imageUrl = null, tempId = 
         imageUrl,
         tempId,
     });
-    return data; // ChatDto.MessageRes
+    return data;
 }
 
-/** ✅ REST 폴백: 읽음 포인터 올리기 (WS 미연결시만 사용) */
+/** ✅ REST 폴백: 읽음 포인터 */
 export async function markReadUpTo(roomId, readerId, upTo) {
     const rid = normRoomId(roomId);
     const { data } = await http.post(
@@ -84,39 +81,5 @@ export async function markReadUpTo(roomId, readerId, upTo) {
             headers: readerId ? { "x-user-id": String(readerId) } : undefined,
         }
     );
-    return data; // ChatDto.ReadEvent
-}
-
-/** STOMP/SockJS 생성기 */
-export function createChatClient({ baseUrl, userId, displayName }) {
-    const clean = (baseUrl || "").replace(/\/+$/, "");
-    const wsUrl = clean ? `${clean}/ws-stomp` : "/ws-stomp";
-
-    const client = new Client({
-        brokerURL: undefined, // SockJS 사용
-        webSocketFactory: () => new SockJS(wsUrl),
-        reconnectDelay: 3000,
-        connectHeaders: {
-            "x-user-id": String(userId ?? ""),
-            "x-user-name": displayName ?? "",
-        },
-        debug: process.env.NODE_ENV === "development"
-            ? (str) => console.log("[STOMP DEBUG]", str)
-            : () => {},
-    });
-
-    client.onStompError = (frame) => {
-        console.warn("[STOMP ERROR] message:", frame?.headers?.message);
-        if (frame?.body) console.warn("[STOMP ERROR] body:", frame.body);
-    };
-
-    client.onWebSocketError = (evt) => {
-        console.warn("[WS ERROR]", evt?.message || evt);
-    };
-
-    client.onWebSocketClose = (evt) => {
-        console.warn("[WS CLOSE]", evt?.code, evt?.reason);
-    };
-
-    return client;
+    return data;
 }
