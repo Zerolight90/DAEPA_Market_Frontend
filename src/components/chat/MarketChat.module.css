@@ -153,6 +153,7 @@
     flex-direction: column;
     gap: 10px;
     min-height: 0; /* 내부 스크롤 정상화 */
+    overscroll-behavior: contain;
 }
 
 .topLoader { text-align:center; color:#9aa0a6; font-size:12px; margin: 6px 0 10px; }
@@ -170,7 +171,12 @@
 .avatar { width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid #eee; }
 .senderName { font-size:12px; color:#666; }
 
-.bubbleRow { display:inline-flex; align-items:flex-end; gap:8px; }
+/* ✅ 말풍선 라인: inline-flex로 한 줄 배치 (읽음/말풍선/시간) */
+.bubbleRow {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 8px;
+}
 
 .image {
     max-width: 320px; max-height: 220px;
@@ -190,7 +196,18 @@
 }
 
 .timeSmall { font-size: 11px; color: #888; }
+
+/* ✅ 읽음(인라인) — 내 메시지일 때 말풍선 '왼쪽'에 붙음 */
+.readInline {
+    font-size: 11px;
+    color: #0a7cff;
+    line-height: 1;
+    transform: translateY(1px); /* 아주 살짝 아래 */
+}
+
+/* 기존 아래쪽에 나오던 읽음 텍스트 스타일은 더 이상 사용하지 않음 (참고)
 .readText { font-size: 11px; color:#0a7cff; margin-top:2px; text-align:right; display:inline-block; }
+*/
 
 .systemMsg {
     margin: 10px auto; background: #f5f7fb; color: #5f6b7a;
@@ -200,7 +217,7 @@
 /* ===== 입력 바 (카드형 리디자인) ===== */
 .inputBar{
     display:flex;
-    align-items:center;   /* 기존: flex-end → 가운데로 */
+    align-items:center;
     gap:12px;
     padding:12px 14px;
     border-top:1px solid #eee;
@@ -210,8 +227,6 @@
     z-index: 2;
 }
 
-
-/* 아이콘 + 입력영역을 하나의 카드로 */
 .composer{
     flex:1 1 auto;
     display:flex;
@@ -233,7 +248,6 @@
 .inputTools{
     display:flex; align-items:center; gap:8px;
 }
-/* MUI IconButton 다듬기 */
 .inputTools :global(.MuiIconButton-root){
     width:34px; height:34px;
     border-radius:10px;
@@ -247,11 +261,10 @@
 }
 .inputTools :global(.MuiSvgIcon-root){ font-size:20px; color:#5f6368; }
 
-/* 텍스트 입력 영역 */
 .inputMain{
     flex:1 1 auto;
     display:flex; flex-direction:column; gap:8px;
-    position:relative; /* 이모지 피커 기준점 */
+    position:relative;
 }
 .input{
     width:100%;
@@ -261,20 +274,18 @@
     font-size:14px;
     border:none;
     outline:none;
-    resize:none;        /* 기존: vertical → none */
-    overflow:auto;      /* 내용 넘치면 스크롤 */
+    resize:none;
+    overflow:auto;
     background:transparent;
     color:#222;
 }
 .input::placeholder{ color:#a2a7b0; }
 
-/* emoji-picker-react 기본 스타일 살짝 보정 */
 .inputMain :global(.epr-main){
     border-radius:12px;
     box-shadow:0 10px 24px rgba(0,0,0,.12);
 }
 
-/* 업로드 미리보기 */
 .imagePreview{ position:relative; display:inline-block; max-width:240px; }
 .imagePreview img{
     display:block; max-width:240px; max-height:170px;
@@ -288,13 +299,12 @@
     cursor:pointer;
 }
 
-/* 전송 버튼 */
 .sendBtn{
     height:44px;
     padding:0 18px;
-    display:flex;               /* 추가 */
-    align-items:center;         /* 추가 */
-    justify-content:center;     /* 추가 */
+    display:flex;
+    align-items:center;
+    justify-content:center;
     border:none;
     border-radius:12px;
     font-weight:700;
@@ -306,9 +316,6 @@
 .sendBtn:hover{ filter:brightness(.98); box-shadow: 0 6px 16px rgba(26,115,232,.28); }
 .sendBtn:active{ transform: translateY(1px); }
 .sendBtn:disabled{ background:#c8d6f3; box-shadow:none; cursor:not-allowed; }
-
-/* 드래그앤드롭 표시용 (필요시 확장) */
-.dropMask { position:relative; }
 
 /* ===== System notice (top banner) ===== */
 .systemNotice{
@@ -360,7 +367,7 @@
     color:#166534;
 }
 
-/* ===== Room header (상단: 물품 + 상대 + 내 역할) ===== */
+/* ===== Room header ===== */
 .roomHeader{
     display:flex;
     gap:12px;
@@ -397,23 +404,8 @@
     margin-top:2px;
 }
 
-/* 리스트 영역에서 상품행 + 역할배지 정렬 */
-.productRow{
-    display:flex;
-    align-items:center;
-    gap:6px;
-}
-
-/* 메시지 스크롤 컨테이너에서 바깥 스크롤 전파 방지(보강) */
-.messages{
-    overscroll-behavior: contain;
-}
-
 /* 리스트 썸네일 + 미읽음 점 */
-.thumbWrap{
-    position: relative;
-    display:inline-block;
-}
+.thumbWrap{ position: relative; display:inline-block; }
 .unreadDot{
     position: absolute;
     right: -4px;
@@ -422,7 +414,7 @@
     height: 18px;
     padding: 0 5px;
     border-radius: 999px;
-    background: #e11d48; /* rose-600 */
+    background: #e11d48;
     color: #fff;
     font-weight: 700;
     font-size: 11px;
@@ -431,10 +423,66 @@
     box-shadow: 0 0 0 2px #fff;
 }
 
-/* (이미 있던 역할/시스템/헤더 스타일 유지) */
+/* === 시안 B: 썸네일 좌상단 라벨 === */
+.thumbWrap {
+    --thumb: 44px;
+    position: relative;
+    width: var(--thumb);
+    height: var(--thumb);
+    flex: 0 0 var(--thumb);
+    margin-right: 10px;
+}
+.thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    background: #f2f2f2;
+}
+.roleTag {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 16px;
+    border-radius: 6px;
+    backdrop-filter: blur(2px);
+    box-shadow: 0 1px 2px rgba(0,0,0,.12);
+}
+.roleTagSeller { background: rgba(255, 226, 122, .92); color: #6b4f00; }
+.roleTagBuyer  { background: rgba(185, 246, 202, .92); color: #0b5130; }
 
+.preview {
+    margin-top: 2px;
+    font-size: 12px;
+    color: #7a7a7a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 
+/* ===== 안읽음 배지 (리스트) ===== */
+.unreadBadge {
+    min-width: 22px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 1px 2px rgba(0,0,0,.12);
+}
+.unreadSeller { background:#FFD84D; color:#5b4400; }
+.unreadBuyer  { background:#7BE2A1; color:#093a25; }
 
+@keyframes blink {
+    0% { opacity: 0.2; }
+    50% { opacity: 1; }
+    100% { opacity: 0.2; }
+}
 
 /* ===== 반응형 ===== */
 @media (max-width: 860px) {
