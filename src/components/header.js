@@ -240,7 +240,7 @@ export default function Header() {
                             </Badge>
                         </Link>
 
-                        <Link href="/wishlist" aria-label="찜 목록"><FavoriteBorderIcon /></Link>
+                        <Link href="/like" aria-label="찜 목록"><FavoriteBorderIcon /></Link>
 
                         {/* ✅ 판매하기 클릭 시 로그인 확인 */}
                         <a href="/sell" aria-label="판매하기" onClick={onClickSell}>
