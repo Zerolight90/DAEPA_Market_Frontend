@@ -17,6 +17,8 @@ import InputAdornment from '@mui/material/InputAdornment';
 import Stack from '@mui/material/Stack';
 import Button from '@mui/material/Button';
 
+import tokenStore from "@/app/store/TokenStore";
+
 const SIDE_SECTIONS = [
     {
         title: "거래 정보",
@@ -61,6 +63,7 @@ const SORTS = [
 ];
 
 export default function MyPage() {
+    const { token } = tokenStore();
 
     // 상위 카테고리
     const [upper, setUpper] = React.useState('');
@@ -98,9 +101,12 @@ export default function MyPage() {
     // DB에서 데이터를 가져오는 로직 (컴포넌트가 처음 로드될 때 실행)
     useEffect(() => {
         const fetchUserPicks = async () => {
+            const currentToken = token || localStorage.getItem('accessToken');
             try {
                 // 백엔드 API 주소
-                const response = await fetch('http://localhost:8080/api/userpicks');
+                const response = await fetch('http://localhost:8080/api/userpicks', {
+                    headers: { 'Authorization': `Bearer ${currentToken}` },
+                });
                 if (!response.ok) {
                     throw new Error('데이터를 불러오는 데 실패했습니다.');
 
@@ -115,7 +121,7 @@ export default function MyPage() {
         };
 
         fetchUserPicks();
-    }, []); // 빈 배열: 최초 1회만 실행
+    }, [token]); // 빈 배열: 최초 1회만 실행
 
     // 상위 카테고리 목록을 불러오는 useEffect
     useEffect(() => {
@@ -214,6 +220,7 @@ export default function MyPage() {
 
     // 추가 버튼 클릭 시 실행될 함수
     const handleAddPick = async () => {
+        const currentToken = token || localStorage.getItem('accessToken');
         // 1. 유효성 검사 (필수 값들이 모두 입력되었는지 확인)
         console.log(upper, selectedMiddle, selectedLow, minPrice, maxPrice)
 
@@ -240,6 +247,7 @@ export default function MyPage() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentToken}`
                 },
                 body: JSON.stringify(newPickData),
             });
@@ -360,11 +368,10 @@ export default function MyPage() {
                     </div>
 
                     <div className={styles.headerRight}>
-                        <Link href="/mypage/connect-cafe" className={styles.bannerCard}>
+                        <Link href="/payCharge" className={styles.bannerCard}>
                             <div className={styles.bannerIcon} aria-hidden />
                             <div className={styles.bannerText}>
-                                <strong>내 상품 2배로 노출시키기</strong>
-                                <span>카페에 상품 자동 등록하기</span>
+                                <strong>대파 페이 충전하기</strong>
                             </div>
                             <span className={styles.bannerArrow} aria-hidden>›</span>
                         </Link>
