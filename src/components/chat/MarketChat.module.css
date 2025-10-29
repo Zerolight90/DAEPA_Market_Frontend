@@ -310,6 +310,132 @@
 /* 드래그앤드롭 표시용 (필요시 확장) */
 .dropMask { position:relative; }
 
+/* ===== System notice (top banner) ===== */
+.systemNotice{
+    margin: 8px 0 12px;
+    padding: 10px 12px;
+    background: #f5f7ff;
+    border: 1px solid #e3e8ff;
+    border-radius: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: #2a3361;
+}
+.systemBadge{
+    font-size: 11px;
+    line-height: 1;
+    padding: 4px 6px;
+    border-radius: 6px;
+    background: #e3e8ff;
+    color: #2a3361;
+    font-weight: 700;
+    margin-top: 2px;
+}
+.systemText{
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.45;
+    word-break: keep-all;
+}
+
+/* ===== Role badge (판매자/구매자) ===== */
+.roleBadge{
+    display:inline-block;
+    padding: 2px 8px;
+    margin-left: 8px;
+    font-size: 11px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    vertical-align: middle;
+}
+.roleSeller{
+    background:#fff5f5;
+    border-color:#ffd7d7;
+    color:#b42318;
+}
+.roleBuyer{
+    background:#f0fdf4;
+    border-color:#bbf7d0;
+    color:#166534;
+}
+
+/* ===== Room header (상단: 물품 + 상대 + 내 역할) ===== */
+.roomHeader{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    padding:10px 12px;
+    border-bottom:1px solid #eee;
+    background:#fafafa;
+}
+.roomThumb{
+    width:44px;
+    height:44px;
+    border-radius:8px;
+    object-fit:cover;
+    flex:0 0 auto;
+}
+.roomMeta{ min-width:0; }
+.roomTitleRow{
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+.roomProduct{
+    font-weight:600;
+    font-size:14px;
+    color:#222;
+    max-width:420px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+}
+.roomSub{
+    font-size:12px;
+    color:#666;
+    margin-top:2px;
+}
+
+/* 리스트 영역에서 상품행 + 역할배지 정렬 */
+.productRow{
+    display:flex;
+    align-items:center;
+    gap:6px;
+}
+
+/* 메시지 스크롤 컨테이너에서 바깥 스크롤 전파 방지(보강) */
+.messages{
+    overscroll-behavior: contain;
+}
+
+/* 리스트 썸네일 + 미읽음 점 */
+.thumbWrap{
+    position: relative;
+    display:inline-block;
+}
+.unreadDot{
+    position: absolute;
+    right: -4px;
+    top: -4px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #e11d48; /* rose-600 */
+    color: #fff;
+    font-weight: 700;
+    font-size: 11px;
+    line-height: 18px;
+    text-align: center;
+    box-shadow: 0 0 0 2px #fff;
+}
+
+/* (이미 있던 역할/시스템/헤더 스타일 유지) */
+
+
+
+
 /* ===== 반응형 ===== */
 @media (max-width: 860px) {
     .wrap { width:100%; border-radius:0; padding:0; box-shadow:none; }

@@ -1,4 +1,3 @@
-// src/lib/chat/api.js
 import axios from "axios";
 
 export const http = axios.create({
@@ -58,7 +57,10 @@ export async function uploadChatImage(file) {
 }
 
 /** ✅ REST 폴백: 메시지 전송 */
-export async function sendMessageRest(roomId, { text, imageUrl = null, tempId = null, senderId }) {
+export async function sendMessageRest(
+    roomId,
+    { text, imageUrl = null, tempId = null, senderId }
+) {
     const rid = normRoomId(roomId);
     const { data } = await http.post(`/api/chats/${rid}/send`, {
         roomId: Number(rid),
