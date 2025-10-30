@@ -86,3 +86,12 @@ export async function markReadUpTo(roomId, readerId, upTo) {
     );
     return data;
 }
+
+// ✅ 상대의 마지막 읽음 위치 조회
+export async function fetchLastSeen(roomId, userId) {
+    const rid = normRoomId(roomId);
+    const { data } = await http.get(`/api/chats/${rid}/last-seen`, {
+        params: { userId: Number(userId) },
+    });
+    return data; // { lastSeenMessageId }
+}
