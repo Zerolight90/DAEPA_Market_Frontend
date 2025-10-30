@@ -1,4 +1,3 @@
-// src/lib/chat/api.js
 import axios from "axios";
 
 export const http = axios.create({
@@ -25,7 +24,7 @@ function normRoomId(id) {
 
 export async function fetchMe() {
     const { data } = await http.get("/api/auth/me");
-    return data;
+    return data; // { userId } | null
 }
 
 export async function fetchRooms(userId) {
@@ -47,7 +46,7 @@ export async function openChatRoom({ productId, sellerId }) {
     return data; // { roomId, created, identifier }
 }
 
-/** ✅ 이미지 업로드(멀티파트) → { url } — 인자로 "File"만 넘겨주세요! */
+/** 이미지 업로드(멀티파트) → { url } — 인자로 "File"만 넘겨주세요! */
 export async function uploadChatImage(file) {
     const form = new FormData();
     form.append("file", file);
@@ -57,7 +56,7 @@ export async function uploadChatImage(file) {
     return data; // { url, ... }
 }
 
-/** ✅ REST 폴백: 메시지 전송 */
+/** REST 폴백: 메시지 전송 */
 export async function sendMessageRest(roomId, { text, imageUrl = null, tempId = null, senderId }) {
     const rid = normRoomId(roomId);
     const { data } = await http.post(`/api/chats/${rid}/send`, {
@@ -70,7 +69,7 @@ export async function sendMessageRest(roomId, { text, imageUrl = null, tempId = 
     return data;
 }
 
-/** ✅ REST 폴백: 읽음 포인터 */
+/** REST 폴백: 읽음 포인터 */
 export async function markReadUpTo(roomId, readerId, upTo) {
     const rid = normRoomId(roomId);
     const { data } = await http.post(
