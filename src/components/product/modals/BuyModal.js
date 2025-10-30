@@ -3,48 +3,35 @@
 import { useState } from "react";
 import BaseModal from "@/components/ui/modal/BaseModal";
 
-import { useModal } from "@/components/ui/modal/ModalProvider"; // ✅ useModal 임포트
+import { useModal } from "@/components/ui/modal/ModalProvider"; // useModal 임포트
 import PayWithPointModal from "./PayWithPointModal";
 
-import { loadTossPayments } from '@tosspayments/payment-sdk';
-import { v4 as uuidv4 } from 'uuid';
+import { loadTossPayments } from '@tosspayments/payment-sdk'; // 결제에 사용할 토스페이먼츠 API 임포트
+import { v4 as uuidv4 } from 'uuid'; // orderId 에서 난수값 생성할 uuid 임포트
 
+// 안심 결제가 아닌 일반 결제 진행하는 모달
 export default function BuyModal({ id, close, itemId, title, price }) {
-    const [qty, setQty] = useState(1);
-    const total = (Number(price) || 0) * qty;
-    const modal = useModal(); // ✅ modal 훅
+    const [qty, setQty] = useState(1); // 물건 양 상태 설정
+    const total = (Number(price) || 0) * qty; // 가격과 양을 더해 총 가격 생성
+    const modal = useModal(); // modal 훅
 
     const purchase = async () => {
-        // TODO: 결제/주문 API
-        // console.log("BUY", { itemId, qty, total });
-        // alert("주문이 생성되었습니다. (모의)");
-        // close();
-
-        // const handlePay = async () => {
-        // ✅ 입력된 금액 유효성 검사
-        // const payAmount = parseInt(price.replace(/,/g, '')); // 콤마 제거 후 숫자로 변환
-        // if (isNaN(payAmount) || payAmount <= 0) {
-        //     alert('올바른 충전 금액을 입력해주세요.');
-        //     return;
-        // }
-        // if (payAmount > 1000000) { // ✅ 예시: 100만원 충전 제한
-        //     alert('최대 충전 가능 금액은 1,000,000원입니다.');
-        //     return;
-        // }
-
+        // .env 파일에서 토스 클라이언트 키 받아오기
         const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY);
 
+        // 결제/주문 토스페이먼츠 API 호출
         tossPayments.requestPayment('카드', {
-            // ✅ 상태에서 금액 가져오기
+            // 상태에서 금액 가져오기
             amount: total,
+            // 거래번호 필요한 값 붙여서 생성
             orderId: `product-${itemId}-${uuidv4()}`,
-            // ✅ 주문명 동적으로 생성
+            // 주문명 동적 생성
             orderName: title || '상품 구매',
             customerName: "id", // 실제 유저 이름으로 변경 필요
             successUrl: `http://localhost:8080/api/pay/success`,
             failUrl: `${window.location.origin}/pay/fail`,
         }).catch(error => {
-            // ✅ 결제창 호출 실패 또는 사용자 취소 시 에러 처리
+            // 결제창 호출 실패 또는 사용자 취소 시 에러 처리
             console.error("결제 요청 실패:", error);
             if (error.code !== 'USER_CANCEL') {
                 alert(`결제 요청 중 오류가 발생했습니다: ${error.message}`);
@@ -53,7 +40,7 @@ export default function BuyModal({ id, close, itemId, title, price }) {
 
     }
 
-    // --- 페이 결제 모달 열기 함수 ---
+    // 대파 페이 결제 모달 열기
     const openPayWithPointModal = () => {
         // 현재 모달을 닫고 새 모달 열기 (선택 사항)
         // close();
@@ -64,13 +51,13 @@ export default function BuyModal({ id, close, itemId, title, price }) {
                 close={newModalClose}
                 itemId={itemId}
                 title={title}
-                qty={qty} // ✅ 수량 전달
-                total={total} // ✅ 총액 전달
+                qty={qty} // 수량 전달
+                total={total} // 총액 전달
             />
         ));
     };
 
-    return (
+    return ( // 최초 모달 창 내용
         <BaseModal id={id} close={close} title="일반결제">
             <div style={{ marginBottom: 10, fontWeight: 700 }}>{title}</div>
             <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom: 16 }}>

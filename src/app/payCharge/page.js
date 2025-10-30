@@ -3,42 +3,43 @@
 import { useState } from 'react'; // ✅ useState 추가
 import { loadTossPayments } from '@tosspayments/payment-sdk';
 import { v4 as uuidv4 } from 'uuid';
-// ✅ Material UI 컴포넌트 추가
-import Box from '@mui/material/Box';
+import Box from '@mui/material/Box'; // Material UI (MUI) 컴포넌트 추가
 import TextField from '@mui/material/TextField';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import InputAdornment from '@mui/material/InputAdornment';
 
 export default function ChargeComponent() {
-  // ✅ 충전 금액을 관리할 상태 추가
+  // 충전 금액을 관리할 상태 추가
   const [amount, setAmount] = useState('');
 
   const handleCharge = async () => {
-    // ✅ 입력된 금액 유효성 검사
-    const chargeAmount = parseInt(amount.replace(/,/g, '')); // 콤마 제거 후 숫자로 변환
+    // 입력된 금액 유효성 검사 (콤마 제거 후 숫자로 변환)
+    const chargeAmount = parseInt(amount.replace(/,/g, ''));
     if (isNaN(chargeAmount) || chargeAmount <= 0) {
       alert('올바른 충전 금액을 입력해주세요.');
       return;
     }
-    if (chargeAmount > 1000000) { // ✅ 예시: 100만원 충전 제한
+    if (chargeAmount > 1000000) { // 충전 금액 상한 제한
       alert('최대 충전 가능 금액은 1,000,000원입니다.');
       return;
     }
 
+    // .env 파일에서 토스 클라이언트 키 받아오기
     const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY);
 
+    // 결제/주문 토스페이먼츠 API 호출
     tossPayments.requestPayment('카드', {
-      // ✅ 상태에서 금액 가져오기
+      // 상태에서 금액 가져오기
       amount: chargeAmount,
       orderId: `charge-${uuidv4()}`,
-      // ✅ 주문명 동적으로 생성
+      // 주문명 동적 생성
       orderName: `대파 페이 ${chargeAmount.toLocaleString()}원 충전`,
       customerName: '대파', // 실제 유저 이름으로 변경 필요
       successUrl: `http://localhost:8080/api/charge/success`,
       failUrl: `${window.location.origin}/pay/fail`,
     }).catch(error => {
-      // ✅ 결제창 호출 실패 또는 사용자 취소 시 에러 처리
+      // 결제창 호출 실패 또는 사용자 취소 시 에러 처리
       console.error("결제 요청 실패:", error);
       if (error.code !== 'USER_CANCEL') {
         alert(`결제 요청 중 오류가 발생했습니다: ${error.message}`);
@@ -46,7 +47,7 @@ export default function ChargeComponent() {
     });
   };
 
-  // ✅ 금액 입력 시 숫자 및 콤마 처리
+  // 금액 입력 시 숫자 및 콤마 처리
   const handleAmountChange = (event) => {
     const value = event.target.value.replace(/[^0-9]/g, ''); // 숫자 외 입력 제거
     if (value === '') {
@@ -60,7 +61,7 @@ export default function ChargeComponent() {
   };
 
   return (
-      // ✅ Material UI Box로 감싸고 스타일 추가
+      // Material UI Box로 감싸고 스타일 추가
       <Box
           sx={{
             margin: '100px auto', // 상하 100px, 좌우 자동 (가운데 정렬)
