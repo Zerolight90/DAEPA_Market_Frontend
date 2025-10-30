@@ -149,6 +149,18 @@ export default function Header() {
         }
     };
 
+    // 마이페이지 클릭 시 로그인 확인
+    const onClickMyPage = (e) => {
+        e.preventDefault(); // 기본 링크 이동 막기
+        if (!me) {
+            alert("마이페이지는 로그인 후 이용할 수 있어요. 로그인 페이지로 이동합니다.");
+            router.push(`/sing/login?next=${encodeURIComponent("/mypage")}&reason=need_login`);
+            return;
+        }
+        // 로그인 상태면 정상 이동
+        router.push("/mypage");
+    };
+
     // ✅ 판매하기 클릭 시 로그인 확인
     const onClickSell = (e) => {
         e.preventDefault(); // 기본 링크 이동 막기
@@ -226,7 +238,7 @@ export default function Header() {
                     </form>
 
                     <div className={styles.icon}>
-                        <Link href="/mypage" aria-label="내 정보"><AccountCircleIcon /></Link>
+                        <Link href="/mypage" aria-label="내 정보" onClick={onClickMyPage}><AccountCircleIcon /></Link>
 
                         {/* ✅ 채팅 배지: 미읽음 합계 표시(0이면 자동 숨김) */}
                         <Link href="/chat" aria-label="채팅" className={styles.chatBadgeWrap}>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Search, Eye, Reply, User, Mail, Calendar } from "lucide-react";
+import { ArrowLeft, Search, Eye, Reply, User, Calendar } from "lucide-react";
 import Link from "next/link";
 import styles from "../admin.module.css";
 
@@ -12,48 +12,20 @@ export default function ContactPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // 헤더와 데이터 행 정렬을 위한 공통 그리드 템플릿 (넓게, 반응형 비율)
+  const columnTemplate = "140px 180px 160px 1.2fr 2fr 140px 180px 140px";
+
   useEffect(() => {
-    // Mock data - 문의 데이터
-    const mockInquiries = [];
-    const categories = ["general", "technical", "business", "complaint", "suggestion", "other"];
-    const statuses = ["pending", "processing", "completed", "closed"];
-    const names = ["김철수", "이영희", "박민수", "정수진", "최지영", "한민호", "윤서연", "강동현", "임수빈", "송태준"];
-    
-    for (let i = 1; i <= 10; i++) {
-      const randomName = names[Math.floor(Math.random() * names.length)];
-      const randomCategory = categories[Math.floor(Math.random() * categories.length)];
-      const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
-      
-      mockInquiries.push({
-        id: i,
-        name: `${randomName}${i}`,
-        email: `user${i}@example.com`,
-        phone: `010-${Math.floor(Math.random() * 9000) + 1000}-${Math.floor(Math.random() * 9000) + 1000}`,
-        category: randomCategory,
-        subject: `문의 제목 ${i} - ${randomCategory === 'general' ? '일반 문의' : 
-                                         randomCategory === 'technical' ? '기술 문의' :
-                                         randomCategory === 'business' ? '사업 제휴' :
-                                         randomCategory === 'complaint' ? '불만 접수' :
-                                         randomCategory === 'suggestion' ? '개선 제안' : '기타'}`,
-        message: `안녕하세요. ${randomCategory === 'general' ? '일반적인 문의사항이 있어서 연락드립니다.' :
-                                randomCategory === 'technical' ? '기술적인 문제가 발생했습니다.' :
-                                randomCategory === 'business' ? '사업 제휴를 제안하고자 합니다.' :
-                                randomCategory === 'complaint' ? '불만사항을 접수하고자 합니다.' :
-                                randomCategory === 'suggestion' ? '개선사항을 제안하고자 합니다.' : '기타 문의사항이 있습니다.'} 자세한 내용은 연락주시면 설명드리겠습니다.`,
-        status: randomStatus,
-        createdAt: `2024-12-${Math.floor(Math.random() * 20) + 1}`,
-        priority: Math.floor(Math.random() * 3) + 1, // 1: 낮음, 2: 보통, 3: 높음
-        hasReply: Math.random() > 0.3
-      });
-    }
-    
-    setInquiries(mockInquiries);
+    fetch("http://localhost:8080/api/admin/contact")
+        .then(res => res.json())
+        .then(data => setInquiries(data))
+        .catch(err => console.error(err));
   }, []);
 
   const filteredInquiries = inquiries.filter(inquiry => {
     const matchesSearch = inquiry.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         inquiry.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         inquiry.subject.toLowerCase().includes(searchTerm.toLowerCase());
+                         inquiry.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (inquiry.message || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesFilter = filterStatus === "all" || inquiry.status === filterStatus;
     return matchesSearch && matchesFilter;
   });
@@ -82,19 +54,15 @@ export default function ContactPage() {
   const getCategoryText = (category) => {
     switch (category) {
       case "general":
-        return "일반 문의";
+        return "거래/결제 문의";
       case "technical":
-        return "기술 문의";
-      case "business":
-        return "사업 제휴";
+        return "계정/로그인 문의";
       case "complaint":
-        return "불만 접수";
-      case "suggestion":
-        return "개선 제안";
+        return "신고/사기 문의";
       case "other":
-        return "기타";
+        return "서비스/기술 문의";
       default:
-        return "일반 문의";
+        return "기타 문의";
     }
   };
 
@@ -142,7 +110,7 @@ export default function ContactPage() {
           <Search size={20} className={styles.searchIcon} />
           <input
             type="text"
-            placeholder="이름, 이메일 또는 제목으로 검색..."
+            placeholder="이름, 제목 또는 내용으로 검색..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className={styles.searchInput}
@@ -164,12 +132,12 @@ export default function ContactPage() {
       {/* Inquiries Table */}
       <div className={styles.tableContainer}>
         <div className={styles.tableHeader}>
-          <div className={styles.tableRow}>
+          <div className={styles.tableRow} style={{ display: "grid", gridTemplateColumns: columnTemplate }}>
             <div className={styles.tableCell}>문의번호</div>
             <div className={styles.tableCell}>이름</div>
-            <div className={styles.tableCell}>이메일</div>
-            <div className={styles.tableCell}>카테고리</div>
+            <div className={styles.tableCell}>문의종류</div>
             <div className={styles.tableCell}>제목</div>
+            <div className={styles.tableCell}>내용</div>
             <div className={styles.tableCell}>상태</div>
             <div className={styles.tableCell}>등록일</div>
             <div className={styles.tableCell}>관리</div>
@@ -177,7 +145,7 @@ export default function ContactPage() {
         </div>
         <div className={styles.tableBody}>
           {currentInquiries.map((inquiry) => (
-            <div key={inquiry.id} className={styles.tableRow}>
+            <div key={inquiry.id} className={styles.tableRow} style={{ display: "grid", gridTemplateColumns: columnTemplate }}>
               <div className={styles.tableCell}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                   <div style={{
@@ -196,12 +164,6 @@ export default function ContactPage() {
                 </div>
               </div>
               <div className={styles.tableCell}>
-                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <Mail size={16} color="#6b7280" />
-                  {inquiry.email}
-                </div>
-              </div>
-              <div className={styles.tableCell}>
                 <span style={{
                   padding: "0.25rem 0.5rem",
                   borderRadius: "0.25rem",
@@ -213,14 +175,13 @@ export default function ContactPage() {
                 </span>
               </div>
               <div className={styles.tableCell}>
-                <div style={{ 
-                  maxWidth: "200px", 
-                  overflow: "hidden", 
-                  textOverflow: "ellipsis", 
-                  whiteSpace: "nowrap",
-                  fontWeight: "500"
-                }}>
-                  {inquiry.subject}
+                <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: "500" }}>
+                  {inquiry.title}
+                </div>
+              </div>
+              <div className={styles.tableCell}>
+                <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#64748b" }}>
+                  {inquiry.content}
                 </div>
               </div>
               <div className={styles.tableCell}>
@@ -229,7 +190,7 @@ export default function ContactPage() {
               <div className={styles.tableCell}>
                 <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem", color: "#64748b" }}>
                   <Calendar size={14} />
-                  {inquiry.createdAt}
+                  {inquiry.date}
                 </div>
               </div>
               <div className={styles.tableCell}>
