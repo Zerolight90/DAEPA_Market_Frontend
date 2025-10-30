@@ -15,5 +15,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 WORKDIR /app
 COPY --from=builder /app ./
 EXPOSE 3000
+
 # Next.js SSR (next start)
 CMD ["npm", "run", "start"]
