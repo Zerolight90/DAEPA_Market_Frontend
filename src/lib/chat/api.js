@@ -50,10 +50,14 @@ export async function openChatRoom({ productId, sellerId }) {
 export async function uploadChatImage(file) {
     const form = new FormData();
     form.append("file", file);
-    const { data } = await http.post("/api/chats/upload", form, {
-        headers: { "Content-Type": "multipart/form-data" },
-    });
-    return data; // { url, ... }
+    // const { data } = await http.post("/api/chats/upload", form);
+    // return data; // { url, ... }
+    try {
+        const { data } = await http.post("/api/chats/upload", form);
+        return data; // { url, ... }
+    } catch (e) {
+        throw e;
+    }
 }
 
 /** REST 폴백: 메시지 전송 */

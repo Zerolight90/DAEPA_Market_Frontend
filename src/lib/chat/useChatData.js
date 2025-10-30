@@ -247,7 +247,9 @@ export function useChatData() {
                 await sendMessageRest(activeId, { text: trimmed, imageUrl, tempId, senderId: me.id });
             }
         } catch (e) {
-            console.error("send failed", e);
+            const data = e?.response?.data;
+            console.error("send failed", data || e);
+            alert(`업로드 실패: ${data?.error ?? e.message}\n${data?.message ?? ""}`);
         }
     }
 
