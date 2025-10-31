@@ -13,15 +13,18 @@ export default function Home() {
     useEffect(() => {
         (async () => {
             try {
-                // ✅ DB에서 상위 카테고리 목록 가져오기
-                const data = await apiFetch(Endpoints.upperCategories);
-                // data는 [{ upperIdx, upperCt }, ...] 형태로 반환됨
+                // ✅ 상품 개수 포함된 상위 카테고리 목록 가져오기
+                const data = await apiFetch(Endpoints.upperCategoriesWithCount);
+                console.log("카테고리 with count:", data);
+
+                // ✅ 백엔드 DTO 기반으로 매핑
                 const mapped = data.map((u, idx) => ({
                     id: u.upperIdx,
                     name: u.upperCt,
-                    icon: pickIcon(idx),   // 아래 함수로 아이콘 매칭
-                    count: "-",            // (추후 상품 개수 API로 대체 가능)
+                    icon: pickIcon(idx),
+                    count: u.productCount ?? 0, // ← 여기서 상품 개수
                 }));
+
                 setCategories(mapped);
             } catch (e) {
                 console.error("카테고리 불러오기 실패:", e);
@@ -34,6 +37,7 @@ export default function Home() {
         const icons = ["📱", "👕", "🏠", "📚", "⚽", "🚗", "🐕", "📦"];
         return icons[i % icons.length];
     };
+
 
     return (
         <>
@@ -54,12 +58,15 @@ export default function Home() {
                                     <div className={styles.categoryIcon}>{c.icon}</div>
                                     <h3 className={styles.categoryName}>{c.name}</h3>
                                     <p className={styles.categoryCount}>
-                                        {c.count === "-" ? "상품 준비중" : `${c.count}개`}
+                                        {typeof c.count === "number" && c.count > 0
+                                            ? `${c.count}개`
+                                            : "상품 준비중"}
                                     </p>
                                 </CardContent>
                             </Card>
                         </Link>
                     ))}
+
                 </div>
             </div>
         </>
