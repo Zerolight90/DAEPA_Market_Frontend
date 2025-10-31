@@ -44,11 +44,9 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
                 credentials: "include",
             });
 
-            // 401은 별도 처리 (로그인 만료/미로그인)
             if (res.status === 401) {
-                const msg = await res.text().catch(() => "");
-                alert(`세션이 만료되었거나 로그인 필요합니다.\n${msg || ""}`);
-                return router.push(`/sing/login?next=${encodeURIComponent(hrefBase)}&reason=need_login`);
+                alert("로그인이 필요합니다.");
+                return; // 리다이렉트 X
             }
 
             // 200이 아니면 서버 에러 메시지 보여주고 종료

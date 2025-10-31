@@ -19,6 +19,7 @@ export default function Page() {
         pdStatus: 0,
         dDeal: "DELIVERY",                                 // ✅ 기본값 확실히 세팅
         files: [],
+        previews: [],
     });
 
     const fileRef = useRef(null);
@@ -28,7 +29,33 @@ export default function Page() {
     const onFiles = (e) => {
         const list = Array.from(e.target.files || []);
         if (list.length > 10) { alert("이미지는 최대 10장까지 업로드 가능합니다."); return; }
-        setForm((p) => ({ ...p, files: list }));
+        // ✅ 기존 것 + 새로 선택한 것 합치고 10장으로 자르기
+        const merged = [...form.files, ...list].slice(0, 10);
+
+        // ✅ 미리보기 URL 만들기
+        const previewUrls = merged.map((file) => ({
+            name: file.name,
+            url: URL.createObjectURL(file),
+        }));
+
+        setForm((p) => ({
+            ...p,
+            files: merged,
+            previews: previewUrls,
+        }));
+    };
+
+    // ✅ 썸네일 X 눌러서 지우기
+    const removeImage = (idx) => {
+        const nextFiles = form.files.filter((_, i) => i !== idx);
+        const nextPreviews = form.previews.filter((_, i) => i !== idx);
+        setForm((p) => ({
+            ...p,
+            files: nextFiles,
+            previews: nextPreviews,
+        }));
+        // input value도 비워줘야 같은 파일 다시 넣을 때 change 이벤트가 뜸
+        if (fileRef.current) fileRef.current.value = "";
     };
 
     const validate = () => {
@@ -107,11 +134,41 @@ export default function Page() {
                         <div className={styles.row}>
                             <div className={styles.labelCol}>상품 이미지</div>
                             <div className={styles.fieldCol}>
-                                <div className={styles.uploader} onClick={() => fileRef.current?.click()} title="이미지 선택">
-                                    <div className={styles.camIcon} />
-                                    <div className={styles.counter}>{(form.files || []).length}/10</div>
+                                <div className={styles.imageArea}>
+                                    <div
+                                        className={styles.uploader}
+                                        onClick={() => fileRef.current?.click()}
+                                        title="이미지 선택"
+                                    >
+                                        <div className={styles.camIcon} />
+                                        <div className={styles.counter}>{(form.files || []).length}/10</div>
+                                    </div>
+
+                                    {/* ✅ 여기서 썸네일 보여주기 */}
+                                    <div className={styles.previewList}>
+                                        {form.previews?.map((p, idx) => (
+                                            <div key={idx} className={styles.previewItem}>
+                                                <img src={p.url} alt={p.name} className={styles.previewImg} />
+                                                <button
+                                                    type="button"
+                                                    className={styles.previewRemove}
+                                                    onClick={() => removeImage(idx)}
+                                                >
+                                                    ×
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                                <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onFiles} />
+
+                                <input
+                                    ref={fileRef}
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    hidden
+                                    onChange={onFiles}
+                                />
                             </div>
                         </div>
                     </section>
