@@ -121,7 +121,7 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
             try { clientRef.current?.deactivate(); } catch {}
             clientRef.current = null;
             setConnected(false);
-            // ❌ setMessages([]) 제거 — 불필요한 재렌더 루프 방지
+
         };
     }, [url, me?.id, subscribeBadge, subscribeRoom]);
 
