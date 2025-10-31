@@ -12,15 +12,18 @@ function join(base, path) {
 }
 
 export const Endpoints = {
+    // ✅ 상위 카테고리 + 상품 개수 포함된 버전
+    upperCategoriesWithCount: `${API_PREFIX}/category/uppers-with-count`, // ← 이 줄 추가!
+
     // 카테고리/상품등록
     upperCategories: `${API_PREFIX}/category/uppers`,
     middleCategories: (upperId) => `${API_PREFIX}/category/uppers/${upperId}/middles`,
     lowCategories: (middleId)   => `${API_PREFIX}/category/middles/${middleId}/lows`,
     createProduct: `${API_PREFIX}/products/create-multipart`,
 
-    // ✅ 찜
+    // ✅ 찜 관련
     favoriteStatus: (pid) => `${API_PREFIX}/favorites/${pid}`,          // GET
-    favoriteToggle: (pid) => `${API_PREFIX}/favorites/${pid}/toggle`,   // ✅ POST (백엔드와 일치)
+    favoriteToggle: (pid) => `${API_PREFIX}/favorites/${pid}/toggle`,   // POST
 };
 
 // 공통 fetch 헬퍼 (쿠키 포함)
