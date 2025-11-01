@@ -14,7 +14,7 @@ ENV NODE_ENV=production \
     NEXT_SHARP_SKIP_SMART_SUBINSTALL=1
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN npx next build --turbopack --no-lint
 
 # ---- 3) runner ----
 FROM node:20-alpine AS runner
