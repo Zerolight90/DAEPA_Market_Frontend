@@ -1,6 +1,21 @@
-// /app/chat/page.js  (Server Component 그대로 둬도 OK)
-import MarketChat from "@/components/chat/MarketChat";
+'use client';
+
+import { Suspense } from 'react';
+import dynamic from 'next/dynamic';
+
+// 채팅은 CSR이 자연스럽고, useSearchParams 훅도 있으니 SSR 끔
+const MarketChat = dynamic(() => import('@/components/chat/MarketChat'), {
+    ssr: false,
+});
+
+// 빌드시 SSG 시도를 막고, 항상 요청 시 렌더
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default function Page() {
-    return <MarketChat />;  // MarketChat 자체가 "use client"라서 자동으로 클라이언트 경계가 잡혀요.
+    return (
+        <Suspense fallback={null}>
+            <MarketChat />
+        </Suspense>
+    );
 }
