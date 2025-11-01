@@ -1,0 +1,56 @@
+name: Dev CI/CD
+
+on:
+  push:
+    branches: ["dev"]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write    # GHCR 푸시 권한
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # 빌드가 깨지면 여기서 실패 → 배포 중단 (안전장치)
+      - name: Install & Build (sanity check)
+        run: |
+          npm ci || npm install
+          NEXT_PUBLIC_API_BASE="http://example.com" npm run build
+
+      - name: Login GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build & Push Image (dev-latest)
+        run: |
+          IMAGE="ghcr.io/zerolight90/daepa_market_frontend:dev-latest"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_KEY }}
+
+      - name: Known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p "${{ secrets.EC2_PORT || 22 }}" "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Remote deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          ssh -p "${{ secrets.EC2_PORT || 22 }}" ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} \
+          "cd ${{ secrets.EC2_APP_DIR }} && GITHUB_TOKEN=$GITHUB_TOKEN GITHUB_ACTOR=$GITHUB_ACTOR ./deploy.sh"
