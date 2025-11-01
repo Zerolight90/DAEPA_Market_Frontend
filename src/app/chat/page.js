@@ -1,14 +1,8 @@
-'use client';
-
+// 서버 컴포넌트 (여기엔 'use client' 쓰지 마세요)
 import { Suspense } from 'react';
-import dynamic from 'next/dynamic';
+import MarketChat from '@/components/chat/MarketChat';
 
-// 채팅은 CSR이 자연스럽고, useSearchParams 훅도 있으니 SSR 끔
-const MarketChat = dynamic(() => import('@/components/chat/MarketChat'), {
-    ssr: false,
-});
-
-// 빌드시 SSG 시도를 막고, 항상 요청 시 렌더
+// 정적 프리렌더 방지 + 요청 시 렌더
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
