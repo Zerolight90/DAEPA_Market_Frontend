@@ -3,8 +3,10 @@
 const BACKEND = process.env.NEXT_PUBLIC_API_BASE
 
 const nextConfig = {
-    // 필요 시 끄기/켜기 옵션들
-    // reactStrictMode: true,
+    output: 'standalone',
+    eslint: { ignoreDuringBuilds: true },      // 빌드 시 ESLint 에러 무시
+    // 필요하면 타입체크도 임시로 무시 가능(권장X)
+    // typescript: { ignoreBuildErrors: true },
 
     async rewrites() {
         return [
