@@ -1,31 +1,31 @@
+version: "3.9"
+
 services:
   frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/zerolight90/daepa_market_frontend:dev-latest
     env_file:
       - .env
     container_name: daepa-frontend
-
     expose:
       - "3000"
-    environment:
-      # 필요 시 런타임 ENV를 여기서 설정
-      NODE_ENV: "production"
     restart: unless-stopped
     networks:
       - daepa_net
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   nginx:
     image: nginx:stable
     container_name: daepa-nginx
     depends_on:
-      - frontend
+      frontend:
+        condition: service_healthy
     ports:
       - "80:80"
-
     volumes:
-
       - ./conf/default.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
     networks:
@@ -34,4 +34,3 @@ services:
 networks:
   daepa_net:
     driver: bridge
-
