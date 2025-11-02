@@ -317,7 +317,7 @@ function JoinFormContent() {
                             type="email"
                             placeholder="example@gmail.com"
                             required
-                            pattern={String.raw`^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}}
+                            pattern={String.raw`^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$`}
                             value={vo.u_id}
                             onChange={onChangeVO}
                             onBlur={() => handleBlur("u_id")}
@@ -403,7 +403,7 @@ function JoinFormContent() {
                         type="password"
                         placeholder="영문/숫자/특수문자 8~20자"
                         required
-                        pattern={String.raw`^[\x21-\x7E]{8,20}}
+                        pattern={String.raw`^[\x21-\x7E]{8,20}$`}
                         value={vo.u_pw}
                         onChange={onChangeVO}
                         autoComplete="new-password"
@@ -509,7 +509,7 @@ function JoinFormContent() {
                         id="u_birth"
                         name="u_birth"
                         type="text"
-                        pattern={String.raw`^(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])}
+                        pattern={String.raw`^(19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])$`}
                         placeholder="생년월일 8자리 (예: 20050501)"
                         required
                         value={vo.u_birth}
@@ -529,7 +529,7 @@ function JoinFormContent() {
                         type="tel"
                         placeholder="'-' 없이 숫자만 입력"
                         required
-                        pattern={String.raw`^01[016789]-?\d{3,4}-?\d{4}}
+                        pattern={String.raw`^01[016789]-?\d{3,4}-?\d{4}$`}
                         value={vo.u_phone}
                         onChange={onChangeVO}
                         onBlur={() => handleBlur("u_phone")}
