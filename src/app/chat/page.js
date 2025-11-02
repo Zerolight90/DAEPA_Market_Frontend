@@ -1,6 +1,17 @@
-// /app/chat/page.js  (Server Component 그대로 둬도 OK)
+// /app/chat/page.js
+import { Suspense } from 'react';
 import MarketChat from "@/components/chat/MarketChat";
+import { CircularProgress, Box, Typography } from "@mui/material";
 
 export default function Page() {
-    return <MarketChat />;  // MarketChat 자체가 "use client"라서 자동으로 클라이언트 경계가 잡혀요.
+    return (
+        <Suspense fallback={
+            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
+                <CircularProgress />
+                <Typography sx={{ml: 2}}>채팅을 불러오는 중...</Typography>
+            </Box>
+        }>
+            <MarketChat />
+        </Suspense>
+    );
 }
