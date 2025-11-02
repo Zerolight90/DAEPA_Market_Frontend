@@ -1,85 +1,90 @@
-:root{
-    --brand: #008c6e;          /* 대파 그린 */
-    --brand-dark:#007459;
-    --text:#222;
-    --sub:#777;
-    --line:#eaeaea;
-    --bg:#fff;                 /* PC는 흰 배경 */
-    --container: 1200px;
+/* src/app/store/[id]/page.module.css */
+
+.page {
+    background: #fafafa;
+    min-height: 100vh;
 }
 
-.page{ background: var(--bg); min-height:100vh; }
-.container{ width: var(--container); margin: 0 auto; }
-
-/* breadcrumb */
-.bcWrap{ padding: 18px 0 6px; color:#999; font-size:13px; }
-.bc{ color:#666; text-decoration:none; }
-.bc:hover{ text-decoration:underline; }
-.sep{ margin:0 6px; color:#c7c7c7; }
-
-/* two-column */
-.container:nth-of-type(2){
-    display:grid;
-    grid-template-columns: 720px 440px;  /* 중고나라 비율 근접 */
-    gap: 40px;
-    padding: 24px 0 60px;
-}
-
-/* 좌측 */
-.leftCol{}
-
-/* 우측 패널 */
-.rightCol{
-    position: sticky;
-    top: 80px;
-    align-self: start;
-    border:1px solid var(--line);
-    border-radius: 10px;
-    padding: 18px;
-    background:#fff;
-}
-
-.title{ font-size:22px; font-weight:700; line-height:1.4; margin:0 0 8px; }
-.price{ font-size:32px; font-weight:800; margin-bottom:12px; color:var(--text); }
-
-/* 정보 테이블 */
-.table{ border-top:1px solid var(--line); border-bottom:1px solid var(--line); margin: 16px 0; }
-.row{
-    display:grid; grid-template-columns: 110px 1fr;
-    padding:10px 0; border-bottom:1px solid #f4f4f4; font-size:14px; color:#444;
-}
-.row:last-child{ border-bottom:none; }
-.row dt{ color:#888; }
-
-/* 좌측 섹션 */
-.section { margin-top: 32px; }
-.h3 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
-.desc p{ font-size:15px; color:#444; line-height:1.7; margin:8px 0; }
-
-.kvMini {
-    list-style: none;
-    margin: 12px 0 20px;
-    padding: 0;
+/* 공통 컨테이너: 위에서는 브레드크럼, 아래에서는 본문 */
+.container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
     display: grid;
-    gap: 8px;
+    grid-template-columns: minmax(0, 1.1fr) 360px;
+    gap: 28px;
+    align-items: flex-start;
 }
-.kvMini li {
+
+/* 브레드크럼 전용 래퍼 */
+.bcWrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 16px 20px 0;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border: 1px solid #eee;
-    border-radius: 10px;
-    padding: 10px 12px;
-    background: #fff;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #999;
 }
-.kvMini li span { color: #666; font-size: 14px; }
-.kvMini li strong { color: #222; font-weight: 700; }
 
+.bc {
+    color: #777;
+    text-decoration: none;
+}
 
+.sep {
+    color: #ccc;
+}
 
+/* 좌측(이미지/상세/연관) */
+.leftCol {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
 
-/* 반응형 */
-@media (max-width: 1024px){
-    .container:nth-of-type(2){ grid-template-columns:1fr; gap:20px; padding:16px 0 40px; }
-    .rightCol{ position: static; }
+/* 우측(제목/가격/버튼/가게/다른상품) */
+.rightCol {
+    position: sticky;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 오른쪽 첫 번째 카드: 제목+가격+버튼 */
+.infoCard {
+    background: #fff;
+    border: 1px solid #ececec;
+    border-radius: 14px;
+    padding: 18px 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.price {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-top: 4px;
+}
+
+/* 공통 카드 (카테고리/거래 정보, 판매자 다른 상품 등) */
+.section {
+    background: #fff;
+    border: 1px solid #ececec;
+    border-radius: 14px;
+    padding: 16px 16px 12px;
+}
+
+.h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 10px;
 }
