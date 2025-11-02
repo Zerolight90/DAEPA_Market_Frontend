@@ -1,5 +1,5 @@
 "use client";
-import { openOrGetRoom } from "@/lib/chat/api";
+import { openChatRoom  } from "@/lib/chat/api";
 import { useRouter } from "next/navigation";
 
 export default function ProductDetail({ product }) {
@@ -13,7 +13,7 @@ export default function ProductDetail({ product }) {
 
     const handleChatClick = async () => {
         try {
-            const { roomId } = await openOrGetRoom({
+            const { roomId } = await openChatRoom ({
                 buyerId: me.id,
                 sellerId,
                 productId,

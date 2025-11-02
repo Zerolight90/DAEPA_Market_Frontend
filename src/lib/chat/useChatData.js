@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
     fetchRooms, fetchMe, fetchMessages,
-    sendMessageRest, uploadChatImage, markReadUpTo
+    sendMessageRest, uploadChatImage, markReadUpTo,
+    fetchLastSeen, // ✅ 추가: 상대의 마지막 읽음 위치 조회
 } from "@/lib/chat/api";
 import {
     createSystemIntro, mapMessageToUi, resolveRole, withDateDividers
@@ -29,6 +30,10 @@ export function useChatData() {
 
     // 내가 마지막으로 서버에 보낸 읽음 위치(중복 방지)
     const lastReadSentByRoomRef = useRef({}); // { [roomId]: lastSeenId }
+
+    // ✅ 상대방이 읽은 최댓값(=내 메시지에 대한 "읽음" 표시의 플로어)을 방 단위로 기억
+    // 이 값 이하의 내 메시지는 언제 로드해도 read: true로 보정한다.
+    const readFloorByRoomRef = useRef({}); // { [roomId]: lastSeenId }
 
     // 상대 표시 안정화
     const [otherNameState, setOtherNameState] = useState("상대");
@@ -91,6 +96,21 @@ export function useChatData() {
         baseUrl: process.env.NEXT_PUBLIC_API_BASE,
     });
 
+    // ✅ 유틸: 이 방에서 "상대 userId" 추정 (counterpartyId 우선, 없으면 역할로 계산)
+    const resolvePeerId = (room, myId, role) => {
+        if (!room) return null;
+        if (room.counterpartyId) return Number(room.counterpartyId);
+        // 백엔드 DTO에 따라 buyerId/sellerId가 있을 수 있음
+        const buyerId = room.buyerId != null ? Number(room.buyerId) : null;
+        const sellerId = room.sellerId != null ? Number(room.sellerId) : null;
+        if (role === "판매자") return buyerId;
+        if (role === "구매자") return sellerId;
+        // 마지막 시도: 내가 seller면 상대는 buyer, 반대도 동일 추정
+        if (sellerId && Number(myId) === sellerId) return buyerId;
+        if (buyerId && Number(myId) === buyerId) return sellerId;
+        return null;
+    };
+
     // 초기 메시지 로드
     useEffect(() => {
         if (!activeId || !me?.id) return;
@@ -98,10 +118,35 @@ export function useChatData() {
         (async () => {
             try {
                 const size = 30;
+
+                // 1) 서버에서 메시지 조회
                 const list = await fetchMessages(activeId, size);
+
+                // 2) 먼저 "상대의 마지막 읽음 위치"를 조회하여 방 플로어를 세팅
+                let peerLastSeen = 0;
+                try {
+                    const peerId = resolvePeerId(activeChat, me?.id, myRole);
+                    if (peerId) {
+                        const res = await fetchLastSeen(activeId, peerId);
+                        peerLastSeen = Number(res?.lastSeenMessageId || 0);
+                        const prevFloor = readFloorByRoomRef.current[activeId] || 0;
+                        readFloorByRoomRef.current[activeId] = Math.max(prevFloor, peerLastSeen);
+                    }
+                } catch { /* 조회 실패 시 0 유지 */ }
+
+                // 3) 방 플로어를 반영하여 UI 모델 생성
+                const floor = readFloorByRoomRef.current[activeId] || 0;
                 const mapped = (list || [])
                     .map((m) => mapMessageToUi(m, me, otherName, otherAvatar))
-                    .filter(x => x.type !== "SYSTEM");
+                    .filter(x => x.type !== "SYSTEM")
+                    .map((x) => {
+                        // 내 메시지이며, id <= floor 면 읽음 고정
+                        const mid = Number(x.id || x.messageId);
+                        return (x.fromMe && Number.isFinite(mid) && mid <= floor)
+                            ? { ...x, read: true }
+                            : x;
+                    });
+
                 setMessagesByRoom(prev => ({ ...prev, [activeId]: [createSystemIntro(activeId), ...mapped] }));
                 setHasMoreBeforeByRoom(prev => ({ ...prev, [activeId]: (list?.length || 0) === size }));
             } catch {
@@ -109,7 +154,8 @@ export function useChatData() {
                 setHasMoreBeforeByRoom(prev => ({ ...prev, [activeId]: false }));
             }
         })();
-    }, [activeId, me?.id]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeId, me?.id]); // (activeChat/myRole은 내부에서만 사용)
 
     // ✅ 배지 실시간 반영
     useEffect(() => {
@@ -128,7 +174,7 @@ export function useChatData() {
         });
     }, [setOnBadge]);
 
-    // ✅ WS 수신 반영: READ 이벤트는 버블로 그리지 않고 "내 메시지" 읽음 표시 갱신
+    // ✅ WS 수신 반영: READ 이벤트는 버블로 그리지 않고 "내 메시지" 읽음 표시 갱신 + 플로어 올림
     useEffect(() => {
         if (!Array.isArray(wsMessages) || activeId == null || !me?.id) return;
         const delta = wsMessages.slice(wsCursorRef.current);
@@ -145,12 +191,18 @@ export function useChatData() {
                     const readerId = Number(m.readerId);
                     const upTo = Number(m.lastSeenMessageId || 0);
                     if (Number.isFinite(upTo) && readerId && readerId !== Number(me.id)) {
+                        // 1) 방 읽음 플로어 끌어올림
+                        const prevFloor = readFloorByRoomRef.current[activeId] || 0;
+                        const newFloor = Math.max(prevFloor, upTo);
+                        readFloorByRoomRef.current[activeId] = newFloor;
+
+                        // 2) 현재 리스트에서 내 메시지 중 newFloor 이하를 모두 읽음으로 고정
                         for (let i = cur.length - 1; i >= 0; i--) {
                             const x = cur[i];
                             if (!x || x.__divider || x.type === "SYSTEM") continue;
                             if (!x.fromMe) continue;
                             const mid = Number(x.id || x.messageId);
-                            if (Number.isFinite(mid) && mid <= upTo && !x.read) {
+                            if (Number.isFinite(mid) && mid <= newFloor && !x.read) {
                                 cur[i] = { ...x, read: true };
                             }
                         }
@@ -170,7 +222,14 @@ export function useChatData() {
                 // 중복 방지
                 if (typeof m.messageId === "number" && cur.some(x => x.id === m.messageId)) continue;
 
-                cur.push(next);
+                // ✅ push 전에 방 플로어 반영(이미 읽은 구간이면 내 메시지 read 고정)
+                const floor = readFloorByRoomRef.current[activeId] || 0;
+                const mid = Number(next.id || next.messageId);
+                const finalNext = (next.fromMe && Number.isFinite(mid) && mid <= floor)
+                    ? { ...next, read: true }
+                    : next;
+
+                cur.push(finalNext);
             }
             return { ...prev, [activeId]: cur };
         });
@@ -199,7 +258,6 @@ export function useChatData() {
         // WS가 연결돼 있으면 WS 읽음 전송 + 낙관적 배지 0
         if (connected && typeof sendRead === "function") {
             try { sendRead(lastId); } catch {}
-            // 낙관적으로 리스트 배지를 0으로
             setRoomList((prev) =>
                 (prev || []).map((r) =>
                     String(r.roomId) === String(activeId) ? { ...r, unread: 0 } : r
@@ -209,6 +267,8 @@ export function useChatData() {
             // REST 폴백
             markReadUpTo(activeId, me.id, lastId)
                 .then(() => {
+                    // ✅ 폴백 성공 시에도 방 플로어 유지(상대가 읽은 값은 아님. 내 것이 아님!)
+                    // 여기서는 배지 초기화 + 화면 안전 보정만 수행
                     setRoomList((prev) =>
                         (prev || []).map((r) =>
                             String(r.roomId) === String(activeId) ? { ...r, unread: 0 } : r
@@ -270,9 +330,18 @@ export function useChatData() {
         try {
             const size = 30;
             const list = await fetchMessages(roomId, size, before);
+
+            // ✅ 방 플로어 반영
+            const floor = readFloorByRoomRef.current[roomId] || 0;
             const mapped = (list || [])
                 .map((m) => mapMessageToUi(m, me, otherNameRef.current, otherAvatarRef.current))
-                .filter(x => x.type !== "SYSTEM");
+                .filter(x => x.type !== "SYSTEM")
+                .map((x) => {
+                    const mid = Number(x.id || x.messageId);
+                    return (x.fromMe && Number.isFinite(mid) && mid <= floor)
+                        ? { ...x, read: true }
+                        : x;
+                });
 
             setMessagesByRoom(prev => {
                 const curNow = prev[roomId] || [];

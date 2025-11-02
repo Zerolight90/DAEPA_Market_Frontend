@@ -50,10 +50,14 @@ export async function openChatRoom({ productId, sellerId }) {
 export async function uploadChatImage(file) {
     const form = new FormData();
     form.append("file", file);
-    const { data } = await http.post("/api/chats/upload", form, {
-        headers: { "Content-Type": "multipart/form-data" },
-    });
-    return data; // { url, ... }
+    // const { data } = await http.post("/api/chats/upload", form);
+    // return data; // { url, ... }
+    try {
+        const { data } = await http.post("/api/chats/upload", form);
+        return data; // { url, ... }
+    } catch (e) {
+        throw e;
+    }
 }
 
 /** REST 폴백: 메시지 전송 */
@@ -81,4 +85,13 @@ export async function markReadUpTo(roomId, readerId, upTo) {
         }
     );
     return data;
+}
+
+// ✅ 상대의 마지막 읽음 위치 조회
+export async function fetchLastSeen(roomId, userId) {
+    const rid = normRoomId(roomId);
+    const { data } = await http.get(`/api/chats/${rid}/last-seen`, {
+        params: { userId: Number(userId) },
+    });
+    return data; // { lastSeenMessageId }
 }

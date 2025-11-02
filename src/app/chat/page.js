@@ -1,16 +1,14 @@
-// /app/chat/page.js
+// 서버 컴포넌트 (여기엔 'use client' 쓰지 마세요)
 import { Suspense } from 'react';
-import MarketChat from "@/components/chat/MarketChat";
-import { CircularProgress, Box, Typography } from "@mui/material";
+import MarketChat from '@/components/chat/MarketChat';
+
+// 정적 프리렌더 방지 + 요청 시 렌더
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default function Page() {
     return (
-        <Suspense fallback={
-            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
-                <CircularProgress />
-                <Typography sx={{ml: 2}}>채팅을 불러오는 중...</Typography>
-            </Box>
-        }>
+        <Suspense fallback={null}>
             <MarketChat />
         </Suspense>
     );

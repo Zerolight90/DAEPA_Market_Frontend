@@ -97,20 +97,65 @@ export function mapMessageToUi(m, me, otherName, otherAvatar) {
 }
 
 // 날짜 디바이더 삽입
+// 안전한 Date 변환 유틸
+function asDateOrNull(v) {
+    if (!v) return null;
+    if (v instanceof Date && !isNaN(v.getTime())) return v;
+    try {
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? null : d;
+    } catch (e) {
+        return null;
+    }
+}
+
+// 날짜 구분선(디바이더) 삽입
 export function withDateDividers(list) {
+    if (!Array.isArray(list)) return [];
+
     return list.reduce((acc, cur, idx, all) => {
-        if (cur.type === "SYSTEM") { acc.push(cur); return acc; }
+        if (!cur) return acc;
+
+        // 시스템 메시지는 그대로 추가
+        if (cur.type === "SYSTEM") {
+            acc.push(cur);
+            return acc;
+        }
+
         const prev = all[idx - 1];
-        const prevTs = prev?.type === "SYSTEM" ? null : prev?.ts;
-        const needDivider = !prevTs ||
-            prevTs.getFullYear() !== cur.ts.getFullYear() ||
-            prevTs.getMonth() !== cur.ts.getMonth() ||
-            prevTs.getDate() !== cur.ts.getDate();
-        if (needDivider) acc.push({ __divider: true, label: fmtDateLine(cur.ts), key: `d-${cur.id}` });
-        acc.push(cur);
+        const prevTs =
+            prev && prev.type !== "SYSTEM"
+                ? asDateOrNull(prev.ts || prev.time)
+                : null;
+        const curTs = asDateOrNull(cur.ts || cur.time);
+
+        // ts(시간) 정보가 없으면 그냥 추가
+        if (!curTs) {
+            acc.push(cur);
+            return acc;
+        }
+
+        // 날짜가 다르면 구분선 삽입
+        const needDivider =
+            !prevTs ||
+            prevTs.getFullYear() !== curTs.getFullYear() ||
+            prevTs.getMonth() !== curTs.getMonth() ||
+            prevTs.getDate() !== curTs.getDate();
+
+        if (needDivider) {
+            acc.push({
+                __divider: true,
+                label: fmtDateLine(curTs),
+                key: `d-${cur.id || idx}`,
+            });
+        }
+
+        // 안전하게 보정된 ts를 넣어서 다음 루프에서 오류 방지
+        acc.push({ ...cur, ts: curTs });
         return acc;
     }, []);
 }
+
 
 // 무한스크롤용 가장 오래된 실제 메시지 ID
 export function oldestRealMessageId(list) {

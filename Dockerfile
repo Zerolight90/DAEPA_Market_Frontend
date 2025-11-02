@@ -1,19 +1,29 @@
-# --- Build stage ---
-FROM node:20-alpine AS builder
+# ---- 1) deps ----
+FROM node:20-alpine AS deps
 WORKDIR /app
+ENV NEXT_TELEMETRY_DISABLED=1
 RUN apk add --no-cache libc6-compat
 COPY package*.json ./
-# CI 환경엔 npm ci가 안전하지만, lock이 불완전하면 npm install 사용
 RUN npm ci || npm install
-COPY . .
-RUN npm run build
 
-# --- Run stage (SSR) ---
-FROM node:20-alpine
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
+# ---- 2) builder ----
+FROM node:20-alpine AS builder
 WORKDIR /app
-COPY --from=builder /app ./
+ENV NODE_ENV=production \
+    NEXT_TELEMETRY_DISABLED=1 \
+    NEXT_SHARP_SKIP_SMART_SUBINSTALL=1
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+RUN npx next build --turbopack --no-lint
+
+# ---- 3) runner ----
+FROM node:20-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    PORT=3000
+RUN apk add --no-cache libc6-compat
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/static ./.next/static
 EXPOSE 3000
-# Next.js SSR (next start)
-CMD ["npm", "run", "start"]
+CMD ["node", "server.js"]
