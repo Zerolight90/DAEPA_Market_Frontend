@@ -19,27 +19,32 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          timeout: 60s             # SSH 연결 타임아웃
-          command_timeout: 60m     # 원격 명령 실행 타임아웃(충분히 크게)
+          timeout: 60s
+          command_timeout: 60m
           script: |
             set -e
+            mkdir -p ~/.ssh
+            ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts || true
+            chmod 644 ~/.ssh/known_hosts
+
             cd ~/apps/frontend
 
-            echo "[1/5] Git fetch & checkout"
+            echo "[1/5] Git 업데이트"
+            cp -f .env /tmp/.env.backup 2>/dev/null || true
             git fetch --all
             git checkout zerolight
-            git pull --rebase origin zerolight
+            git reset --hard origin/zerolight
+            [ -f /tmp/.env.backup ] && mv /tmp/.env.backup .env
 
-            echo "[2/5] Optional: .env 관리 (필요 시 여기서 갱신)"
-            # echo "NEXT_PUBLIC_API_BASE=http://<backend-host>:<port>" > .env
-
-            echo "[3/5] Compose down"
+            echo "[2/5] 기존 컨테이너 정리"
             docker compose down
 
-            echo "[4/5] Build & Up"
-            docker compose build --no-cache --progress=plain
+            echo "[3/5] 빌드 및 배포 시작"
+            docker compose build --progress=plain
             docker compose up -d
 
-            echo "[5/5] Status"
+            echo "[4/5] 상태 확인"
             docker compose ps
+
+            echo "[5/5] 최근 로그 확인"
             docker logs --tail=100 daepa-frontend || true
