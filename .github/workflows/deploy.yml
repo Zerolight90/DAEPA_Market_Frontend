@@ -19,6 +19,8 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
+          timeout: 60s             # SSH 연결 타임아웃
+          command_timeout: 60m     # 원격 명령 실행 타임아웃(충분히 크게)
           script: |
             set -e
             cd ~/apps/frontend
