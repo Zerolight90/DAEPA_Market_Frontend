@@ -3,7 +3,7 @@ name: Deploy Frontend to EC2
 on:
   push:
     branches:
-      - zerolight   # 🚀 zerolight 브랜치 푸시 시 자동배포 실행
+      - zerolight   # 푸시 시 자동배포 실행
 
 jobs:
   deploy:
@@ -13,16 +13,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # ========================
-      # 🔐 SSH 접속하여 배포 진행
-      # ========================
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
           timeout: 300s
           command_timeout: 120m
           script_stop: false
