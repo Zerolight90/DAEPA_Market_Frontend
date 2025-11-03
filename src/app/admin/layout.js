@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -9,20 +9,19 @@ import {
   Edit, UserPlus
 } from "lucide-react";
 import styles from "./admin.module.css";
+import { Box, CircularProgress, Typography } from "@mui/material";
 
-export default function AdminLayout({ children }) {
+function AdminLayoutContent({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [adminName, setAdminName] = useState("대파 관리자"); // ✅ 기본값
+  const [adminName, setAdminName] = useState("대파 관리자");
   const pathname = usePathname();
   const dropdownRef = useRef(null);
 
-  // 로그인 페이지인 경우 레이아웃을 적용하지 않음
   if (pathname === "/admin/login") {
     return <>{children}</>;
   }
 
-  // 로그인 체크: sessionStorage에 adminIdx 없으면 로그인 페이지로 강제 이동
   if (typeof window !== "undefined") {
     const isLoggedIn = sessionStorage.getItem("adminIdx");
     if (!isLoggedIn) {
@@ -31,8 +30,6 @@ export default function AdminLayout({ children }) {
     }
   }
 
-
-  // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -46,7 +43,6 @@ export default function AdminLayout({ children }) {
     };
   }, []);
 
-  // 로그인한 관리자 닉네임 읽어오기
   useEffect(() => {
     const nick = sessionStorage.getItem("adminNick");
     if (nick) setAdminName(nick);
@@ -64,7 +60,6 @@ export default function AdminLayout({ children }) {
 
   return (
     <div className={styles.adminLayout}>
-      {/* Top Header */}
       <header className={styles.topHeader}>
         <div className={styles.headerLeft}>
           <div className={styles.headerLogo}>
@@ -82,7 +77,6 @@ export default function AdminLayout({ children }) {
         </div>
       </header>
 
-      {/* Sidebar */}
       <div className={`${styles.sidebar} ${sidebarOpen ? styles.sidebarOpen : ""}`}>
         <div className={styles.sidebarHeader}>
           <div className={styles.profileSection} ref={dropdownRef}>
@@ -152,16 +146,12 @@ export default function AdminLayout({ children }) {
         </div>
       </div>
 
-      {/* Main Content */}
       <div className={styles.mainContent}>
-
-        {/* Page Content */}
         <main className={styles.pageContent}>
           {children}
         </main>
       </div>
 
-      {/* Overlay for mobile */}
       {sidebarOpen && (
         <div
           className={styles.overlay}
@@ -170,4 +160,17 @@ export default function AdminLayout({ children }) {
       )}
     </div>
   );
+}
+
+export default function AdminLayout({ children }) {
+    return (
+        <Suspense fallback={
+            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
+                <CircularProgress />
+                <Typography sx={{ml: 2}}>관리자 페이지 로딩 중...</Typography>
+            </Box>
+        }>
+            <AdminLayoutContent>{children}</AdminLayoutContent>
+        </Suspense>
+    );
 }

@@ -1,3 +1,4 @@
+//src/components/product/RelateProducts.js
 import Link from "next/link";
 import styles from "./SellerOtherList.module.css"; // 썸네일 스타일 재사용
 

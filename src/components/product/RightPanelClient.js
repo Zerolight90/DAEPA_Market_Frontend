@@ -1,3 +1,5 @@
+//src/components/product/RightPanelClient.js
+
 "use client";
 
 import { useState } from "react";
