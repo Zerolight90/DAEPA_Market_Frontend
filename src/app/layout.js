@@ -1,16 +1,13 @@
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
+import "./globals.css";                     // 전역 CSS
+import "swiper/css";                        // ✅ Swiper 기본
+import "swiper/css/navigation";             // ✅ 네비게이션 쓰면
+import "swiper/css/pagination";          // ✅ 페이지네이션 쓰면
+
 import ConditionalLayout from "./ConditionalLayout";
 
-const geistSans = Geist({
-    variable: "--font-geist-sans",
-    subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-    variable: "--font-geist-mono",
-    subsets: ["latin"],
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata = {
     title: "대파 - 신선한 중고 거래",
@@ -20,11 +17,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
     return (
         <html lang="ko">
-            <body className={`${geistSans.variable} ${geistMono.variable}`}>
-                <ConditionalLayout>
-                    {children}
-                </ConditionalLayout>
-            </body>
+        <body className={`${geistSans.variable} ${geistMono.variable}`}>
+        <ConditionalLayout>{children}</ConditionalLayout>
+        </body>
         </html>
     );
 }
