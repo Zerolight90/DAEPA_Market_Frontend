@@ -11,6 +11,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: SSH into EC2 and deploy
         uses: appleboy/ssh-action@v1.0.3
@@ -19,14 +20,14 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
-          timeout: 60s
-          command_timeout: 60m
+
+          # 🔥 핵심 3줄
+          timeout: 300s                # SSH 세션 유효시간 (5분)
+          command_timeout: 120m        # 명령 실행 타임아웃 (2시간)
+          script_stop: false           # 실패해도 즉시 중단하지 않음 (디버그용)
+
           script: |
             set -e
-            mkdir -p ~/.ssh
-            ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts || true
-            chmod 644 ~/.ssh/known_hosts
-
             cd ~/apps/frontend
 
             echo "[1/5] Git 업데이트"
@@ -40,6 +41,7 @@ jobs:
             docker compose down
 
             echo "[3/5] 빌드 및 배포 시작"
+            # --no-cache 제거 (캐시 사용으로 속도 ↑)
             docker compose build --progress=plain
             docker compose up -d
 
