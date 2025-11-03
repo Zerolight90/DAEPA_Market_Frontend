@@ -1,3 +1,4 @@
+//src/components/product/DetailsPanel.js
 import styles from "./Details-panel.module.css";
 import SafetyTips from "@/components/ui/SafetyTips";
 

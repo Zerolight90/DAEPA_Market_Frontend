@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "../join.module.css";
 import axios from "axios";
+import { CircularProgress, Box, Typography } from "@mui/material";
 
-export default function JoinFormPage() {
+function JoinFormContent() {
     const router = useRouter();
     const api_url = "/api/sing/join/signup";
 
@@ -596,5 +597,18 @@ export default function JoinFormPage() {
                 </button>
             </form>
         </main>
+    );
+}
+
+export default function JoinFormPage() {
+    return (
+        <Suspense fallback={
+            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
+                <CircularProgress />
+                <Typography sx={{ml: 2}}>페이지를 불러오는 중...</Typography>
+            </Box>
+        }>
+            <JoinFormContent />
+        </Suspense>
     );
 }
