@@ -16,9 +16,8 @@ export default function OAuthPage() {
     const accessTokenFromQuery = sp.get("accessToken");
     const refreshTokenFromQuery = sp.get("refreshToken");
 
-    // 화면 제어용
-    const [loading, setLoading] = useState(true);     // ✅ 처음엔 로딩
-    const [forceShow, setForceShow] = useState(false); // ✅ 이미 입력했어도 강제로 열고 싶을 때 대비 (옵션)
+    const [loading, setLoading] = useState(true);
+    const [forceShow, setForceShow] = useState(false);
 
     // 폼 데이터
     const [email, setEmail] = useState("");
@@ -27,10 +26,13 @@ export default function OAuthPage() {
     const [phone, setPhone] = useState("");
     const [gender, setGender] = useState("");
     const [birth, setBirth] = useState("");
-
     const [location, setLocation] = useState("");
     const [addressDetail, setAddressDetail] = useState("");
     const [zipcode, setZipcode] = useState("");
+
+    // ✅ 중복검사 결과 상태
+    const [nicknameMsg, setNicknameMsg] = useState({ text: "", color: "" });
+    const [phoneMsg, setPhoneMsg] = useState({ text: "", color: "" });
 
     // 약관
     const [showTerms, setShowTerms] = useState(false);
@@ -42,7 +44,9 @@ export default function OAuthPage() {
     const [marketingChecked, setMarketingChecked] = useState(false);
     const [allChecked, setAllChecked] = useState(false);
 
-    // 1) 쿼리로 온 토큰 저장
+    // =======================
+    // 1) 토큰 저장
+    // =======================
     useEffect(() => {
         if (accessTokenFromQuery) {
             localStorage.setItem("accessToken", accessTokenFromQuery);
@@ -53,14 +57,13 @@ export default function OAuthPage() {
         }
     }, [accessTokenFromQuery, refreshTokenFromQuery, setToken]);
 
-    // 2) 내 정보 조회 → u_status=1 이면 바로 리다이렉트
+    // =======================
+    // 2) 내 정보 조회
+    // =======================
     useEffect(() => {
         (async () => {
-            const atk =
-                accessTokenFromQuery || localStorage.getItem("accessToken") || null;
+            const atk = accessTokenFromQuery || localStorage.getItem("accessToken");
             if (!atk) {
-                // 토큰도 없으면 로그인부터
-                setLoading(false);
                 alert("로그인이 필요합니다.");
                 router.replace("/sing/login");
                 return;
@@ -72,40 +75,36 @@ export default function OAuthPage() {
                     credentials: "include",
                     cache: "no-store",
                 });
-
                 if (!res.ok) {
                     setLoading(false);
                     return;
                 }
 
                 const data = await res.json();
-
-                // ✅ 여기서 핵심
                 if (data.u_status === 1 && !forceShow) {
-                    // 이미 추가정보 입력 끝난 유저 → 다시 여기 올 필요 없음
                     router.replace("/");
                     return;
                 }
 
-                // 폼에 미리 채워줄 값
-                if (data.u_id) setEmail(data.u_id);
-                if (data.u_name) setUname(data.u_name);
-                if (data.u_nickname) setNickname(data.u_nickname);
-                if (data.u_phone) setPhone(data.u_phone);
-                if (data.u_gender) setGender(data.u_gender);
-                if (data.u_birth) setBirth(data.u_birth);
-                if (data.u_location) setLocation(data.u_location);
-                if (data.u_location_detail) setAddressDetail(data.u_location_detail);
-                if (data.u_address) setZipcode(data.u_address);
-            } catch (e) {
-                // 실패해도 폼은 보여줄 수 있음
+                // 폼 초기값
+                setEmail(data.u_id || "");
+                setUname(data.u_name || "");
+                setNickname(data.u_nickname || "");
+                setPhone(data.u_phone || "");
+                setGender(data.u_gender || "");
+                setBirth(data.u_birth || "");
+                setLocation(data.u_location || "");
+                setAddressDetail(data.u_location_detail || "");
+                setZipcode(data.u_address || "");
             } finally {
                 setLoading(false);
             }
         })();
     }, [accessTokenFromQuery, forceShow, router]);
 
-    // 3) 다음 주소 스크립트
+    // =======================
+    // 3) 주소 API 스크립트
+    // =======================
     useEffect(() => {
         const id = "daum-postcode-script";
         if (document.getElementById(id)) return;
@@ -118,7 +117,7 @@ export default function OAuthPage() {
 
     const openPostcode = () => {
         if (!window.daum?.Postcode) {
-            alert("주소 스크립트가 아직 준비 안 됐어요. 잠시 후 다시 시도해주세요.");
+            alert("주소 스크립트가 아직 준비 안 됐어요.");
             return;
         }
         new window.daum.Postcode({
@@ -133,6 +132,66 @@ export default function OAuthPage() {
         }).open();
     };
 
+    // =======================
+    // 4) 닉네임 자동 중복검사
+    // =======================
+    useEffect(() => {
+        if (!nickname) {
+            setNicknameMsg({ text: "", color: "" });
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            try {
+                const res = await fetch(
+                    `${BACKEND_URL}/api/sing/join/check_nickname?u_nickname=${nickname}`
+                );
+                const exists = await res.json();
+                if (exists) {
+                    setNicknameMsg({ text: "이미 사용 중인 별명입니다.", color: "red" });
+                } else {
+                    setNicknameMsg({ text: "사용 가능한 별명입니다.", color: "green" });
+                }
+            } catch {
+                setNicknameMsg({ text: "확인 중 오류 발생", color: "red" });
+            }
+        }, 500); // 0.5초 후 실행
+
+        return () => clearTimeout(timer);
+    }, [nickname]);
+
+    // =======================
+    // 5) 전화번호 자동 중복검사
+    // =======================
+    useEffect(() => {
+        if (!phone) {
+            setPhoneMsg({ text: "", color: "" });
+            return;
+        }
+
+        const timer = setTimeout(async () => {
+            try {
+                const cleanPhone = phone.replace(/[^0-9]/g, "");
+                const res = await fetch(
+                    `${BACKEND_URL}/api/sing/join/check_phone?u_phone=${cleanPhone}`
+                );
+                const exists = await res.json();
+                if (exists) {
+                    setPhoneMsg({ text: "이미 사용 중인 전화번호입니다.", color: "red" });
+                } else {
+                    setPhoneMsg({ text: "사용 가능한 전화번호입니다.", color: "green" });
+                }
+            } catch {
+                setPhoneMsg({ text: "확인 중 오류 발생", color: "red" });
+            }
+        }, 500);
+
+        return () => clearTimeout(timer);
+    }, [phone]);
+
+    // =======================
+    // 6) 약관 전체동의
+    // =======================
     const handleAllAgree = (e) => {
         const checked = e.target.checked;
         setAllChecked(checked);
@@ -145,24 +204,26 @@ export default function OAuthPage() {
         }
     };
 
+    // =======================
+    // 7) 제출
+    // =======================
     const handleSubmit = async (e) => {
         e.preventDefault();
+
         if (!termsChecked || !privacyChecked) {
             alert("필수 약관에 모두 동의해 주세요.");
             return;
         }
 
-        const atk =
-            accessTokenFromQuery || localStorage.getItem("accessToken") || "";
+        const atk = accessTokenFromQuery || localStorage.getItem("accessToken");
 
         try {
             const res = await fetch(`${BACKEND_URL}/api/users/oauth-complete`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    ...(atk ? { Authorization: `Bearer ${atk}` } : {}),
+                    Authorization: atk ? `Bearer ${atk}` : "",
                 },
-                credentials: "include",
                 body: JSON.stringify({
                     email,
                     uname,
@@ -178,32 +239,26 @@ export default function OAuthPage() {
                 }),
             });
 
-            if (!res.ok) {
-                const txt = await res.text();
-                console.error(txt);
-                alert("회원정보 저장에 실패했습니다.");
-                return;
-            }
-
+            if (!res.ok) throw new Error("저장 실패");
             alert("정보가 저장되었습니다.");
             router.replace("/");
         } catch (err) {
             console.error(err);
-            alert("저장 중 오류가 발생했습니다.");
+            alert("회원정보 저장 중 오류가 발생했습니다.");
         }
     };
 
-    // ✅ 여기서 로딩 처리
-    if (loading) {
-        return <p style={{ padding: 24 }}>불러오는 중...</p>;
-    }
+    // =======================
+    // UI
+    // =======================
+    if (loading) return <p style={{ padding: 24 }}>불러오는 중...</p>;
 
     return (
         <main className={styles.container}>
             <div className={styles.card}>
                 <h1 className={styles.title}>추가 정보 입력</h1>
                 <p className={styles.subText}>
-                    소셜 로그인을 마무리하려면 아래 정보를 한 번만 입력해 주세요 🙌
+                    소셜 로그인을 마무리하려면 아래 정보를 입력해 주세요 🙌
                 </p>
 
                 <form onSubmit={handleSubmit}>
@@ -242,6 +297,9 @@ export default function OAuthPage() {
                             value={nickname}
                             onChange={(e) => setNickname(e.target.value)}
                         />
+                        <div style={{ color: nicknameMsg.color, fontSize: "0.9em", marginTop: 5 }}>
+                            {nicknameMsg.text}
+                        </div>
                     </div>
 
                     {/* 전화번호 */}
@@ -252,10 +310,14 @@ export default function OAuthPage() {
                             type="tel"
                             value={phone}
                             onChange={(e) => setPhone(e.target.value)}
+                            placeholder="'-' 없이 숫자만 입력"
                         />
+                        <div style={{ color: phoneMsg.color, fontSize: "0.9em", marginTop: 5 }}>
+                            {phoneMsg.text}
+                        </div>
                     </div>
 
-                    {/* 성별 + 생일 */}
+                    {/* 성별 + 생년월일 */}
                     <div className={styles.inlineRow}>
                         <div>
                             <label className={styles.label}>성별</label>
@@ -263,7 +325,6 @@ export default function OAuthPage() {
                                 className={styles.input}
                                 value={gender}
                                 onChange={(e) => setGender(e.target.value)}
-                                disabled
                             >
                                 <option value="">선택</option>
                                 <option value="M">남성</option>
@@ -277,7 +338,6 @@ export default function OAuthPage() {
                                 type="date"
                                 value={birth}
                                 onChange={(e) => setBirth(e.target.value)}
-                                readOnly
                             />
                         </div>
                     </div>
@@ -294,11 +354,7 @@ export default function OAuthPage() {
                                 onChange={(e) => setLocation(e.target.value)}
                                 placeholder="시/군/구까지 입력"
                             />
-                            <button
-                                type="button"
-                                className={styles.inlineBtn}
-                                onClick={openPostcode}
-                            >
+                            <button type="button" className={styles.inlineBtn} onClick={openPostcode}>
                                 검색
                             </button>
                         </div>
@@ -327,78 +383,6 @@ export default function OAuthPage() {
                             onChange={(e) => setZipcode(e.target.value)}
                             readOnly
                         />
-                    </div>
-
-                    {/* 약관 */}
-                    <div className={styles.agreeBox}>
-                        <p className={styles.label}>약관 동의</p>
-                        <div className={styles.agreeItem}>
-                            <input
-                                type="checkbox"
-                                checked={allChecked}
-                                onChange={handleAllAgree}
-                            />
-                            <strong>전체 동의</strong>
-                        </div>
-
-                        <div className={styles.agreeItem}>
-                            <input
-                                type="checkbox"
-                                checked={termsChecked}
-                                onChange={(e) => setTermsChecked(e.target.checked)}
-                                disabled={!termsRead}
-                            />
-                            <span>[필수] 이용약관 동의</span>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowTerms((p) => !p);
-                                    setTermsRead(true);
-                                }}
-                                className={styles.linkBtn}
-                            >
-                                보기
-                            </button>
-                        </div>
-                        {showTerms && (
-                            <div className={styles.termsBox}>
-                                <p>제1조(목적) ...</p>
-                            </div>
-                        )}
-
-                        <div className={styles.agreeItem}>
-                            <input
-                                type="checkbox"
-                                checked={privacyChecked}
-                                onChange={(e) => setPrivacyChecked(e.target.checked)}
-                                disabled={!privacyRead}
-                            />
-                            <span>[필수] 개인정보 처리방침 동의</span>
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setShowPrivacy((p) => !p);
-                                    setPrivacyRead(true);
-                                }}
-                                className={styles.linkBtn}
-                            >
-                                보기
-                            </button>
-                        </div>
-                        {showPrivacy && (
-                            <div className={styles.termsBox}>
-                                <p>1. 수집 항목: ...</p>
-                            </div>
-                        )}
-
-                        <div className={styles.agreeItem}>
-                            <input
-                                type="checkbox"
-                                checked={marketingChecked}
-                                onChange={(e) => setMarketingChecked(e.target.checked)}
-                            />
-                            <span>[선택] 마케팅 정보 수신 동의</span>
-                        </div>
                     </div>
 
                     <button type="submit" className={styles.submitBtn}>

@@ -2,34 +2,10 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
+import styles from './leave.module.css';
+import Sidebar from '@/components/mypage/sidebar';
 import { usePathname } from 'next/navigation';
-import styles from '../mypage.module.css';
 
-// 사이드바 섹션
-const SIDE_SECTIONS = [
-    {
-        title: '거래 정보',
-        items: [
-            { href: '/mypage/sell', label: '판매내역' },
-            { href: '/mypage/buy', label: '구매내역' },
-            { href: '/mypage/shipping', label: '택배' },
-            { href: '/mypage/like', label: '찜한 상품' },
-            { href: '/mypage/matching', label: '관심 상품 매칭' },
-            { href: '/mypage/safe-settle', label: '안심결제 정산내역' },
-        ],
-    },
-    {
-        title: '내 정보',
-        items: [
-            { href: '/mypage/account', label: '계좌 관리' },
-            { href: '/mypage/address', label: '배송지 관리' },
-            { href: '/mypage/review', label: '거래 후기' },
-            { href: '/mypage/leave', label: '탈퇴하기' }, // 현재 페이지
-        ],
-    },
-];
-
-// 탈퇴 사유
 const REASONS = [
     { id: 'low_usage', label: '사용 빈도가 낮고 개인정보 및 보안 우려' },
     { id: 'bad_users', label: '비매너 사용자들로 인한 불편 (사기 등)' },
@@ -42,7 +18,7 @@ export default function LeavePage() {
     const pathname = usePathname();
 
     const [checked, setChecked] = useState([]);
-    const [detail, setDetail] = useState('');
+    const [detail] = useState(''); // 편집 불가이므로 상태만 유지
     const [etcText, setEtcText] = useState('');
     const [agree, setAgree] = useState(false);
 
@@ -57,8 +33,7 @@ export default function LeavePage() {
 
     const canSubmit = useMemo(() => {
         const etcOk =
-            !checked.includes('etc') ||
-            (checked.includes('etc') && etcText.trim().length > 0);
+            !checked.includes('etc') || (checked.includes('etc') && etcText.trim().length > 0);
         return agree && checked.length > 0 && count <= MAX && etcOk;
     }, [agree, checked, count, etcText]);
 
@@ -80,43 +55,24 @@ export default function LeavePage() {
 
     return (
         <div className={styles.wrapper}>
-            {/* 좌: 사이드바 */}
+            {/* 좌측 사이드바 (공용) */}
             <aside className={styles.sidebar}>
-                <nav className={styles.sideNav}>
-                    <div className={styles.sideHeader}>마이페이지</div>
-
-                    {SIDE_SECTIONS.map((sec) => (
-                        <div key={sec.title} className={styles.sideSection}>
-                            <div className={styles.sideTitle}>{sec.title}</div>
-                            <ul className={styles.sideList}>
-                                {sec.items.map((it) => {
-                                    const active = pathname === it.href;
-                                    return (
-                                        <li key={it.href}>
-                                            <Link
-                                                href={it.href}
-                                                className={`${styles.sideLink} ${active ? styles.active : ''}`}
-                                            >
-                                                {it.label}
-                                            </Link>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </div>
-                    ))}
-                </nav>
+                <Sidebar />
             </aside>
 
-            {/* 우: 본문 */}
+            {/* 우측 본문 */}
             <main className={styles.main}>
                 <header className={styles.header}>
-                    <Link href="/mypage" className={styles.backLink}>←</Link>
+                    <Link href="/mypage" className={styles.backLink} aria-label="뒤로가기">
+                        ←
+                    </Link>
                     <h1 className={styles.pageTitle}>회원 탈퇴</h1>
                 </header>
 
                 <section className={styles.titleBlock}>
-                    <h2 className={styles.titleLine}>탈퇴사유를 알려주시면 개선을 위해 노력하겠습니다.</h2>
+                    <h2 className={styles.titleLine}>
+                        탈퇴사유를 알려주시면 개선을 위해 노력하겠습니다.
+                    </h2>
                     <p className={styles.subtitle}>다중 선택이 가능해요.</p>
                 </section>
 
@@ -152,7 +108,7 @@ export default function LeavePage() {
                         )}
                     </section>
 
-                    {/* 상세 사유 */}
+                    {/* 상세 사유 (편집 불가) */}
                     <section className={styles.card}>
                         <div className={styles.cardTitleRow}>
                             <h3 className={styles.cardTitle}>상세 사유를 작성해 주세요.</h3>
@@ -160,14 +116,16 @@ export default function LeavePage() {
                 {count}/{MAX}
               </span>
                         </div>
+
                         <textarea
                             value={detail}
-                            onChange={(e) => setDetail(e.target.value)}
+                            readOnly
+                            disabled
                             rows={6}
                             maxLength={MAX}
-                            placeholder="예 : 타 서비스 이용"
-                            className={styles.textarea}
-
+                            placeholder="예: 타 서비스 이용"
+                            className={`${styles.textarea} ${styles.textareaDisabled}`}
+                            aria-disabled="true"
                         />
                     </section>
 
@@ -179,14 +137,16 @@ export default function LeavePage() {
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>01</span>
                                 <span>
-                  탈퇴 신청일로부터 <b>30일</b> 이내 동일 아이디·휴대폰 번호로 재가입 불가 (신규 혜택 미적용)
+                  탈퇴 신청일로부터 <b>30일</b> 이내 동일 아이디와 휴대폰 번호로 재가입 불가하며 신규 가입
+                  혜택은 적용되지 않습니다.
                 </span>
                             </li>
 
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>02</span>
                                 <span>
-                  회원 탈퇴 시 본인 계정에 등록/작성한 게시물은 삭제됩니다. 단, 스크랩/공용 게시판 게시물은 직접 삭제 후 진행하세요.
+                  회원 탈퇴 시 본인 계정에 등록/작성한 게시물은 삭제됩니다. 단, 스크랩/공용 게시물 등은 직접
+                  삭제한 후 진행해 주세요.
                 </span>
                             </li>
 
@@ -206,12 +166,12 @@ export default function LeavePage() {
 
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>04</span>
-                                <span>탈퇴 신청 후 <b>72시간(3일)</b> 내 동일 계정 로그인 시 탈퇴 신청이 자동 철회됩니다.</span>
+                                <span>탈퇴 신청 후 <b>72시간(3일)</b> 이내 동일 계정 로그인 시 탈퇴 신청이 자동 철회됩니다.</span>
                             </li>
 
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>05</span>
-                                <span>연동 서비스 권한이 해제될 수 있으며, 등급/권한 변경에 유의해주세요.</span>
+                                <span>연동 서비스 권한이 해제될 수 있으며, 등급/권한 변경에 유의해 주세요.</span>
                             </li>
                         </ol>
 
