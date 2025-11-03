@@ -20,7 +20,6 @@ ErrorOutlineIcon.propTypes = {
 };
 
 export default function PaySuccessPage() {
-    const searchParams = useSearchParams();
     const router = useRouter();
     const [paymentInfo, setPaymentInfo] = useState({
         amount: null,
@@ -32,7 +31,17 @@ export default function PaySuccessPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null); // 에러 상태 추가
 
+    const [searchParams, setSearchParams] = useState(null);
+
     useEffect(() => {
+            // ✅ 클라이언트에서만 searchParams 초기화
+            const params = new URLSearchParams(window.location.search);
+            setSearchParams(params);
+        }, []);
+
+    useEffect(() => {
+        if (!searchParams) return; // 아직 로딩 중이면 대기
+
         const amountParam = searchParams.get('amount');
         const orderIdParam = searchParams.get('orderId');
         let itemIdFromOrderId = null;
