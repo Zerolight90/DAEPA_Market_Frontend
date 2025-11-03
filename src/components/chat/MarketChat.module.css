@@ -453,35 +453,39 @@
 }
 
 /* === 시안 B: 썸네일 좌상단 라벨 === */
-.thumbWrap {
-    --thumb: 44px;
-    position: relative;
-    width: var(--thumb);
-    height: var(--thumb);
-    flex: 0 0 var(--thumb);
-    margin-right: 10px;
-}
+/* 썸네일·배지 외 기존 스타일은 그대로 유지 */
+.thumbWrap { position: relative; display: inline-block; }
 .thumb {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    border-radius: 8px;
-    background: #f2f2f2;
+    width: 56px; height: 56px;
+    border-radius: 10px; object-fit: cover; border: 1px solid #eee;
 }
-.roleTag {
-    position: absolute;
-    top: 4px;
-    left: 4px;
-    padding: 2px 6px;
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 16px;
-    border-radius: 6px;
-    backdrop-filter: blur(2px);
-    box-shadow: 0 1px 2px rgba(0,0,0,.12);
+
+/* 이름 옆(리스트용) 작은 뱃지 */
+.rolePill{
+    display:inline-block;
+    margin-left: 8px;
+    padding: 1px 6px;
+    font-size: 11px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    vertical-align: middle;
 }
-.roleTagSeller { background: rgba(255, 226, 122, .92); color: #6b4f00; }
-.roleTagBuyer  { background: rgba(185, 246, 202, .92); color: #0b5130; }
+
+/* 이미 있는 역할 색을 재사용 */
+.roleSeller{ background:#fff5f5; border-color:#ffd7d7; color:#b42318; }
+.roleBuyer { background:#f0fdf4; border-color:#bbf7d0; color:#166534; }
+
+/* (참고) 헤더에서 쓰는 큰 배지 */
+.roleBadge{
+    display:inline-block;
+    padding: 2px 8px;
+    margin-left: 8px;
+    font-size: 11px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    vertical-align: middle;
+}
+
 
 .preview {
     margin-top: 2px;
@@ -507,6 +511,14 @@
 .unreadSeller { background:#FFD84D; color:#5b4400; }
 .unreadBuyer  { background:#7BE2A1; color:#093a25; }
 
+/* 가격 표시 공통 스타일 */
+.price{
+    margin-left: 8px;
+    font-weight: 800;
+    color: #111;
+    font-size: 13px;
+    white-space: nowrap;
+}
 @keyframes blink {
     0% { opacity: 0.2; }
     50% { opacity: 1; }
