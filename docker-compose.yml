@@ -12,7 +12,7 @@ services:
     networks:
       - daepa_net
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000"]
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/', {redirect:'manual'}).then(r=>process.exit(r.status<400?0:1)).catch(()=>process.exit(1))"]
       interval: 15s
       timeout: 5s
       retries: 10

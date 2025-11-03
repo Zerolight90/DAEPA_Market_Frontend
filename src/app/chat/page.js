@@ -1,4 +1,3 @@
-// 서버 컴포넌트 (여기엔 'use client' 쓰지 마세요)
 import { Suspense } from 'react';
 import MarketChat from '@/components/chat/MarketChat';
 
