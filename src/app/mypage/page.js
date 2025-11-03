@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./mypage.module.css";
-import TokeStore from "@/app/store/TokenStore";
+import tokenStore from "@/app/store/TokenStore";
 
 const SIDE_SECTIONS = [
     {
@@ -35,11 +35,11 @@ const METRICS = [
     { key: "eco", label: "에코마일", value: "0 M" },
 ];
 
+// 탭: 전체 / 판매중(0) / 판매완료(1)
 const TABS = [
     { key: "all", label: "전체" },
-    { key: "selling", label: "판매중" },
-    // { key: "reserved", label: "예약중" },
-    { key: "sold", label: "판매완료" },
+    { key: "selling", label: "판매중" }, // status=0
+    { key: "sold", label: "판매완료" },  // status=1
 ];
 
 const SORTS = [
@@ -50,56 +50,38 @@ const SORTS = [
 
 export default function MyPage() {
     const pathname = usePathname();
-    const { accessToken } = TokeStore();
+    const { accessToken } = tokenStore();
 
-    // 탭/정렬 상태
     const [tab, setTab] = useState("all");
     const [sort, setSort] = useState("latest");
 
-    // 내 정보
     const [myInfo, setMyInfo] = useState({
         nickname: "로딩 중...",
         trust: 0,
         avatarUrl: "",
     });
 
-    // 🔴 여기! 실제 상품 목록 상태
-    // status: SELLING | RESERVED | SOLD
-    const [items, setItems] = useState([
-        {
-            id: 1,
-            title: "스타벅스 아이스 클래식 밀크 티 T",
-            price: 5000,
-            status: "SOLD",
-            createdAt: "2025-10-30T02:10:00Z",
-            img: "/no-image.png",
-            ago: "51분 전",
-        },
-        {
-            id: 2,
-            title: "무선 마우스",
-            price: 12000,
-            status: "SELLING",
-            createdAt: "2025-10-30T01:00:00Z",
-            img: "/no-image.png",
-            ago: "2시간 전",
-        },
-    ]);
+    const [items, setItems] = useState([]);
 
-    // 내 정보 가져오기
+    // 1) 내 정보
     useEffect(() => {
         if (!accessToken) {
             setMyInfo({ nickname: "로그인 필요", trust: 0, avatarUrl: "" });
             return;
         }
+
         (async () => {
             try {
+                // ✅ 리라이트 경로 사용
                 const res = await fetch("/api/sing/me", {
                     method: "GET",
-                    headers: { Authorization: `Bearer ${accessToken}` },
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                    },
                     credentials: "include",
                     cache: "no-store",
                 });
+
                 if (res.ok) {
                     const data = await res.json();
                     setMyInfo({
@@ -110,25 +92,74 @@ export default function MyPage() {
                 } else {
                     setMyInfo({ nickname: "정보 없음", trust: 0, avatarUrl: "" });
                 }
-            } catch {
+            } catch (err) {
+                console.error("❌ /api/sing/me fetch error:", err);
                 setMyInfo({ nickname: "에러 발생", trust: 0, avatarUrl: "" });
             }
         })();
     }, [accessToken]);
 
-    // 1) 탭에 따라 먼저 필터
-    const filteredItems = useMemo(() => {
-        return items.filter((it) => {
-            if (tab === "selling") return it.status === "SELLING";
-            if (tab === "reserved") return it.status === "RESERVED";
-            if (tab === "sold") return it.status === "SOLD";
-            return true; // all
-        });
-    }, [items, tab]);
+    // 2) 내 상품 목록
+    useEffect(() => {
+        if (!accessToken) {
+            setItems([]);
+            return;
+        }
 
-    // 2) 그다음 정렬
+        // 탭 → status
+        let statusParam = "";
+        if (tab === "selling") statusParam = "0";
+        else if (tab === "sold") statusParam = "1";
+
+        const url =
+            statusParam === ""
+                ? "/api/products/mypage"
+                : `/api/products/mypage?status=${statusParam}`;
+
+        (async () => {
+            try {
+                console.log("➡️ GET", url);
+                const res = await fetch(url, {
+                    method: "GET",
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                    },
+                    credentials: "include",
+                });
+
+                if (!res.ok) {
+                    // 여기서 404가 나오면 백엔드가 "해당 아이디의 회원이 없습니다." 던진 거
+                    const txt = await res.text();
+                    console.warn("❌ mypage not ok:", res.status, txt);
+                    setItems([]);
+                    return;
+                }
+
+                const data = await res.json();
+                console.log("✅ mypage data:", data);
+
+                const mapped = data.map((p, idx) => ({
+                    id: idx + 1,
+                    title: p.pd_title,
+                    price: p.pd_price,
+                    status: p.pd_status === "0" ? "SELLING" : "SOLD",
+                    createdAt: p.pd_create
+                        ? `${p.pd_create}T00:00:00Z`
+                        : "2025-01-01T00:00:00Z",
+                    img: "/no-image.png",
+                    ago: p.pd_create || "",
+                }));
+                setItems(mapped);
+            } catch (e) {
+                console.error("❌ mypage fetch error:", e);
+                setItems([]);
+            }
+        })();
+    }, [accessToken, tab]);
+
+    // 3) 정렬
     const sortedItems = useMemo(() => {
-        const copied = [...filteredItems];
+        const copied = [...items];
         switch (sort) {
             case "low":
                 return copied.sort((a, b) => a.price - b.price);
@@ -140,11 +171,9 @@ export default function MyPage() {
                     (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
                 );
         }
-    }, [filteredItems, sort]);
+    }, [items, sort]);
 
-    // 신선도 퍼센트
     const trustPercent = Math.min(100, Math.round((myInfo.trust / 100) * 100));
-    // 신선도 색
     const trustColor =
         myInfo.trust < 20 ? "#8B4513" : myInfo.trust < 50 ? "#A3E635" : "#10B981";
 
@@ -164,9 +193,7 @@ export default function MyPage() {
                                         <li key={it.href}>
                                             <Link
                                                 href={it.href}
-                                                className={`${styles.sideLink} ${
-                                                    active ? styles.active : ""
-                                                }`}
+                                                className={`${styles.sideLink} ${active ? styles.active : ""}`}
                                             >
                                                 {it.label}
                                             </Link>
@@ -179,9 +206,9 @@ export default function MyPage() {
                 </nav>
             </aside>
 
-            {/* 오른쪽 콘텐츠 */}
+            {/* 오른쪽 본문 */}
             <section className={styles.content}>
-                {/* 상단 프로필 */}
+                {/* 프로필 */}
                 <header className={styles.header}>
                     <div className={styles.profile}>
                         <div className={styles.avatar} aria-hidden>
@@ -195,7 +222,9 @@ export default function MyPage() {
 
                         <div className={styles.profileMeta}>
                             <div className={styles.nicknameRow}>
-                                <strong className={styles.nickname}>{myInfo.nickname}</strong>
+                                <strong className={styles.nickname}>
+                                    {myInfo.nickname}
+                                </strong>
                                 <Link
                                     href="/store/intro"
                                     className={styles.openStore}
@@ -214,17 +243,17 @@ export default function MyPage() {
                             </div>
 
                             <div className={styles.trustRow}>
-                <span className={styles.trustLabel}>
-                  신선도 <b>{myInfo.trust}</b>
-                </span>
+                                <span className={styles.trustLabel}>
+                                    신선도 <b>{myInfo.trust}</b>
+                                </span>
                                 <div className={styles.trustBar}>
-                  <span
-                      className={styles.trustGauge}
-                      style={{
-                          width: `${trustPercent}%`,
-                          background: trustColor,
-                      }}
-                  />
+                                    <span
+                                        className={styles.trustGauge}
+                                        style={{
+                                            width: `${trustPercent}%`,
+                                            background: trustColor,
+                                        }}
+                                    />
                                 </div>
                                 <span className={styles.trustMax}>100</span>
                             </div>
@@ -243,8 +272,8 @@ export default function MyPage() {
                                 <span>카페에 상품 자동 등록하기</span>
                             </div>
                             <span className={styles.bannerArrow} aria-hidden>
-                ›
-              </span>
+                                ›
+                            </span>
                         </Link>
 
                         <ul className={styles.metricRow}>
@@ -258,9 +287,8 @@ export default function MyPage() {
                     </div>
                 </header>
 
-                {/* 내 상품 카드 */}
+                {/* 내 상품 */}
                 <div className={styles.panel}>
-                    {/* 제목 + 탭 */}
                     <div className={styles.panelHead}>
                         <h3 className={styles.panelTitle}>내 상품</h3>
                         <nav className={styles.tabs} aria-label="내 상품 필터">
@@ -268,9 +296,7 @@ export default function MyPage() {
                                 <button
                                     key={t.key}
                                     type="button"
-                                    className={`${styles.tab} ${
-                                        tab === t.key ? styles.tabActive : ""
-                                    }`}
+                                    className={`${styles.tab} ${tab === t.key ? styles.tabActive : ""}`}
                                     onClick={() => setTab(t.key)}
                                 >
                                     {t.label}
@@ -279,7 +305,6 @@ export default function MyPage() {
                         </nav>
                     </div>
 
-                    {/* 총 개수 + 정렬 */}
                     <div className={styles.panelSub}>
                         <span className={styles.total}>총 {sortedItems.length}개</span>
                         <div className={styles.sorts}>
@@ -287,9 +312,7 @@ export default function MyPage() {
                                 <button
                                     key={s.key}
                                     type="button"
-                                    className={`${styles.sort} ${
-                                        sort === s.key ? styles.sortActive : ""
-                                    }`}
+                                    className={`${styles.sort} ${sort === s.key ? styles.sortActive : ""}`}
                                     onClick={() => setSort(s.key)}
                                 >
                                     {s.label}
@@ -298,7 +321,6 @@ export default function MyPage() {
                         </div>
                     </div>
 
-                    {/* 목록 */}
                     {sortedItems.length === 0 ? (
                         <div className={styles.empty}>
                             선택된 조건에 해당하는 상품이 없습니다.
@@ -313,8 +335,8 @@ export default function MyPage() {
                                         <div className={styles.cardBody}>
                                             <strong className={styles.cardTitle}>{it.title}</strong>
                                             <span className={styles.cardPrice}>
-                        {it.price.toLocaleString()}원
-                      </span>
+                                                {it.price.toLocaleString()}원
+                                            </span>
                                             <span className={styles.cardMeta}>{it.ago}</span>
                                         </div>
                                     </Link>
