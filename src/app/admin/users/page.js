@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import styles from "../admin.module.css";
 
@@ -145,7 +146,9 @@ export default function UsersPage() {
                   <div className={styles.tableCell}>{getStatusBadge(user.ustatus)}</div>
                   <div className={styles.tableCell}>
                     <div className={styles.actionButtons}>
-                      <button className={`${styles.actionButton} ${styles.blue}`}>상세</button>
+                      <Link href={`/admin/users/${user.uidx}`} className={`${styles.actionButton} ${styles.blue}`}>
+                        상세
+                      </Link>
                       <button className={`${styles.actionButton} ${styles.gray}`}>수정</button>
                     </div>
                   </div>
