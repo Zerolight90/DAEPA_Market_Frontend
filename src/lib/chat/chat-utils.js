@@ -33,9 +33,18 @@ export function createSystemIntro(roomId) {
 
 // 내 역할
 export function resolveRole(room, meId) {
-    if (room?.sellerId != null) return Number(room.sellerId) === Number(meId) ? "판매자" : "구매자";
+    // ✅ 서버가 문자열로 내려주는 경우 최우선
+    if (typeof room?.myRole === "string" && room.myRole.trim()) {
+        return room.myRole; // "판매자" | "구매자" | "참여자"
+    }
+
+    // ✅ 기존 호환 로직 유지
+    if (room?.sellerId != null) {
+        return Number(room.sellerId) === Number(meId) ? "판매자" : "구매자";
+    }
     if (typeof room?.isSeller === "boolean") return room.isSeller ? "판매자" : "구매자";
-    if (typeof room?.role === "string") return room.role;
+    if (typeof room?.role === "string" && room.role.trim()) return room.role;
+
     return null;
 }
 
@@ -165,4 +174,11 @@ export function oldestRealMessageId(list) {
         .filter((n) => Number.isFinite(n));
     if (!ids.length) return null;
     return Math.min(...ids);
+}
+
+export function formatKRW(n) {
+    if (n == null) return null;
+    const num = Number(n);
+    if (!Number.isFinite(num) || num <= 0) return null;
+    return num.toLocaleString("ko-KR") + "원";
 }

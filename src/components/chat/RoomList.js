@@ -1,17 +1,25 @@
-// components/chat/RoomList.js
 "use client";
 import ScrollArea from "./ScrollArea";
-import { fmtHHMM, resolveRole } from "@/lib/chat/chat-utils";
+import { fmtHHMM, resolveRole, formatKRW } from "@/lib/chat/chat-utils";
 import s from "./MarketChat.module.css";
+
+const safeSrc = (v) => {
+    if (v == null) return null;
+    const s = String(v).trim();
+    return s.length ? s : null;
+};
 
 export default function RoomList({ rooms, meId, activeId, onSelect }) {
     return (
         <aside className={s.list}>
             <h3 className={s.listTitle}>채팅 목록</h3>
+
             <ScrollArea className={s.ul} component="ul" sx={{ maxHeight: "600px" }}>
-                {rooms.map((r) => {
+                {(rooms || []).map((r) => {
                     const role = resolveRole(r, meId); // "판매자" | "구매자" | null
                     const active = String(activeId) === String(r.roomId);
+                    const priceText = formatKRW(r.productPrice);
+                    const thumb = safeSrc(r.productThumb) || "/images/placeholder.jpg";
 
                     return (
                         <li
@@ -19,29 +27,29 @@ export default function RoomList({ rooms, meId, activeId, onSelect }) {
                             className={`${s.item} ${active ? s.active : ""}`}
                             onClick={() => onSelect(r.roomId)}
                         >
-                            {/* 썸네일 + 좌상단 역할 라벨 */}
+                            {/* 썸네일 (오버레이 라벨 없음) */}
                             <div className={s.thumbWrap}>
-                                <img className={s.thumb} src={r.productThumb} alt="" />
-                                {role && (
-                                    <span
-                                        className={`${s.roleTag} ${
-                                            role === "판매자" ? s.roleTagSeller : s.roleTagBuyer
-                                        }`}
-                                        title={`내 역할: ${role}`}
-                                    >
-                    {role}
-                  </span>
-                                )}
+                                <img className={s.thumb} src={thumb} alt="" />
                             </div>
 
-                            {/* 텍스트 영역 */}
+                            {/* 우측 텍스트 */}
                             <div className={s.itemMain}>
                                 <div className={s.top}>
-                                    <span className={s.name}>{r.counterpartyName}</span>
+                  <span className={s.name}>
+                    {r.counterpartyName}
+                      {role && (
+                          <span
+                              className={`${s.rolePill} ${
+                                  role === "판매자" ? s.roleSeller : s.roleBuyer
+                              }`}
+                          >
+                        {role}
+                      </span>
+                      )}
+                  </span>
 
-                                    {/* 오른쪽 메타: 안읽음 배지 + 시간 */}
                                     <div className={s.metaRight}>
-                                        {r.unread > 0 && (
+                                        {Number(r.unread) > 0 && (
                                             <span
                                                 className={`${s.unreadBadge} ${
                                                     role === "판매자" ? s.unreadSeller : s.unreadBuyer
@@ -59,9 +67,17 @@ export default function RoomList({ rooms, meId, activeId, onSelect }) {
 
                                 <div className={s.productRow}>
                                     <span className={s.product}>{r.productTitle}</span>
+                                    {priceText && <span className={s.price}>{priceText}</span>}
+                                    {r.productStatus && (
+                                        <span className={`${s.status} ${s[r.productStatus] || ""}`}>
+                      {r.productStatus}
+                    </span>
+                                    )}
                                 </div>
 
-                                {r.lastMessage && <div className={s.preview}>{r.lastMessage}</div>}
+                                {r.lastMessage && (
+                                    <div className={s.preview}>{r.lastMessage}</div>
+                                )}
                             </div>
                         </li>
                     );

@@ -5,6 +5,12 @@ import { fmtHHMM } from "@/lib/chat/chat-utils";
 import s from "./MarketChat.module.css";
 import ImageLightbox from "./ImageLightbox";
 
+const safeSrc = (v) => {
+    if (v == null) return null;
+    const s = String(v).trim();
+    return s.length ? s : null;
+};
+
 export default function MessageList({
                                         messages,
                                         otherName,
@@ -17,38 +23,28 @@ export default function MessageList({
     const wasAtBottomRef = useRef(true);
     const [tick, setTick] = useState(0);
 
-    // 라이트박스 상태
+    // 라이트박스
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [lightboxIndex, setLightboxIndex] = useState(0);
     const [lightboxSrcs, setLightboxSrcs] = useState([]);
 
-    // 이미지 목록 추출 (메시지 배열로부터)
     useEffect(() => {
         const imgs = (messages || [])
-            .filter((m) => m && m.imageUrl)
-            .map((m) => m.imageUrl);
+            .filter((m) => safeSrc(m?.imageUrl))
+            .map((m) => safeSrc(m.imageUrl));
         setLightboxSrcs(imgs);
     }, [messages]);
 
-    // 라이트박스 열기
     const openLightbox = (src) => {
         const idx = lightboxSrcs.indexOf(src);
         setLightboxIndex(idx >= 0 ? idx : 0);
         setLightboxOpen(true);
     };
     const closeLightbox = () => setLightboxOpen(false);
+    const showPrev = () => setLightboxIndex((p) => Math.max(0, p - 1));
+    const showNext = () =>
+        setLightboxIndex((p) => Math.min(lightboxSrcs.length - 1, p + 1));
 
-    // 🔒 경계 처리: 더 이상 못 가면 멈춤
-    const showPrev = () => {
-        setLightboxIndex((prev) => Math.max(0, prev - 1));
-    };
-    const showNext = () => {
-        setLightboxIndex((prev) =>
-            Math.min(lightboxSrcs.length - 1, prev + 1)
-        );
-    };
-
-    // 스크롤 유틸
     const isNearBottom = useCallback(() => {
         const el = scrollerRef.current;
         if (!el) return true;
@@ -95,7 +91,8 @@ export default function MessageList({
         }
     };
 
-    // 안전한 key 생성
+    const avatar = safeSrc(otherAvatar) || "/images/profile_img/sangjun.jpg";
+
     const safeKey = (idx, m) =>
         m?.key ??
         m?.id ??
@@ -119,28 +116,35 @@ export default function MessageList({
                             <p className={s.systemText}>{m.text}</p>
                         </div>
                     ) : (
-                        <div key={safeKey(idx, m)} className={`${s.msg} ${m.fromMe ? s.me : s.other}`}>
+                        <div
+                            key={safeKey(idx, m)}
+                            className={`${s.msg} ${m.fromMe ? s.me : s.other}`}
+                        >
                             {!m.fromMe && (
                                 <div className={s.senderRow}>
-                                    <img className={s.avatar} src={otherAvatar} alt="" />
+                                    {/* avatar 가 없으면 렌더 자체를 생략 */}
+                                    {avatar ? (
+                                        <img className={s.avatar} src={avatar} alt="" />
+                                    ) : null}
                                     <span className={s.senderName}>{otherName}</span>
                                 </div>
                             )}
 
                             <div className={s.bubbleRow}>
-                                {m.fromMe && m.read && <span className={s.readInline}>읽음</span>}
+                                {m.fromMe && m.read && (
+                                    <span className={s.readInline}>읽음</span>
+                                )}
 
-                                {m.imageUrl ? (
-                                    // ✅ 이미지 동일 사이즈 박스
+                                {safeSrc(m.imageUrl) ? (
                                     <div
                                         className={s.imageBox}
                                         role="button"
-                                        onClick={() => openLightbox(m.imageUrl)}
+                                        onClick={() => openLightbox(safeSrc(m.imageUrl))}
                                         title="이미지 크게 보기"
                                     >
                                         <img
                                             className={s.image}
-                                            src={m.imageUrl}
+                                            src={safeSrc(m.imageUrl)}
                                             alt=""
                                             onLoad={handleImageLoad}
                                             onError={handleImageLoad}
@@ -158,7 +162,6 @@ export default function MessageList({
                 )}
             </ScrollArea>
 
-            {/* 라이트박스 */}
             <ImageLightbox
                 open={lightboxOpen}
                 images={lightboxSrcs}
