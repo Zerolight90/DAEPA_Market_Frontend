@@ -52,14 +52,14 @@
     text-shadow: 0 2px 12px rgba(0,0,0,0.3);
 }
 
-:global(.swiper-button-prev),
-:global(.swiper-button-next) {
+:global(.swiper-button-prev, .swiper-button-next)
+{
     color: #fff;
     width: 44px;
     height: 44px;
 }
-:global(.swiper-button-prev:hover),
-:global(.swiper-button-next:hover) {
+:global(.swiper-button-prev:hover, .swiper-button-next:hover)
+{
     filter: drop-shadow(0 2px 8px rgba(0,0,0,0.35));
 }
 
