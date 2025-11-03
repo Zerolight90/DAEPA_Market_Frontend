@@ -1,0 +1,43 @@
+name: Deploy Frontend to EC2
+
+on:
+  push:
+    branches: ["zerolight"]
+
+concurrency:
+  group: frontend-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH into EC2 and deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script: |
+            set -e
+            cd ~/apps/frontend
+
+            echo "[1/5] Git fetch & checkout"
+            git fetch --all
+            git checkout zerolight
+            git pull --rebase origin zerolight
+
+            echo "[2/5] Optional: .env 관리 (필요 시 여기서 갱신)"
+            # echo "NEXT_PUBLIC_API_BASE=http://<backend-host>:<port>" > .env
+
+            echo "[3/5] Compose down"
+            docker compose down
+
+            echo "[4/5] Build & Up"
+            docker compose build --no-cache --progress=plain
+            docker compose up -d
+
+            echo "[5/5] Status"
+            docker compose ps
+            docker logs --tail=100 daepa-frontend || true
