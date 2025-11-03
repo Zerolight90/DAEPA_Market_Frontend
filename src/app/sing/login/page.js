@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "@/app/sing/login/login.module.css";
 import tokenStore from "@/app/store/TokenStore";
-import naverLogo from "@/app/naverlogin.png";
+import naverLogo from "@/app/naver.png";
+import kakaoLogo from "@/app/kakaologin.png"; // ✅ 추가
 
 export default function Page() {
     const router = useRouter();
@@ -17,12 +18,17 @@ export default function Page() {
 
     const { setToken } = tokenStore();
 
-    // ✅ 백엔드 주소 여기서 고정
+    // ✅ 백엔드 주소
     const BACKEND_URL = "http://localhost:8080";
 
-    // ✅ 네이버 로그인 버튼 눌렀을 때
+    // ✅ 네이버 로그인 버튼
     const handleNaverLogin = () => {
-        router.push("http://localhost:8080/oauth2/authorization/naver");
+        window.location.href = `${BACKEND_URL}/oauth2/authorization/naver`;
+    };
+
+    // ✅ 카카오 로그인 버튼
+    const handleKakaoLogin = () => {
+        window.location.href = `${BACKEND_URL}/oauth2/authorization/kakao`;
     };
 
     // ✅ 저장된 로그인 옵션 불러오기
@@ -42,7 +48,6 @@ export default function Page() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        // 옵션 저장
         try {
             if (rememberId && uid) {
                 localStorage.setItem("login_saved_id", uid);
@@ -88,7 +93,6 @@ export default function Page() {
                 <h1 className={styles.title}>로그인</h1>
 
                 <form onSubmit={handleSubmit}>
-                    {/* 아이디 */}
                     <div className={styles.row}>
                         <label htmlFor="u_id" className={styles.label}>
                             아이디
@@ -106,7 +110,6 @@ export default function Page() {
                         />
                     </div>
 
-                    {/* 비밀번호 */}
                     <div className={styles.row}>
                         <label htmlFor="u_pw" className={styles.label}>
                             비밀번호
@@ -124,7 +127,6 @@ export default function Page() {
                         />
                     </div>
 
-                    {/* 체크박스들 */}
                     <div className={styles.options}>
                         <label className={styles.checkItem}>
                             <input
@@ -156,7 +158,6 @@ export default function Page() {
                     </div>
                 </form>
 
-                {/* 아이디/비번 찾기 */}
                 <div className={styles.links}>
                     <Link href="/sing/login/find_id" className={styles.link}>
                         아이디 찾기
@@ -167,23 +168,37 @@ export default function Page() {
                     </Link>
                 </div>
 
-                {/* ✅ 네이버 로그인 버튼 */}
+                {/* ✅ SNS 로그인 버튼들 */}
                 <div className={styles.snsWrap}>
                     <button
                         type="button"
                         className={`${styles.snsBtn} ${styles.naver}`}
                         onClick={handleNaverLogin}
-                        aria-label="네이버로 로그인"
                     >
                         <Image
                             src={naverLogo}
                             alt="네이버 로그인"
-                            width={220}
+                            width={380}
+                            height={48}
+                            priority
+                        />
+                    </button>
+
+                    <button
+                        type="button"
+                        className={`${styles.snsBtn} ${styles.kakao}`}
+                        onClick={handleKakaoLogin}
+                    >
+                        <Image
+                            src={kakaoLogo}
+                            alt="카카오 로그인"
+                            width={380}
                             height={48}
                             priority
                         />
                     </button>
                 </div>
+
             </div>
         </div>
     );

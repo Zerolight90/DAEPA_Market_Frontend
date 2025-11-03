@@ -6,28 +6,8 @@ import { usePathname } from 'next/navigation';
 import styles from './address.module.css';
 import tokenStore from '@/app/store/TokenStore';
 
-const SIDE_SECTIONS = [
-    {
-        title: '거래 정보',
-        items: [
-            { href: '/mypage/sell', label: '판매내역' },
-            { href: '/mypage/buy', label: '구매내역' },
-            { href: '/mypage/shipping', label: '택배' },
-            { href: '/mypage/like', label: '찜한 상품' },
-            { href: '/mypage/matching', label: '관심 상품 매칭' },
-            { href: '/mypage/safe-settle', label: '안심결제 정산내역' },
-        ],
-    },
-    {
-        title: '내 정보',
-        items: [
-            { href: '/mypage/account', label: '계좌 관리' },
-            { href: '/mypage/address', label: '배송지 관리' },
-            { href: '/mypage/review', label: '거래 후기' },
-            { href: '/mypage/leave', label: '탈퇴하기' },
-        ],
-    },
-];
+// ✅ 공용 사이드바 임포트
+import Sidebar from '@/components/mypage/sidebar';
 
 export default function AddressPage() {
     const pathname = usePathname();
@@ -50,6 +30,7 @@ export default function AddressPage() {
         phone: '',
         addr1: '',
         addr2: '',
+        region: '',
         primary: false,
     });
 
@@ -92,16 +73,15 @@ export default function AddressPage() {
         const addr2 = me.uLocationDetail ?? '';
         const region = me.uLocation ?? '';
 
-        // 주소가 하나도 없으면 카드 안 만듦
         if (!addr1 && !addr2) return null;
 
         return {
             label: '기본 배송지',
             name,
             phone,
-            addr1,
-            addr2,
-            region,
+            addr1,      // 우편번호(예: 12345)
+            addr2,      // 상세주소
+            region,     // 도로명/지번
             primary: true,
         };
     }, [me]);
@@ -152,7 +132,7 @@ export default function AddressPage() {
                 credentials: 'include',
             });
         } catch {
-            // 데모라서 실패해도 프론트에만 넣어둠
+            // 데모라서 실패해도 프론트만 갱신
         }
         setAddresses((prev) => {
             const next = form.primary ? prev.map((a) => ({ ...a, primary: false })) : prev;
@@ -163,32 +143,8 @@ export default function AddressPage() {
 
     return (
         <div className={styles.wrapper}>
-            {/* Sidebar */}
-            <aside className={styles.sidebar}>
-                <nav className={styles.sideNav}>
-                    <div className={styles.sideHeader}>마이페이지</div>
-                    {SIDE_SECTIONS.map((sec) => (
-                        <div key={sec.title} className={styles.sideSection}>
-                            <div className={styles.sideTitle}>{sec.title}</div>
-                            <ul className={styles.sideList}>
-                                {sec.items.map((it) => {
-                                    const active = pathname === it.href;
-                                    return (
-                                        <li key={it.href}>
-                                            <Link
-                                                href={it.href}
-                                                className={`${styles.sideLink} ${active ? styles.active : ''}`}
-                                            >
-                                                {it.label}
-                                            </Link>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </div>
-                    ))}
-                </nav>
-            </aside>
+            {/* ✅ 공용 사이드바 */}
+            <Sidebar />
 
             {/* Content */}
             <main className={styles.content}>
@@ -221,9 +177,7 @@ export default function AddressPage() {
                                                     {a.label || '배송지'}
                                                 </strong>
                                                 {a.primary && (
-                                                    <span className={styles.addrPrimaryBadge}>
-                                                        대표 배송지
-                                                    </span>
+                                                    <span className={styles.addrPrimaryBadge}>대표 배송지</span>
                                                 )}
                                             </div>
 
@@ -231,9 +185,7 @@ export default function AddressPage() {
                                             <button
                                                 type="button"
                                                 className={styles.addrEditBtn}
-                                                onClick={() =>
-                                                    setEditTarget(isEditing ? null : idx)
-                                                }
+                                                onClick={() => setEditTarget(isEditing ? null : idx)}
                                             >
                                                 ✎ 편집
                                             </button>
@@ -254,7 +206,7 @@ export default function AddressPage() {
                                             </div>
                                         )}
 
-                                        {/* 편집 모드일 때만 나오는 하단 액션 */}
+                                        {/* 편집 모드 하단 액션 */}
                                         {isEditing && (
                                             <div className={styles.addrActionBar}>
                                                 <button
@@ -262,8 +214,7 @@ export default function AddressPage() {
                                                     className={styles.addrAction}
                                                     disabled={a.primary}
                                                     onClick={() => {
-                                                        // TODO: 대표 설정 API 호출
-                                                        // setAddresses(...)
+                                                        // TODO: 대표 설정 API
                                                     }}
                                                 >
                                                     대표 배송지 설정
@@ -273,8 +224,7 @@ export default function AddressPage() {
                                                     type="button"
                                                     className={styles.addrActionDanger}
                                                     onClick={() => {
-                                                        // TODO: 삭제 API 호출
-                                                        // setAddresses(prev => prev.filter((_, i) => i !== idx))
+                                                        // TODO: 삭제 API
                                                     }}
                                                 >
                                                     삭제
