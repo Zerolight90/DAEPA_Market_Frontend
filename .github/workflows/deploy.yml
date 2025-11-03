@@ -2,51 +2,55 @@ name: Deploy Frontend to EC2
 
 on:
   push:
-    branches: ["zerolight"]
-
-concurrency:
-  group: frontend-deploy
-  cancel-in-progress: true
+    branches:
+      - zerolight   # 🚀 zerolight 브랜치 푸시 시 자동배포 실행
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: SSH into EC2 and deploy
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # ========================
+      # 🔐 SSH 접속하여 배포 진행
+      # ========================
+      - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT || 22 }}
-
-          # 🔥 핵심 3줄
-          timeout: 300s                # SSH 세션 유효시간 (5분)
-          command_timeout: 120m        # 명령 실행 타임아웃 (2시간)
-          script_stop: false           # 실패해도 즉시 중단하지 않음 (디버그용)
-
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          timeout: 300s
+          command_timeout: 120m
+          script_stop: false
           script: |
             set -e
             cd ~/apps/frontend
 
-            echo "[1/5] Git 업데이트"
+            echo "[1/6] Git 업데이트"
             cp -f .env /tmp/.env.backup 2>/dev/null || true
             git fetch --all
             git checkout zerolight
             git reset --hard origin/zerolight
             [ -f /tmp/.env.backup ] && mv /tmp/.env.backup .env
 
-            echo "[2/5] 기존 컨테이너 정리"
-            docker compose down
+            echo "[2/6] 기존 컨테이너 및 캐시 정리"
+            docker compose down || true
+            docker system prune -af || true
+            docker builder prune -af || true
+            rm -rf .next || true
 
-            echo "[3/5] 빌드 및 배포 시작"
-            # --no-cache 제거 (캐시 사용으로 속도 ↑)
-            docker compose build --progress=plain
+            echo "[3/6] 빌드 및 배포 시작 (강제 새 빌드)"
+            docker compose build --no-cache --progress=plain
             docker compose up -d
 
-            echo "[4/5] 상태 확인"
+            echo "[4/6] 상태 확인"
             docker compose ps
 
-            echo "[5/5] 최근 로그 확인"
-            docker logs --tail=100 daepa-frontend || true
+            echo "[5/6] 최근 로그 확인"
+            docker logs --tail=50 daepa-frontend || true
+
+            echo "[6/6] 배포 완료 🎉"
