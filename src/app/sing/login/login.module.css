@@ -139,7 +139,13 @@
     background:#fff;
 }
 .kakao { background:#FEE500; border-color:#F4D600; }
-.naver { background:#03C75A; color:#fff; border-color:#03C75A; }
+.naver {   background: none !important; /* ✅ 배경 완전 제거 */
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center; }
 
 /* 에러 메시지 */
 .error { color:#ff4d4f; font-size:0.9em; text-align:center; margin-top:10px; }
