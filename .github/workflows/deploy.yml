@@ -24,7 +24,7 @@ jobs:
       github.repository_owner == 'Zerolight90' &&
       github.ref == 'refs/heads/main'
 
-    timeout-minutes: 240
+    timeout-minutes: 120
     runs-on: ubuntu-latest
 
     steps:
@@ -42,7 +42,7 @@ jobs:
 
       # 캐시 Next.js 빌드
       - name: Cache Next.js build
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: ~/.next
           key: ${{ runner.os }}-next-build-${{ hashFiles('**/package-lock.json') }}
