@@ -1,12 +1,8 @@
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
-
 import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import "swiper/css";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
+import "./globals.css";                     // 전역 CSS
+import "swiper/css";                        // ✅ Swiper 기본
+import "swiper/css/navigation";             // ✅ 네비게이션 쓰면
+import "swiper/css/pagination";          // ✅ 페이지네이션 쓰면
 
 import ConditionalLayout from "./ConditionalLayout";
 

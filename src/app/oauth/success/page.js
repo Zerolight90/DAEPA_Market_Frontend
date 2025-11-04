@@ -1,30 +1,20 @@
-//src/app/oauth/success
 "use client";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-export const fetchCache = "force-no-store";
-
-import { Suspense, useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import tokenStore from "@/app/store/TokenStore";
 
-function Inner() {
+export default function OAuthSuccessPage() {
     const router = useRouter();
     const sp = useSearchParams();
     const { setToken } = tokenStore();
 
-    // StrictMode 등으로 인한 중복 실행 가드
-    const ran = useRef(false);
+    const accessToken = sp.get("accessToken");
+    const refreshToken = sp.get("refreshToken");
+    const provider = sp.get("provider") || "naver";
 
     useEffect(() => {
-        if (ran.current) return;
-        ran.current = true;
-
-        const accessToken = sp.get("accessToken");
-        const refreshToken = sp.get("refreshToken");
-        const provider = sp.get("provider") || "naver";
-
+        // 1) 토큰 저장
         if (accessToken) {
             localStorage.setItem("accessToken", accessToken);
             setToken(accessToken);
@@ -33,17 +23,9 @@ function Inner() {
             localStorage.setItem("refreshToken", refreshToken);
         }
 
-        // 마무리 후 메인 OAuth 페이지로 이동
+        // 2) 실제 추가정보 페이지로
         router.replace(`/oauth?provider=${provider}`);
-    }, [router, setToken, sp]);
+    }, [accessToken, refreshToken, provider, router, setToken]);
 
     return <p style={{ padding: 24 }}>소셜 로그인 중입니다...</p>;
-}
-
-export default function Page() {
-    return (
-        <Suspense fallback={<p style={{ padding: 24 }}>로딩 중…</p>}>
-            <Inner />
-        </Suspense>
-    );
 }
