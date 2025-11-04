@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Search, Eye, Reply, User, Calendar } from "lucide-react";
+import { ArrowLeft, Search, Eye, User, Calendar } from "lucide-react";
 import Link from "next/link";
 import styles from "../admin.module.css";
 
 export default function ContactPage() {
   const [inquiries, setInquiries] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterCategory, setFilterCategory] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -23,10 +23,10 @@ export default function ContactPage() {
   }, []);
 
   const filteredInquiries = inquiries.filter(inquiry => {
-    const matchesSearch = inquiry.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         inquiry.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (inquiry.message || "").toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === "all" || inquiry.status === filterStatus;
+    const matchesSearch = (inquiry.name ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (inquiry.title ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (inquiry.content ?? "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesFilter = filterCategory === "all" || inquiry.category === filterCategory;
     return matchesSearch && matchesFilter;
   });
 
@@ -54,13 +54,13 @@ export default function ContactPage() {
   const getCategoryText = (category) => {
     switch (category) {
       case "general":
-        return "거래/결제 문의";
+        return "거래/결제";
       case "technical":
-        return "계정/로그인 문의";
+        return "계정/로그인";
       case "complaint":
-        return "신고/사기 문의";
+        return "신고/사기";
       case "other":
-        return "서비스/기술 문의";
+        return "검수/배송";
       default:
         return "기타 문의";
     }
@@ -82,22 +82,22 @@ export default function ContactPage() {
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
-          <Link 
-            href="/admin" 
-            style={{ 
-              display: "flex", 
-              alignItems: "center", 
-              gap: "0.5rem", 
-              color: "#64748b", 
-              textDecoration: "none",
-              fontSize: "0.875rem"
-            }}
-          >
-            <ArrowLeft size={16} />
-            대시보드로 돌아가기
-          </Link>
-        </div>
+        {/*<div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>*/}
+        {/*  <Link */}
+        {/*    href="/admin" */}
+        {/*    style={{ */}
+        {/*      display: "flex", */}
+        {/*      alignItems: "center", */}
+        {/*      gap: "0.5rem", */}
+        {/*      color: "#64748b", */}
+        {/*      textDecoration: "none",*/}
+        {/*      fontSize: "0.875rem"*/}
+        {/*    }}*/}
+        {/*  >*/}
+        {/*    <ArrowLeft size={16} />*/}
+        {/*    대시보드로 돌아가기*/}
+        {/*  </Link>*/}
+        {/*</div>*/}
         <h1 className={styles.pageTitle}>문의 관리</h1>
         <p className={styles.pageSubtitle}>
           사용자들의 문의사항을 확인하고 답변하세요
@@ -117,15 +117,16 @@ export default function ContactPage() {
           />
         </div>
         <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
           className={styles.filterSelect}
         >
-          <option value="all">전체 상태</option>
-          <option value="pending">대기</option>
-          <option value="processing">처리중</option>
-          <option value="completed">완료</option>
-          {/*<option value="closed">종료</option>*/}
+          <option value="all">전체 문의</option>
+          <option value="general">{getCategoryText("general")}</option>
+          <option value="technical">{getCategoryText("technical")}</option>
+          <option value="complaint">{getCategoryText("complaint")}</option>
+          <option value="other">{getCategoryText("other")}</option>
+          <option value="etc">기타 문의</option>
         </select>
       </div>
 
@@ -152,7 +153,7 @@ export default function ContactPage() {
                     width: "8px",
                     height: "8px",
                     borderRadius: "50%",
-                    backgroundColor: getPriorityColor(inquiry.priority)
+                    backgroundColor: getPriorityColor(inquiry.priority ?? 1)
                   }}></div>
                   #{inquiry.id}
                 </div>
@@ -174,14 +175,20 @@ export default function ContactPage() {
                   {getCategoryText(inquiry.category)}
                 </span>
               </div>
-              <div className={styles.tableCell}>
-                <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: "500" }}>
-                  {inquiry.title}
+              <div className={styles.tableCell} style={{ minWidth: 0 }}>
+                <div
+                  style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: "500" }}
+                  title={inquiry.title || "-"}
+                >
+                  {inquiry.title || "-"}
                 </div>
               </div>
-              <div className={styles.tableCell}>
-                <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#64748b" }}>
-                  {inquiry.content}
+              <div className={styles.tableCell} style={{ minWidth: 0 }}>
+                <div
+                  style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "#64748b" }}
+                  title={inquiry.content || "-"}
+                >
+                  {inquiry.content || "-"}
                 </div>
               </div>
               <div className={styles.tableCell}>
@@ -195,16 +202,10 @@ export default function ContactPage() {
               </div>
               <div className={styles.tableCell}>
                 <div className={styles.actionButtons}>
-                  <button className={`${styles.actionButton} ${styles.blue}`}>
+                  <Link href={`/admin/contact/${inquiry.id}`} className={`${styles.actionButton} ${styles.blue}`}>
                     <Eye size={16} />
                     상세
-                  </button>
-                  {inquiry.status !== "completed" && inquiry.status !== "closed" && (
-                    <button className={`${styles.actionButton} ${styles.gray}`}>
-                      <Reply size={16} />
-                      답변
-                    </button>
-                  )}
+                  </Link>
                 </div>
               </div>
             </div>
