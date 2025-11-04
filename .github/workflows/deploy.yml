@@ -19,19 +19,19 @@ concurrency:
 
 jobs:
   deploy:
-    # 추가 가드: 소유 레포의 main일 때만 배포 실행
+    # 추가 가드: main 브랜치 + 레포지토리 소유자만 실행
     if: |
       github.repository_owner == 'Zerolight90' &&
       github.ref == 'refs/heads/main'
 
-    timeout-minutes: 120
+    timeout-minutes: 240     # 🔸 전체 Job 최대 4시간
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 캐시 Node 모듈
+      # Node 모듈 캐시
       - name: Cache Node modules
         uses: actions/cache@v3
         with:
@@ -40,7 +40,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      # 캐시 Next.js 빌드
+      # Next.js 빌드 캐시
       - name: Cache Next.js build
         uses: actions/cache@v3
         with:
@@ -49,19 +49,22 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-next-build-
 
-      # 선택: 빌드 검증 (Next 빌드 실패 시 여기서 차단)
+      # Node 환경 세팅
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'npm'
 
+      # 의존성 설치
       - name: Install dependencies
         run: npm ci
 
+      # Next.js 빌드 검증 (에러나면 여기서 중단)
       - name: Build (validation only)
         run: npx next build --no-lint
 
+      # SSH로 실제 서버에 배포
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -71,36 +74,37 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script_stop: true
           debug: false
+          timeout: 60m           # 🔸 SSH 세션 최대 시간
+          command_timeout: 60m   # 🔸 명령 실행 시간(기본 10분 → 60분으로 확장)
           script: |
             set -euo pipefail
+            export DOCKER_BUILDKIT=1
+            export COMPOSE_DOCKER_CLI_BUILD=1
+
             cd ~/apps/frontend
 
-            echo "[1/6] Git update"
+            echo "[1/5] Git update"
             cp -f .env /tmp/.env.backup 2>/dev/null || true
             git fetch --all
             git checkout main
             git reset --hard origin/main
             [ -f /tmp/.env.backup ] && mv /tmp/.env.backup .env
 
-            echo "[2/6] Cleanup containers and caches"
+            echo "[2/5] Stop and prepare"
             docker compose down || true
-            docker system prune -af || true
-            docker builder prune -af || true
 
-            if [ -d .next ]; then
-              sudo -n chown -R $USER:$USER .next || true
-              sudo -n chmod -R u+w .next || true
-              sudo -n rm -rf .next || true
-            fi
+            # ❌ 시스템 캐시 삭제 금지 (빌드 속도 개선을 위해 유지)
+            # docker system prune -af || true
+            # docker builder prune -af || true
 
-            echo "[3/6] Build and run"
-            docker compose --progress=plain build --no-cache
+            echo "[3/5] Build with cache"
+            docker compose build --progress=plain   # --no-cache 제거로 캐시 사용
+
+            echo "[4/5] Start containers"
             docker compose up -d
 
-            echo "[4/6] Status"
+            echo "[5/5] Status & logs"
             docker compose ps
-
-            echo "[5/6] Recent logs"
             docker logs --tail=80 daepa-frontend || true
 
-            echo "[6/6] Done"
+            echo "✅ Deploy complete!"
