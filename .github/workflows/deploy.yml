@@ -2,8 +2,7 @@ name: Deploy Frontend to EC2
 
 on:
   push:
-    branches:
-      - zerolight   # 푸시 시 자동배포 실행
+    branches: [zerolight]  # 푸시 시 자동배포 실행
 
 jobs:
   deploy:
@@ -24,7 +23,7 @@ jobs:
           command_timeout: 120m
           script_stop: false
           script: |
-            set -e
+            set -euo pipefail
             cd ~/apps/frontend
 
             echo "[1/6] Git 업데이트"
@@ -38,7 +37,13 @@ jobs:
             docker compose down || true
             docker system prune -af || true
             docker builder prune -af || true
-            rm -rf .next || true
+
+            # .next 권한 정리 후 삭제 (권한 에러 방지)
+            if [ -d .next ]; then
+              sudo -n chown -R ubuntu:ubuntu .next || true
+              sudo -n chmod -R u+w .next || true
+              sudo -n rm -rf .next || true
+            fi
 
             echo "[3/6] 빌드 및 배포 시작 (강제 새 빌드)"
             docker compose build --no-cache --progress=plain

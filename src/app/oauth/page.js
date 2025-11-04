@@ -1,3 +1,4 @@
+//src/app/oauth/
 "use client";
 
 export const dynamic = "force-dynamic";
