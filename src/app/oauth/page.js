@@ -1,14 +1,15 @@
 "use client";
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./oauth.module.css";
 import tokenStore from "@/app/store/TokenStore";
 
 const BACKEND_URL = "http://localhost:8080";
 
-export default function OAuthPage() {
+function InnerOAuthPage() {
     const router = useRouter();
     const sp = useSearchParams();
     const { setToken } = tokenStore();
@@ -45,9 +46,7 @@ export default function OAuthPage() {
     const [marketingChecked, setMarketingChecked] = useState(false);
     const [allChecked, setAllChecked] = useState(false);
 
-    // =======================
     // 1) 토큰 저장
-    // =======================
     useEffect(() => {
         if (accessTokenFromQuery) {
             localStorage.setItem("accessToken", accessTokenFromQuery);
@@ -58,9 +57,7 @@ export default function OAuthPage() {
         }
     }, [accessTokenFromQuery, refreshTokenFromQuery, setToken]);
 
-    // =======================
     // 2) 내 정보 조회
-    // =======================
     useEffect(() => {
         (async () => {
             const atk = accessTokenFromQuery || localStorage.getItem("accessToken");
@@ -103,9 +100,7 @@ export default function OAuthPage() {
         })();
     }, [accessTokenFromQuery, forceShow, router]);
 
-    // =======================
     // 3) 주소 API 스크립트
-    // =======================
     useEffect(() => {
         const id = "daum-postcode-script";
         if (document.getElementById(id)) return;
@@ -133,9 +128,7 @@ export default function OAuthPage() {
         }).open();
     };
 
-    // =======================
     // 4) 닉네임 자동 중복검사
-    // =======================
     useEffect(() => {
         if (!nickname) {
             setNicknameMsg({ text: "", color: "" });
@@ -156,14 +149,12 @@ export default function OAuthPage() {
             } catch {
                 setNicknameMsg({ text: "확인 중 오류 발생", color: "red" });
             }
-        }, 500); // 0.5초 후 실행
+        }, 500);
 
         return () => clearTimeout(timer);
     }, [nickname]);
 
-    // =======================
     // 5) 전화번호 자동 중복검사
-    // =======================
     useEffect(() => {
         if (!phone) {
             setPhoneMsg({ text: "", color: "" });
@@ -190,9 +181,7 @@ export default function OAuthPage() {
         return () => clearTimeout(timer);
     }, [phone]);
 
-    // =======================
     // 6) 약관 전체동의
-    // =======================
     const handleAllAgree = (e) => {
         const checked = e.target.checked;
         setAllChecked(checked);
@@ -205,9 +194,7 @@ export default function OAuthPage() {
         }
     };
 
-    // =======================
     // 7) 제출
-    // =======================
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -249,9 +236,7 @@ export default function OAuthPage() {
         }
     };
 
-    // =======================
     // UI
-    // =======================
     if (loading) return <p style={{ padding: 24 }}>불러오는 중...</p>;
 
     return (
@@ -392,5 +377,13 @@ export default function OAuthPage() {
                 </form>
             </div>
         </main>
+    );
+}
+
+export default function Page() {
+    return (
+        <Suspense fallback={<p style={{ padding: 24 }}>로딩 중…</p>}>
+            <InnerOAuthPage />
+        </Suspense>
     );
 }
