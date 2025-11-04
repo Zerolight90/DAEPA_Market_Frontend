@@ -1,0 +1,186 @@
+.page {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 32px 16px 80px;
+    background: #fff;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    gap: 24px;
+    border-bottom: 1px solid #f1f1f1;
+    padding-bottom: 20px;
+}
+
+.userBox {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: #f2f2f2;
+}
+
+.userName {
+    font-size: 20px;
+    font-weight: 600;
+    color: #222;
+}
+
+.userLocation {
+    margin-top: 4px;
+    font-size: 14px;
+    color: #777;
+}
+
+.mannerBox {
+    min-width: 160px;
+    text-align: right;
+}
+
+.mannerRow {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    align-items: center;
+}
+
+.mannerValue {
+    font-size: 20px;
+    font-weight: 600;
+    color: #14b36b;
+}
+
+.mannerEmoji {
+    font-size: 18px;
+}
+
+.mannerLabel {
+    font-size: 12px;
+    color: #888;
+}
+
+.mannerBar {
+    width: 140px;
+    height: 6px;
+    background: #edf3f1;
+    border-radius: 999px;
+    margin-left: auto;
+    margin-top: 6px;
+    overflow: hidden;
+}
+
+.mannerFill {
+    height: 100%;
+    background: linear-gradient(90deg, #14b36b, #48d597);
+}
+
+.tabs {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+.tab {
+    background: none;
+    border: none;
+    padding: 10px 4px 14px;
+    font-size: 15px;
+    color: #777;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+}
+
+.tab span {
+    font-weight: 500;
+}
+
+.activeTab {
+    color: #222;
+    font-weight: 600;
+    border-bottom-color: #222;
+}
+
+.reviewList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    margin-top: 8px;
+}
+
+.reviewItem {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid #f6f6f6;
+}
+
+.reviewLeft {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    flex: 1;
+}
+
+.reviewAvatar {
+    width: 40px;
+    height: 40px;
+    background: #ececec;
+    border-radius: 50%;
+    flex: 0 0 40px;
+}
+
+.reviewTop {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+}
+
+.reviewWriter {
+    font-weight: 600;
+    color: #222;
+}
+
+.reviewMeta {
+    font-size: 12px;
+    color: #999;
+}
+
+.reviewContent {
+    margin-top: 4px;
+    font-size: 14px;
+    color: #555;
+    line-height: 1.5;
+    max-width: 570px;
+}
+
+.thumbnail {
+    width: 56px;
+    height: 56px;
+    border-radius: 6px;
+    object-fit: cover;
+    flex: 0 0 56px;
+}
+
+@media (max-width: 720px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .mannerBox {
+        text-align: left;
+    }
+    .reviewItem {
+        flex-direction: column;
+    }
+    .thumbnail {
+        margin-left: 54px;
+    }
+}

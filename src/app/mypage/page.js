@@ -6,27 +6,8 @@ import { usePathname } from "next/navigation";
 import styles from "./mypage.module.css";
 import tokenStore from "@/app/store/TokenStore";
 
-const SIDE_SECTIONS = [
-    {
-        title: "거래 정보",
-        items: [
-            { href: "/mypage/sell", label: "판매내역" },
-            { href: "/mypage/buy", label: "구매내역" },
-            { href: "/mypage/shipping", label: "택배" },
-            { href: "/mypage/matching", label: "관심 상품 매칭" },
-            { href: "/mypage/safe-settle", label: "안심결제 정산내역" },
-        ],
-    },
-    {
-        title: "내 정보",
-        items: [
-            { href: "/mypage/account", label: "계좌 관리" },
-            { href: "/mypage/address", label: "배송지 관리" },
-            { href: "/mypage/review", label: "거래 후기" },
-            { href: "/mypage/leave", label: "탈퇴하기" },
-        ],
-    },
-];
+// ⬇️ 분리된 사이드바 컴포넌트 사용 (파일명: src/components/mypage/sidebar.js)
+import SideNav from "@/components/mypage/sidebar";
 
 const METRICS = [
     { key: "safe", label: "안심결제", value: 0 },
@@ -35,7 +16,6 @@ const METRICS = [
     { key: "eco", label: "에코마일", value: "0 M" },
 ];
 
-// 탭: 전체 / 판매중(0) / 판매완료(1)
 const TABS = [
     { key: "all", label: "전체" },
     { key: "selling", label: "판매중" }, // status=0
@@ -72,12 +52,9 @@ export default function MyPage() {
 
         (async () => {
             try {
-                // ✅ 리라이트 경로 사용
                 const res = await fetch("/api/sing/me", {
                     method: "GET",
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
+                    headers: { Authorization: `Bearer ${accessToken}` },
                     credentials: "include",
                     cache: "no-store",
                 });
@@ -85,8 +62,8 @@ export default function MyPage() {
                 if (res.ok) {
                     const data = await res.json();
                     setMyInfo({
-                        nickname: data.uName || "사용자",
-                        trust: data.uManner || 0,
+                        nickname: data.uName || data.u_nickname || data.uNickname || "사용자",
+                        trust: data.uManner ?? 0,
                         avatarUrl: data.avatarUrl || "",
                     });
                 } else {
@@ -106,29 +83,22 @@ export default function MyPage() {
             return;
         }
 
-        // 탭 → status
         let statusParam = "";
         if (tab === "selling") statusParam = "0";
         else if (tab === "sold") statusParam = "1";
 
         const url =
-            statusParam === ""
-                ? "/api/products/mypage"
-                : `/api/products/mypage?status=${statusParam}`;
+            statusParam === "" ? "/api/products/mypage" : `/api/products/mypage?status=${statusParam}`;
 
         (async () => {
             try {
-                console.log("➡️ GET", url);
                 const res = await fetch(url, {
                     method: "GET",
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
+                    headers: { Authorization: `Bearer ${accessToken}` },
                     credentials: "include",
                 });
 
                 if (!res.ok) {
-                    // 여기서 404가 나오면 백엔드가 "해당 아이디의 회원이 없습니다." 던진 거
                     const txt = await res.text();
                     console.warn("❌ mypage not ok:", res.status, txt);
                     setItems([]);
@@ -136,16 +106,12 @@ export default function MyPage() {
                 }
 
                 const data = await res.json();
-                console.log("✅ mypage data:", data);
-
                 const mapped = data.map((p, idx) => ({
                     id: idx + 1,
                     title: p.pd_title,
                     price: p.pd_price,
-                    status: p.pd_status === "0" ? "SELLING" : "SOLD",
-                    createdAt: p.pd_create
-                        ? `${p.pd_create}T00:00:00Z`
-                        : "2025-01-01T00:00:00Z",
+                    status: String(p.pd_status) === "0" ? "SELLING" : "SOLD",
+                    createdAt: p.pd_create ? `${p.pd_create}T00:00:00Z` : "2025-01-01T00:00:00Z",
                     img: "/no-image.png",
                     ago: p.pd_create || "",
                 }));
@@ -167,44 +133,17 @@ export default function MyPage() {
                 return copied.sort((a, b) => b.price - a.price);
             case "latest":
             default:
-                return copied.sort(
-                    (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-                );
+                return copied.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         }
     }, [items, sort]);
 
     const trustPercent = Math.min(100, Math.round((myInfo.trust / 100) * 100));
-    const trustColor =
-        myInfo.trust < 20 ? "#8B4513" : myInfo.trust < 50 ? "#A3E635" : "#10B981";
+    const trustColor = myInfo.trust < 20 ? "#8B4513" : myInfo.trust < 50 ? "#A3E635" : "#10B981";
 
     return (
         <main className={styles.wrap}>
-            {/* 사이드바 */}
-            <aside className={styles.sidebar}>
-                <nav className={styles.sideNav}>
-                    <div className={styles.sideHeader}>마이페이지</div>
-                    {SIDE_SECTIONS.map((section) => (
-                        <div key={section.title} className={styles.sideSection}>
-                            <div className={styles.sideTitle}>{section.title}</div>
-                            <ul className={styles.sideList}>
-                                {section.items.map((it) => {
-                                    const active = pathname === it.href;
-                                    return (
-                                        <li key={it.href}>
-                                            <Link
-                                                href={it.href}
-                                                className={`${styles.sideLink} ${active ? styles.active : ""}`}
-                                            >
-                                                {it.label}
-                                            </Link>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        </div>
-                    ))}
-                </nav>
-            </aside>
+            {/* ⬇️ 분리된 사이드바 사용 */}
+            <SideNav currentPath={pathname} />
 
             {/* 오른쪽 본문 */}
             <section className={styles.content}>
@@ -222,9 +161,7 @@ export default function MyPage() {
 
                         <div className={styles.profileMeta}>
                             <div className={styles.nicknameRow}>
-                                <strong className={styles.nickname}>
-                                    {myInfo.nickname}
-                                </strong>
+                                <strong className={styles.nickname}>{myInfo.nickname}</strong>
                                 <Link
                                     href="/store/intro"
                                     className={styles.openStore}
@@ -243,24 +180,19 @@ export default function MyPage() {
                             </div>
 
                             <div className={styles.trustRow}>
-                                <span className={styles.trustLabel}>
-                                    신선도 <b>{myInfo.trust}</b>
-                                </span>
+                <span className={styles.trustLabel}>
+                  신선도 <b>{myInfo.trust}</b>
+                </span>
                                 <div className={styles.trustBar}>
-                                    <span
-                                        className={styles.trustGauge}
-                                        style={{
-                                            width: `${trustPercent}%`,
-                                            background: trustColor,
-                                        }}
-                                    />
+                  <span
+                      className={styles.trustGauge}
+                      style={{ width: `${trustPercent}%`, background: trustColor }}
+                  />
                                 </div>
                                 <span className={styles.trustMax}>100</span>
                             </div>
 
-                            <p className={styles.trustDesc}>
-                                앱에서 가게 소개 작성하고 신뢰도를 높여 보세요.
-                            </p>
+                            <p className={styles.trustDesc}>앱에서 가게 소개 작성하고 신뢰도를 높여 보세요.</p>
                         </div>
                     </div>
 
@@ -271,9 +203,7 @@ export default function MyPage() {
                                 <strong>내 상품 2배로 노출시키기</strong>
                                 <span>카페에 상품 자동 등록하기</span>
                             </div>
-                            <span className={styles.bannerArrow} aria-hidden>
-                                ›
-                            </span>
+                            <span className={styles.bannerArrow} aria-hidden>›</span>
                         </Link>
 
                         <ul className={styles.metricRow}>
@@ -322,9 +252,7 @@ export default function MyPage() {
                     </div>
 
                     {sortedItems.length === 0 ? (
-                        <div className={styles.empty}>
-                            선택된 조건에 해당하는 상품이 없습니다.
-                        </div>
+                        <div className={styles.empty}>선택된 조건에 해당하는 상품이 없습니다.</div>
                     ) : (
                         <ul className={styles.grid}>
                             {sortedItems.map((it) => (
@@ -334,9 +262,7 @@ export default function MyPage() {
                                         <img src={it.img} alt={it.title} className={styles.cardImg} />
                                         <div className={styles.cardBody}>
                                             <strong className={styles.cardTitle}>{it.title}</strong>
-                                            <span className={styles.cardPrice}>
-                                                {it.price.toLocaleString()}원
-                                            </span>
+                                            <span className={styles.cardPrice}>{it.price.toLocaleString()}원</span>
                                             <span className={styles.cardMeta}>{it.ago}</span>
                                         </div>
                                     </Link>

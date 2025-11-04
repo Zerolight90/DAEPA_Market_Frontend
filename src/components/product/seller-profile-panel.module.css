@@ -1,89 +1,76 @@
-.box,
-.shopBox {
+/* 카드 */
+.box {
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 14px;
     background: #fff;
-    border: 1px solid #ececec;
-    border-radius: 14px;
-    padding: 18px 18px 16px;
 }
 
-.title {
-    font-weight: 600;
-    margin-bottom: 14px;
-    font-size: 0.95rem;
-}
-
-.row,
-.profileRow {
+/* 상단 프로필 */
+.row {
     display: flex;
     gap: 12px;
     align-items: center;
+    margin-bottom: 12px;
 }
 
 .avatar {
     position: relative;
-    width: 54px;
-    height: 54px;
+    width: 56px;
+    height: 56px;
     border-radius: 50%;
     overflow: hidden;
-    background: #f4f4f4;
-    flex-shrink: 0;
+    flex: 0 0 56px;
+    background: #f2f2f2;
 }
 
-.meta {
+.meta { flex: 1; min-width: 0; }
+.name { font-weight: 700; color: #111; }
+.sub  { color: #777; font-size: 13px; margin-top: 2px; }
+.since{ color: #999; font-size: 12px; margin-top: 2px; }
+
+/* === 신선도 게이지 === */
+.freshWrap { margin: 10px 0 12px; }
+.freshHead {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: baseline;
+    gap: 6px;
+    margin-bottom: 6px;
 }
+.freshLabel { font-weight: 700; color: #14b85b; }
+.freshNow   { font-weight: 700; color: #14b85b; }
+.freshMax   { color: #a9a9a9; font-size: 12px; }
 
-.name {
-    font-weight: 600;
-}
-
-.sub {
-    color: #888;
-    font-size: 0.75rem;
-}
-
-.since {
-    color: #aaa;
-    font-size: 0.7rem;
-}
-
-.mannerWrap {
-    margin-top: 14px;
-}
-
-.mannerBar {
-    height: 6px;
-    background: #f0f0f0;
+.freshBar {
+    position: relative;
+    height: 10px;
     border-radius: 999px;
+    background: #edf2f4;
     overflow: hidden;
 }
-
-.mannerFill {
+.freshFill {
     height: 100%;
-    background: #2ecc71;
+    border-radius: 999px;
+    /* 좌→우 그라디언트 (두번째 참고 이미지 느낌) */
+    background: linear-gradient(90deg, #22c55e, #10b981, #0ea5e9);
+    transition: width .25s ease;
 }
 
-.mannerText {
-    margin-top: 6px;
-    font-size: 0.72rem;
-    color: #666;
-}
-
+/* 하단 버튼들 */
 .actions {
-    margin-top: 14px;
-    display: flex;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 8px;
 }
-
 .link {
-    flex: 1;
-    text-align: center;
-    font-size: 0.78rem;
-    border: 1px solid #e5e5e5;
-    border-radius: 8px;
-    padding: 6px 0;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 0;
+    border: 1px solid #e6e6e6;
+    border-radius: 10px;
     text-decoration: none;
-    color: #333;
+    color: #222;
+    background: #fff;
 }
+.link:hover { background: #f9f9f9; }

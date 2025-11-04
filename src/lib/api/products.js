@@ -1,8 +1,11 @@
 // src/lib/api/products.js
 import { api } from "./client";
 
-/** 상세: 백엔드 ProductDetailDTO -> 프론트 모델로 매핑 */
+/**
+ * 상품 상세: 백엔드 ProductDetailDTO -> 프론트에서 쓰기 쉬운 형태로 변환
+ */
 export const fetchProduct = async (id) => {
+    // 백엔드: GET /api/products/{id}
     const res = await api(`/products/${id}`, { next: { revalidate: 0 } });
     if (!res) return null;
 
@@ -16,13 +19,13 @@ export const fetchProduct = async (id) => {
     }
 
     // 🔥 거래방식 여러 이름으로 들어오는 거 전부 커버
-    // 지금 백엔드 JSON에선 "ddeal" 이라서 그걸 꼭 넣어야 함
+    // 지금 백엔드 JSON에선 "ddeal" 로 내려오니까 그걸 반드시 포함시켜야 함
     const rawDeal = (
-        res.dDeal ??       // 우리가 원래 예상한 이름
+        res.dDeal ??       // camel
         res.ddeal ??       // ← 실제로 오는 이름
-        res.d_deal ??      // snake_case
-        res.deal ??        // 혹시 줄여서
-        res.tradeMethod ?? // 프론트에서 보냈던 이름
+        res.d_deal ??      // snake
+        res.deal ??        // 짧게
+        res.tradeMethod ?? // 혹시 프론트에서 보낼 때 이렇게
         res.dealType ??    // 다른 API 스타일
         ""
     )
@@ -37,7 +40,7 @@ export const fetchProduct = async (id) => {
         dealType = "만나서 직거래";
     }
 
-    // 직거래 위치
+    // 직거래 위치 (지금은 상품 위치랑 같게)
     const meetLocation = res.location || res.pdLocation || null;
 
     return {
@@ -50,15 +53,16 @@ export const fetchProduct = async (id) => {
         images,
         createdAt: res.pdCreate,
 
-        // ⭐ 판매자 - 컴포넌트가 nickname / avatarUrl 을 먼저 봄
+        // ⭐ 판매자 - 컴포넌트가 nickname / avatarUrl 을 먼저 보는 구조라 이렇게 맞춤
+        // 🟢 판매자
         seller: {
             id: res.sellerId,
-            nickname: res.sellerName,               // ← 이걸로 화면에 이름 나오게
-            name: res.sellerName,                   // 혹시 다른 데서 name으로 쓸 수도 있으니까
+            nickname: res.sellerName,
+            name: res.sellerName,
             avatarUrl: res.sellerAvatar ?? "/images/avatar-default.png",
-            // 아직 백엔드가 안 주는 값들은 기본값
+            // 🟢 여기! 백엔드가 내려준 sellerManner 사용
+            manner: typeof res.sellerManner === "number" ? res.sellerManner : 0,
             deals: res.sellerDeals ?? 0,
-            manner: res.sellerManner ?? 0,
         },
 
         // 카테고리
@@ -69,11 +73,13 @@ export const fetchProduct = async (id) => {
         // 거래/상태
         condition,     // "중고상품" / "새상품"
         dealType,      // "택배거래" / "만나서 직거래"
-        meetLocation,  // "서울 ..." 또는 null
+        meetLocation,  // 직거래 위치 (없으면 null)
     };
 };
 
-/** 연관상품: 그대로 쓰거나, 필요한 경우 프론트 키로 변환 */
+/**
+ * 연관상품
+ */
 export const fetchRelated = async (id, limit = 10) => {
     const list = await api(`/products/${id}/related?limit=${limit}`, {
         next: { revalidate: 60 },
@@ -90,7 +96,9 @@ export const fetchRelated = async (id, limit = 10) => {
     }));
 };
 
-/** 판매자 다른 상품 */
+/**
+ * 판매자의 다른 상품
+ */
 export const fetchSellerItems = async (sellerId, excludeId, limit = 8) => {
     const list = await api(
         `/sellers/${sellerId}/products?exclude=${excludeId}&limit=${limit}`,
