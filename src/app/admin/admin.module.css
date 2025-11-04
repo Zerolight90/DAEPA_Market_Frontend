@@ -700,6 +700,18 @@
   border-color: #d1d5db;
 }
 
+.actionButtonRed {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.actionButtonRed:hover {
+  background: #fecaca;
+  border-color: #f87171;
+  color: #7f1d1d;
+}
+
 .approveButton:hover {
   background-color: #dcfce7;
   border-color: #10b981;

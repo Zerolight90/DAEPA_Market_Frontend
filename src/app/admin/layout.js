@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, Package, ShoppingCart, BarChart3,
-  Settings, Menu, X, LogOut, User, Image, ChevronDown,
-  Edit, UserPlus
+  Menu, X, LogOut, User, Image, ChevronDown,
+  Edit, UserPlus, ShieldAlert
 } from "lucide-react";
 import styles from "./admin.module.css";
 import { Box, CircularProgress, Typography } from "@mui/material";
@@ -55,7 +55,7 @@ function AdminLayoutContent({ children }) {
     { name: "배송 관리", href: "/admin/shipping", icon: Package },
     { name: "검수 관리", href: "/admin/inspection", icon: BarChart3 },
     { name: "배너 관리", href: "/admin/banner", icon: Image },
-    { name: "설정", href: "/admin/settings", icon: Settings },
+    { name: "신고 관리", href: "/admin/reports", icon: ShieldAlert },
   ];
 
   return (
