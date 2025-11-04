@@ -1,27 +1,33 @@
 "use client";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const fetchCache = "force-no-store";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./oauth.module.css";
 import tokenStore from "@/app/store/TokenStore";
 
-const BACKEND_URL = "http://localhost:8080";
+// 배포에서는 NEXT_PUBLIC_API_BASE_URL 사용, 없으면 로컬로
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8080";
 
 function InnerOAuthPage() {
     const router = useRouter();
     const sp = useSearchParams();
     const { setToken } = tokenStore();
 
+    const ranTokenSave = useRef(false);
+    const ranFetchMe = useRef(false);
+
     const provider = sp.get("provider") || "naver";
-    const accessTokenFromQuery = sp.get("accessToken");
-    const refreshTokenFromQuery = sp.get("refreshToken");
+    const accessTokenFromQuery = sp.get("accessToken") || null;
+    const refreshTokenFromQuery = sp.get("refreshToken") || null;
 
     const [loading, setLoading] = useState(true);
-    const [forceShow, setForceShow] = useState(false);
+    const [forceShow] = useState(false);
 
-    // 폼 데이터
+    // 폼 상태
     const [email, setEmail] = useState("");
     const [uname, setUname] = useState("");
     const [nickname, setNickname] = useState("");
@@ -32,7 +38,7 @@ function InnerOAuthPage() {
     const [addressDetail, setAddressDetail] = useState("");
     const [zipcode, setZipcode] = useState("");
 
-    // ✅ 중복검사 결과 상태
+    // 중복검사 메시지
     const [nicknameMsg, setNicknameMsg] = useState({ text: "", color: "" });
     const [phoneMsg, setPhoneMsg] = useState({ text: "", color: "" });
 
@@ -46,19 +52,23 @@ function InnerOAuthPage() {
     const [marketingChecked, setMarketingChecked] = useState(false);
     const [allChecked, setAllChecked] = useState(false);
 
-    // 1) 토큰 저장
+    // 1) 토큰 저장(중복 방지)
     useEffect(() => {
+        if (ranTokenSave.current) return;
+        ranTokenSave.current = true;
+
         if (accessTokenFromQuery) {
             localStorage.setItem("accessToken", accessTokenFromQuery);
             setToken(accessTokenFromQuery);
         }
-        if (refreshTokenFromQuery) {
-            localStorage.setItem("refreshToken", refreshTokenFromQuery);
-        }
+        if (refreshTokenFromQuery) localStorage.setItem("refreshToken", refreshTokenFromQuery);
     }, [accessTokenFromQuery, refreshTokenFromQuery, setToken]);
 
-    // 2) 내 정보 조회
+    // 2) 내 정보 조회(중복 방지)
     useEffect(() => {
+        if (ranFetchMe.current) return;
+        ranFetchMe.current = true;
+
         (async () => {
             const atk = accessTokenFromQuery || localStorage.getItem("accessToken");
             if (!atk) {
@@ -68,23 +78,26 @@ function InnerOAuthPage() {
             }
 
             try {
-                const res = await fetch(`${BACKEND_URL}/api/users/me`, {
+                const res = await fetch(`${API_BASE}/api/users/me`, {
                     headers: { Authorization: `Bearer ${atk}` },
                     credentials: "include",
                     cache: "no-store",
                 });
+
                 if (!res.ok) {
                     setLoading(false);
                     return;
                 }
 
                 const data = await res.json();
+
+                // u_status === 1이면 가입 완료 → 홈으로
                 if (data.u_status === 1 && !forceShow) {
                     router.replace("/");
                     return;
                 }
 
-                // 폼 초기값
+                // 폼 초기화
                 setEmail(data.u_id || "");
                 setUname(data.u_name || "");
                 setNickname(data.u_nickname || "");
@@ -94,6 +107,8 @@ function InnerOAuthPage() {
                 setLocation(data.u_location || "");
                 setAddressDetail(data.u_location_detail || "");
                 setZipcode(data.u_address || "");
+            } catch (e) {
+                // 폴백: 폼 머무름
             } finally {
                 setLoading(false);
             }
@@ -112,7 +127,7 @@ function InnerOAuthPage() {
     }, []);
 
     const openPostcode = () => {
-        if (!window.daum?.Postcode) {
+        if (!window.daum || !window.daum.Postcode) {
             alert("주소 스크립트가 아직 준비 안 됐어요.");
             return;
         }
@@ -122,62 +137,59 @@ function InnerOAuthPage() {
                 setLocation(addr);
                 setZipcode(data.zonecode || "");
                 setTimeout(() => {
-                    document.getElementById("addressDetailInput")?.focus();
+                    const el = document.getElementById("addressDetailInput");
+                    if (el) el.focus();
                 }, 0);
             },
         }).open();
     };
 
-    // 4) 닉네임 자동 중복검사
+    // 4) 닉네임 중복검사(디바운스)
     useEffect(() => {
         if (!nickname) {
             setNicknameMsg({ text: "", color: "" });
             return;
         }
-
         const timer = setTimeout(async () => {
             try {
                 const res = await fetch(
-                    `${BACKEND_URL}/api/sing/join/check_nickname?u_nickname=${nickname}`
+                    `${API_BASE}/api/sing/join/check_nickname?u_nickname=${encodeURIComponent(nickname)}`
                 );
                 const exists = await res.json();
-                if (exists) {
-                    setNicknameMsg({ text: "이미 사용 중인 별명입니다.", color: "red" });
-                } else {
-                    setNicknameMsg({ text: "사용 가능한 별명입니다.", color: "green" });
-                }
+                setNicknameMsg(
+                    exists
+                        ? { text: "이미 사용 중인 별명입니다.", color: "red" }
+                        : { text: "사용 가능한 별명입니다.", color: "green" }
+                );
             } catch {
                 setNicknameMsg({ text: "확인 중 오류 발생", color: "red" });
             }
         }, 500);
-
         return () => clearTimeout(timer);
     }, [nickname]);
 
-    // 5) 전화번호 자동 중복검사
+    // 5) 전화번호 중복검사(디바운스)
     useEffect(() => {
         if (!phone) {
             setPhoneMsg({ text: "", color: "" });
             return;
         }
-
         const timer = setTimeout(async () => {
             try {
                 const cleanPhone = phone.replace(/[^0-9]/g, "");
                 const res = await fetch(
-                    `${BACKEND_URL}/api/sing/join/check_phone?u_phone=${cleanPhone}`
+                    `${API_BASE}/api/sing/join/check_phone?u_phone=${encodeURIComponent(cleanPhone)}`
                 );
                 const exists = await res.json();
-                if (exists) {
-                    setPhoneMsg({ text: "이미 사용 중인 전화번호입니다.", color: "red" });
-                } else {
-                    setPhoneMsg({ text: "사용 가능한 전화번호입니다.", color: "green" });
-                }
+                setPhoneMsg(
+                    exists
+                        ? { text: "이미 사용 중인 전화번호입니다.", color: "red" }
+                        : { text: "사용 가능한 전화번호입니다.", color: "green" }
+                );
             } catch {
                 setPhoneMsg({ text: "확인 중 오류 발생", color: "red" });
             }
         }, 500);
-
         return () => clearTimeout(timer);
     }, [phone]);
 
@@ -203,10 +215,10 @@ function InnerOAuthPage() {
             return;
         }
 
-        const atk = accessTokenFromQuery || localStorage.getItem("accessToken");
+        const atk = accessTokenFromQuery || localStorage.getItem("accessToken") || "";
 
         try {
-            const res = await fetch(`${BACKEND_URL}/api/users/oauth-complete`, {
+            const res = await fetch(`${API_BASE}/api/users/oauth-complete`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -225,6 +237,8 @@ function InnerOAuthPage() {
                     provider,
                     agree: marketingChecked ? "1" : "0",
                 }),
+                credentials: "include",
+                cache: "no-store",
             });
 
             if (!res.ok) throw new Error("저장 실패");
@@ -236,16 +250,13 @@ function InnerOAuthPage() {
         }
     };
 
-    // UI
     if (loading) return <p style={{ padding: 24 }}>불러오는 중...</p>;
 
     return (
         <main className={styles.container}>
             <div className={styles.card}>
                 <h1 className={styles.title}>추가 정보 입력</h1>
-                <p className={styles.subText}>
-                    소셜 로그인을 마무리하려면 아래 정보를 입력해 주세요 🙌
-                </p>
+                <p className={styles.subText}>소셜 로그인을 마무리하려면 아래 정보를 입력해 주세요 🙌</p>
 
                 <form onSubmit={handleSubmit}>
                     {/* 이메일 */}
@@ -307,11 +318,7 @@ function InnerOAuthPage() {
                     <div className={styles.inlineRow}>
                         <div>
                             <label className={styles.label}>성별</label>
-                            <select
-                                className={styles.input}
-                                value={gender}
-                                onChange={(e) => setGender(e.target.value)}
-                            >
+                            <select className={styles.input} value={gender} onChange={(e) => setGender(e.target.value)}>
                                 <option value="">선택</option>
                                 <option value="M">남성</option>
                                 <option value="F">여성</option>
@@ -371,9 +378,7 @@ function InnerOAuthPage() {
                         />
                     </div>
 
-                    <button type="submit" className={styles.submitBtn}>
-                        저장하고 시작하기
-                    </button>
+                    <button type="submit" className={styles.submitBtn}>저장하고 시작하기</button>
                 </form>
             </div>
         </main>
