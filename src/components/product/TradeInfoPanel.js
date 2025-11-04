@@ -27,7 +27,9 @@ export default function TradeInfoPanel({
 
             {/* 상품 상태 */}
             <div className={styles.row}>
-                <span className={styles.icon}>📦</span>
+                <span className={styles.icon}>
+                    {_condition === "새상품" ? "🎁" : "♻️"}
+                </span>
                 <span className={styles.label}>상품 상태</span>
                 <span className={styles.badge}>{_condition}</span>
             </div>

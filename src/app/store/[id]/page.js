@@ -17,7 +17,6 @@ import { ModalProvider } from "@/components/ui/modal/ModalProvider";
 import DetailsPanel from "@/components/product/DetailsPanel";
 import SellerProfilePanel from "@/components/product/SellerProfilePanel";
 import RelatedProducts from "@/components/product/RelateProducts";
-import SellerOtherList from "@/components/product/SellerOtherList";
 import TradeInfoPanel from "@/components/product/TradeInfoPanel";
 
 export const dynamic = "force-dynamic";
@@ -148,11 +147,7 @@ export default async function ProductPage(props) {
                         </div>
 
                         <SellerProfilePanel seller={seller} />
-
-                        <div className={styles.section}>
-                            <h3 className={styles.h3}>판매자의 다른 상품</h3>
-                            <SellerOtherList sellerId={seller.id} excludeId={item.id} />
-                        </div>
+                        
                     </aside>
                 </div>
             </ModalProvider>
