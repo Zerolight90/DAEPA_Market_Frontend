@@ -1,16 +1,47 @@
-name: Deploy Frontend to EC2
+name: Deploy Frontend
 
 on:
   push:
-    branches: [zerolight]  # 푸시 시 자동배포 실행
+    branches:
+      - main            # main 브랜치에 push될 때만 실행
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/deploy.yml'
+      - 'docker/**'
+      - 'Dockerfile'
+      - 'compose.yaml'
+      - 'docker-compose.yml'
+  workflow_dispatch:     # Actions 탭에서 수동 실행 허용
+
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: true
 
 jobs:
   deploy:
+    # 추가 가드: 소유 레포의 main일 때만 배포 실행
+    if: |
+      github.repository_owner == 'Zerolight90' &&
+      github.ref == 'refs/heads/main'
+
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout
         uses: actions/checkout@v4
+
+      # 선택: 빌드 검증 (Next 빌드 실패 시 여기서 차단)
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build (validation only)
+        run: npm run build --if-present
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
@@ -18,41 +49,39 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          port: ${{ secrets.SSH_PORT }}
-          timeout: 300s
-          command_timeout: 120m
-          script_stop: false
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
+          debug: false
           script: |
             set -euo pipefail
             cd ~/apps/frontend
 
-            echo "[1/6] Git 업데이트"
+            echo "[1/6] Git update"
             cp -f .env /tmp/.env.backup 2>/dev/null || true
             git fetch --all
-            git checkout zerolight
-            git reset --hard origin/zerolight
+            git checkout main
+            git reset --hard origin/main
             [ -f /tmp/.env.backup ] && mv /tmp/.env.backup .env
 
-            echo "[2/6] 기존 컨테이너 및 캐시 정리"
+            echo "[2/6] Cleanup containers and caches"
             docker compose down || true
             docker system prune -af || true
             docker builder prune -af || true
 
-            # .next 권한 정리 후 삭제 (권한 에러 방지)
             if [ -d .next ]; then
-              sudo -n chown -R ubuntu:ubuntu .next || true
+              sudo -n chown -R $USER:$USER .next || true
               sudo -n chmod -R u+w .next || true
               sudo -n rm -rf .next || true
             fi
 
-            echo "[3/6] 빌드 및 배포 시작 (강제 새 빌드)"
-            docker compose build --no-cache --progress=plain
+            echo "[3/6] Build and run"
+            docker compose --progress=plain build --no-cache
             docker compose up -d
 
-            echo "[4/6] 상태 확인"
+            echo "[4/6] Status"
             docker compose ps
 
-            echo "[5/6] 최근 로그 확인"
-            docker logs --tail=50 daepa-frontend || true
+            echo "[5/6] Recent logs"
+            docker logs --tail=80 daepa-frontend || true
 
-            echo "[6/6] 배포 완료 🎉"
+            echo "[6/6] Done"
