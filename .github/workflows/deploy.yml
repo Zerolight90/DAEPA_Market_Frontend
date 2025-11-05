@@ -6,11 +6,16 @@ on:
       - main            # main 브랜치에 push될 때만 실행
     paths:
       - 'frontend/**'
-      - '.github/workflows/deploy.yml'
-      - 'docker/**'
+      - 'conf/**'             # ← 추가
+      - 'src/**'              # ← 소스 변경도 태우려면
+      - 'app/**'
+      - 'public/**'
+      - 'next.config.mjs'     # ← 추가
       - 'Dockerfile'
+      - 'docker/**'
       - 'compose.yaml'
       - 'docker-compose.yml'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:     # Actions 탭에서 수동 실행 허용
 
 concurrency:
