@@ -1,11 +1,9 @@
-/* src/app/store/[id]/page.module.css */
-
 .page {
     background: #fafafa;
     min-height: 100vh;
 }
 
-/* 공통 컨테이너: 위에서는 브레드크럼, 아래에서는 본문 */
+/* 공통 컨테이너 */
 .container {
     max-width: 1180px;
     margin: 0 auto;
@@ -16,7 +14,7 @@
     align-items: flex-start;
 }
 
-/* 브레드크럼 전용 래퍼 */
+/* 브레드크럼 */
 .bcWrap {
     max-width: 1180px;
     margin: 0 auto;
@@ -43,6 +41,26 @@
     gap: 20px;
 }
 
+/* ✅ 이미지 박스: 크기 고정 & 비율 유지 */
+.imageWrap {
+    width: 100%;
+    aspect-ratio: 1 / 1; /* 정사각형 박스 고정 */
+    border-radius: 10px;
+    overflow: hidden;
+    background: #f5f5f5; /* 이미지 없는 경우 회색 배경 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ✅ 실제 이미지: 박스에 꽉 차게 */
+.imageWrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover; /* 이미지 비율 유지 + 꽉 채움 */
+    display: block;
+}
+
 /* 우측(제목/가격/버튼/가게/다른상품) */
 .rightCol {
     position: sticky;
@@ -52,7 +70,7 @@
     gap: 16px;
 }
 
-/* 오른쪽 첫 번째 카드: 제목+가격+버튼 */
+/* 오른쪽 첫 번째 카드 */
 .infoCard {
     background: #fff;
     border: 1px solid #ececec;
