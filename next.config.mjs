@@ -6,7 +6,7 @@ const nextConfig = {
     async rewrites() {
         if (!BACKEND) return []; // 값이 없으면 프록시 비활성화(빌드 통과)
         return [
-            { source: '/api/:path*',     destination: `${BACKEND}/api/:path*` },
+            { source: '/api/:path*',     destination: `${BACKEND}/:path*` },
             { source: '/uploads/:path*', destination: `${BACKEND}/uploads/:path*` },
         ];
     },
