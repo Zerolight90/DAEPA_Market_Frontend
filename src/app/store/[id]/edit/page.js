@@ -1,216 +1,171 @@
-// src/app/store/[id]/edit/page.js
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import EditCategoryPicker from "./EditCategoryPicker";
 
 export default function ProductEditPage() {
     const { id } = useParams();
     const router = useRouter();
+    const fileRef = useRef(null);
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
 
-    // 기본 필드
-    const [title, setTitle] = useState("");
-    const [price, setPrice] = useState("");
-    const [content, setContent] = useState("");
-    const [location, setLocation] = useState("");
-    const [pdStatus, setPdStatus] = useState(0);
-    const [dDeal, setDDeal] = useState("DELIVERY");
+    // 폼 값
+    const [form, setForm] = useState({
+        upperId: null,
+        middleId: null,
+        lowId: null,
+        title: "",
+        price: "",
+        content: "",
+        location: "",
+        pdStatus: 0,
+        dDeal: "DELIVERY",
+        files: [],
+        previews: [],
+        existing: [],
+    });
 
-    // 카테고리
-    const [upperList, setUpperList] = useState([]);
-    const [middleList, setMiddleList] = useState([]);
-    const [lowList, setLowList] = useState([]);
-
-    const [upperId, setUpperId] = useState("");
-    const [middleId, setMiddleId] = useState("");
-    const [lowId, setLowId] = useState("");
-
-    // 이미지
-    const [existingImages, setExistingImages] = useState([]);
-    const [newFiles, setNewFiles] = useState([]);
-    const [imagesChanged, setImagesChanged] = useState(false);
+    // 초기 카테고리 값은 따로 보관해서 다시 안 바뀌게
+    const [initialCategory, setInitialCategory] = useState(null);
 
     useEffect(() => {
         if (!id) return;
 
-        // 상품 + 카테고리 같이 불러오기
-        const loadAll = async () => {
-            // 1) 상품
-            const prodRes = await fetch(`/api/products/${id}`, { credentials: "include" });
-            if (!prodRes.ok) {
-                throw new Error("상품을 불러올 수 없습니다.");
+        (async () => {
+            try {
+                const res = await fetch(`/api/products/${id}`, {
+                    credentials: "include",
+                });
+                if (!res.ok) throw new Error("상품을 불러올 수 없습니다.");
+                const data = await res.json();
+
+                // 👇 여기서 실제 오는 키들 중 하나를 선택
+                // 백엔드가 ddeal 로 줌
+                const rawDeal =
+                    data.dDeal ??
+                    data.ddeal ??
+                    data.deal ??
+                    data.dealType ??
+                    null;
+
+                const normalizedDeal = (() => {
+                    if (!rawDeal) return "DELIVERY";
+                    const v = rawDeal.toString().trim().toUpperCase();
+                    if (v === "MEET" || v === "DIRECT" || v === "MEETUP") {
+                        return "MEET";
+                    }
+                    return "DELIVERY";
+                })();
+
+                setForm((p) => ({
+                    ...p,
+                    upperId: data.upperId ?? null,
+                    middleId: data.middleId ?? null,
+                    lowId: data.lowId ?? null,
+                    title: data.pdTitle ?? "",
+                    price: data.pdPrice ? String(data.pdPrice) : "",
+                    content: data.pdContent ?? "",
+                    location: data.pdLocation ?? data.location ?? "",
+                    pdStatus: data.pdStatus ?? 0,
+                    dDeal: normalizedDeal,
+                    existing: Array.isArray(data.images)
+                        ? data.images
+                        : data.pdThumb
+                            ? [data.pdThumb]
+                            : [],
+                }));
+
+                setInitialCategory({
+                    upperId: data.upperId ?? null,
+                    middleId: data.middleId ?? null,
+                    lowId: data.lowId ?? null,
+                });
+            } catch (e) {
+                console.error(e);
+                setError(e.message);
+            } finally {
+                setLoading(false);
             }
-            const data = await prodRes.json();
-
-            // 2) 카테고리들
-            const [uRes, mRes, lRes] = await Promise.all([
-                fetch("/api/categories/upper"),
-                fetch("/api/categories/middle"),
-                fetch("/api/categories/low"),
-            ]);
-            const [u, m, l] = await Promise.all([
-                uRes.ok ? uRes.json() : [],
-                mRes.ok ? mRes.json() : [],
-                lRes.ok ? lRes.json() : [],
-            ]);
-
-            // 카테고리 목록 저장
-            setUpperList(u);
-            setMiddleList(m);
-            setLowList(l);
-
-            // 기본 필드 채우기
-            setTitle(data.pdTitle ?? "");
-            setPrice(data.pdPrice ?? "");
-            setContent(data.pdContent ?? "");
-            setLocation(data.pdLocation ?? data.location ?? "");
-            setPdStatus(data.pdStatus ?? 0);
-            setDDeal(data.dDeal ?? "DELIVERY");
-
-            // 이미지 기존 것 채우기
-            if (Array.isArray(data.images) && data.images.length > 0) {
-                setExistingImages(data.images);
-            } else if (data.pdThumb) {
-                setExistingImages([data.pdThumb]);
-            } else {
-                setExistingImages([]);
-            }
-
-            // 여기서 이름으로 id 찾기 (백엔드가 upperId 안 주니까)
-            let foundUpperId = "";
-            let foundMiddleId = "";
-            let foundLowId = "";
-
-            // lowName -> lowId
-            if (data.lowName) {
-                const foundLow = l.find((x) => x.lowCt === data.lowName);
-                if (foundLow) {
-                    foundLowId = String(foundLow.lowIdx);
-                    foundMiddleId = String(foundLow.middleIdx); // low가 middle_idx 갖고 있을 거라 가정
-                }
-            }
-
-            // middleName -> middleId (위에서 못 찾았으면)
-            if (!foundMiddleId && data.middleName) {
-                const foundMid = m.find((x) => x.middleCt === data.middleName);
-                if (foundMid) {
-                    foundMiddleId = String(foundMid.middleIdx);
-                    foundUpperId = String(foundMid.upperIdx);
-                }
-            }
-
-            // upperName -> upperId (위에서 못 찾았으면)
-            if (!foundUpperId && data.upperName) {
-                const foundUp = u.find((x) => x.upperCt === data.upperName);
-                if (foundUp) {
-                    foundUpperId = String(foundUp.upperIdx);
-                }
-            }
-
-            // low에서 middle/upper 못 채웠으면 한 번 더 보정
-            if (foundLowId && !foundMiddleId) {
-                const lowObj = l.find((x) => String(x.lowIdx) === foundLowId);
-                if (lowObj) {
-                    foundMiddleId = String(lowObj.middleIdx);
-                }
-            }
-            if (foundMiddleId && !foundUpperId) {
-                const midObj = m.find((x) => String(x.middleIdx) === foundMiddleId);
-                if (midObj) {
-                    foundUpperId = String(midObj.upperIdx);
-                }
-            }
-
-            setUpperId(foundUpperId);
-            setMiddleId(foundMiddleId);
-            setLowId(foundLowId);
-
-            setLoading(false);
-        };
-
-        loadAll().catch((e) => {
-            console.error(e);
-            setError(e.message);
-            setLoading(false);
-        });
+        })();
     }, [id]);
 
-    // 선택한 상위/중위에 맞춰 필터링
-    const filteredMiddle = middleList.filter(
-        (m) => !upperId || Number(m.upperIdx) === Number(upperId)
-    );
-    const filteredLow = lowList.filter(
-        (l) => !middleId || Number(l.middleIdx) === Number(middleId)
-    );
-
-    const handleFileChange = (e) => {
-        const files = Array.from(e.target.files || []);
-        setNewFiles(files);
-        setImagesChanged(true);
+    // 카테고리 변경 콜백
+    const handleCategoryChange = ({ upperId, middleId, lowId }) => {
+        setForm((p) => ({
+            ...p,
+            upperId,
+            middleId,
+            lowId,
+        }));
     };
 
-    const handleRemoveExistingImage = (idx) => {
-        const next = existingImages.filter((_, i) => i !== idx);
-        setExistingImages(next);
-        setImagesChanged(true);
+    const onFiles = (e) => {
+        const list = Array.from(e.target.files || []);
+        const merged = [...form.files, ...list].slice(0, 10);
+        const previews = merged.map((f) => ({
+            name: f.name,
+            url: URL.createObjectURL(f),
+        }));
+        setForm((p) => ({
+            ...p,
+            files: merged,
+            previews,
+        }));
     };
 
-    const handleSubmit = async (e) => {
+    const removeExisting = (idx) => {
+        setForm((p) => ({
+            ...p,
+            existing: p.existing.filter((_, i) => i !== idx),
+        }));
+    };
+
+    const removeNew = (idx) => {
+        const nextFiles = form.files.filter((_, i) => i !== idx);
+        const nextPreviews = form.previews.filter((_, i) => i !== idx);
+        setForm((p) => ({ ...p, files: nextFiles, previews: nextPreviews }));
+        if (fileRef.current) fileRef.current.value = "";
+    };
+
+    const submit = async (e) => {
         e.preventDefault();
         if (saving) return;
         setSaving(true);
         setError("");
 
-        const dto = {
-            title,
-            price,
-            content,
-            location,
-            pdStatus: Number(pdStatus),
-            dDeal,
-            upperId: Number(upperId),
-            middleId: Number(middleId),
-            lowId: Number(lowId),
-            imageUrls: existingImages,
-        };
-
         try {
-            if (imagesChanged) {
-                // 이미지도 같이 보낼 때 → 백엔드에서 만든 멀티파트 수정 API로
-                const form = new FormData();
-                form.append(
-                    "dto",
-                    new Blob([JSON.stringify(dto)], { type: "application/json" })
-                );
-                newFiles.forEach((f) => {
-                    form.append("images", f);
-                });
+            const dto = {
+                upperId: form.upperId,
+                middleId: form.middleId,
+                lowId: form.lowId,
+                title: form.title,
+                price: Number((form.price || "0").replace(/,/g, "")),
+                content: form.content,
+                location: form.location,
+                pdStatus: form.pdStatus,
+                dDeal: form.dDeal, // ← 여기로 그대로 감
+                imageUrls: form.existing,
+            };
 
-                const res = await fetch(`/api/products/${id}/update-multipart`, {
-                    method: "PUT",
-                    credentials: "include",
-                    body: form,
-                });
-                if (!res.ok) {
-                    const txt = await res.text().catch(() => "");
-                    throw new Error(txt || "이미지 포함 수정 실패");
-                }
-            } else {
-                // 이미지 안 바꿈 → JSON 수정
-                const res = await fetch(`/api/products/${id}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "include",
-                    body: JSON.stringify(dto),
-                });
-                if (!res.ok) {
-                    const txt = await res.text().catch(() => "");
-                    throw new Error(txt || "수정 실패");
-                }
+            const fd = new FormData();
+            fd.append(
+                "dto",
+                new Blob([JSON.stringify(dto)], { type: "application/json" })
+            );
+            (form.files || []).forEach((f) => fd.append("images", f));
+
+            const res = await fetch(`/api/products/${id}/edit-multipart`, {
+                method: "POST",
+                credentials: "include",
+                body: fd,
+            });
+            if (!res.ok) {
+                const txt = await res.text().catch(() => "");
+                throw new Error(txt || "수정에 실패했습니다.");
             }
 
             alert("수정되었습니다.");
@@ -236,24 +191,22 @@ export default function ProductEditPage() {
                     style={{
                         background: "#ffe5e5",
                         border: "1px solid #ffb3b3",
-                        padding: "10px 14px",
+                        padding: 10,
                         borderRadius: 8,
-                        marginBottom: 18,
-                        color: "#a30000",
+                        marginBottom: 16,
                     }}
                 >
                     {error}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} style={{ display: "grid", gap: 18 }}>
+            <form onSubmit={submit} style={{ display: "grid", gap: 18 }}>
                 {/* 이미지 */}
                 <div>
                     <div style={{ fontWeight: 600, marginBottom: 6 }}>상품 이미지</div>
-                    <input type="file" multiple accept="image/*" onChange={handleFileChange} />
-                    <div style={{ display: "flex", gap: 10, marginTop: 10, flexWrap: "wrap" }}>
-                        {existingImages.map((src, i) => (
-                            <div key={i} style={{ position: "relative" }}>
+                    <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                        {form.existing.map((src, i) => (
+                            <div key={"exist-" + i} style={{ position: "relative" }}>
                                 <img
                                     src={src}
                                     alt=""
@@ -267,7 +220,7 @@ export default function ProductEditPage() {
                                 />
                                 <button
                                     type="button"
-                                    onClick={() => handleRemoveExistingImage(i)}
+                                    onClick={() => removeExisting(i)}
                                     style={{
                                         position: "absolute",
                                         top: -6,
@@ -285,93 +238,80 @@ export default function ProductEditPage() {
                                 </button>
                             </div>
                         ))}
-                        {newFiles.map((f, i) => (
-                            <div
-                                key={"new-" + i}
-                                style={{
-                                    width: 90,
-                                    height: 90,
-                                    border: "1px dashed #ccc",
-                                    borderRadius: 6,
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontSize: 12,
-                                }}
-                            >
-                                {f.name}
+
+                        {form.previews.map((p, i) => (
+                            <div key={"new-" + i} style={{ position: "relative" }}>
+                                <img
+                                    src={p.url}
+                                    alt={p.name}
+                                    style={{
+                                        width: 90,
+                                        height: 90,
+                                        objectFit: "cover",
+                                        borderRadius: 6,
+                                        border: "1px solid #eee",
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => removeNew(i)}
+                                    style={{
+                                        position: "absolute",
+                                        top: -6,
+                                        right: -6,
+                                        background: "#0008",
+                                        color: "#fff",
+                                        width: 20,
+                                        height: 20,
+                                        borderRadius: "50%",
+                                        border: "none",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    ×
+                                </button>
                             </div>
                         ))}
                     </div>
-                    <p style={{ fontSize: 12, color: "#888", marginTop: 4 }}>
-                        이미지를 변경하면 이미지까지 함께 수정됩니다.
-                    </p>
+
+                    <input
+                        ref={fileRef}
+                        type="file"
+                        multiple
+                        accept="image/*"
+                        onChange={onFiles}
+                        style={{ marginTop: 10 }}
+                    />
                 </div>
 
                 {/* 카테고리 */}
                 <div>
                     <div style={{ fontWeight: 600, marginBottom: 6 }}>카테고리</div>
-                    <div style={{ display: "flex", gap: 10 }}>
-                        <select
-                            value={upperId}
-                            onChange={(e) => {
-                                setUpperId(e.target.value);
-                                setMiddleId("");
-                                setLowId("");
-                            }}
-                            style={{ flex: 1, padding: "8px 10px" }}
-                        >
-                            <option value="">대분류를 선택하세요</option>
-                            {upperList.map((u) => (
-                                <option key={u.upperIdx} value={u.upperIdx}>
-                                    {u.upperCt}
-                                </option>
-                            ))}
-                        </select>
-
-                        <select
-                            value={middleId}
-                            onChange={(e) => {
-                                setMiddleId(e.target.value);
-                                setLowId("");
-                            }}
-                            style={{ flex: 1, padding: "8px 10px" }}
-                        >
-                            <option value="">중분류를 선택하세요</option>
-                            {filteredMiddle.map((m) => (
-                                <option key={m.middleIdx} value={m.middleIdx}>
-                                    {m.middleCt}
-                                </option>
-                            ))}
-                        </select>
-
-                        <select
-                            value={lowId}
-                            onChange={(e) => setLowId(e.target.value)}
-                            style={{ flex: 1, padding: "8px 10px" }}
-                        >
-                            <option value="">소분류를 선택하세요</option>
-                            {filteredLow.map((l) => (
-                                <option key={l.lowIdx} value={l.lowIdx}>
-                                    {l.lowCt}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                    {initialCategory ? (
+                        <EditCategoryPicker
+                            initialUpperId={initialCategory.upperId}
+                            initialMiddleId={initialCategory.middleId}
+                            initialLowId={initialCategory.lowId}
+                            onChange={handleCategoryChange}
+                        />
+                    ) : (
+                        <div style={{ fontSize: 13, color: "#888" }}>
+                            카테고리를 불러오는 중입니다…
+                        </div>
+                    )}
                 </div>
 
-                {/* 제목 */}
+                {/* 상품명 */}
                 <div>
                     <div style={{ fontWeight: 600, marginBottom: 6 }}>상품명</div>
                     <input
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        required
+                        value={form.title}
+                        onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
                         style={{
                             width: "100%",
-                            padding: "8px 10px",
-                            borderRadius: 6,
                             border: "1px solid #ddd",
+                            borderRadius: 6,
+                            padding: "8px 10px",
                         }}
                     />
                 </div>
@@ -381,14 +321,13 @@ export default function ProductEditPage() {
                     <div style={{ fontWeight: 600, marginBottom: 6 }}>가격</div>
                     <input
                         type="number"
-                        value={price}
-                        onChange={(e) => setPrice(e.target.value)}
-                        required
+                        value={form.price}
+                        onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
                         style={{
                             width: "100%",
-                            padding: "8px 10px",
-                            borderRadius: 6,
                             border: "1px solid #ddd",
+                            borderRadius: 6,
+                            padding: "8px 10px",
                         }}
                     />
                 </div>
@@ -397,14 +336,14 @@ export default function ProductEditPage() {
                 <div>
                     <div style={{ fontWeight: 600, marginBottom: 6 }}>설명</div>
                     <textarea
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
+                        value={form.content}
+                        onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))}
                         rows={6}
                         style={{
                             width: "100%",
-                            padding: "8px 10px",
-                            borderRadius: 6,
                             border: "1px solid #ddd",
+                            borderRadius: 6,
+                            padding: "8px 10px",
                         }}
                     />
                 </div>
@@ -417,8 +356,8 @@ export default function ProductEditPage() {
                             type="radio"
                             name="pdStatus"
                             value={0}
-                            checked={Number(pdStatus) === 0}
-                            onChange={(e) => setPdStatus(e.target.value)}
+                            checked={Number(form.pdStatus) === 0}
+                            onChange={() => setForm((p) => ({ ...p, pdStatus: 0 }))}
                         />{" "}
                         중고
                     </label>
@@ -427,8 +366,8 @@ export default function ProductEditPage() {
                             type="radio"
                             name="pdStatus"
                             value={1}
-                            checked={Number(pdStatus) === 1}
-                            onChange={(e) => setPdStatus(e.target.value)}
+                            checked={Number(form.pdStatus) === 1}
+                            onChange={() => setForm((p) => ({ ...p, pdStatus: 1 }))}
                         />{" "}
                         새상품
                     </label>
@@ -442,8 +381,10 @@ export default function ProductEditPage() {
                             type="radio"
                             name="dDeal"
                             value="DELIVERY"
-                            checked={dDeal === "DELIVERY"}
-                            onChange={(e) => setDDeal(e.target.value)}
+                            checked={form.dDeal === "DELIVERY"}
+                            onChange={(e) =>
+                                setForm((p) => ({ ...p, dDeal: e.target.value }))
+                            }
                         />{" "}
                         택배거래
                     </label>
@@ -452,26 +393,13 @@ export default function ProductEditPage() {
                             type="radio"
                             name="dDeal"
                             value="MEET"
-                            checked={dDeal === "MEET"}
-                            onChange={(e) => setDDeal(e.target.value)}
+                            checked={form.dDeal === "MEET"}
+                            onChange={(e) =>
+                                setForm((p) => ({ ...p, dDeal: e.target.value }))
+                            }
                         />{" "}
                         만나서 직거래
                     </label>
-                </div>
-
-                {/* 위치 */}
-                <div>
-                    <div style={{ fontWeight: 600, marginBottom: 6 }}>거래 위치</div>
-                    <input
-                        value={location}
-                        onChange={(e) => setLocation(e.target.value)}
-                        style={{
-                            width: "100%",
-                            padding: "8px 10px",
-                            borderRadius: 6,
-                            border: "1px solid #ddd",
-                        }}
-                    />
                 </div>
 
                 <button
@@ -484,7 +412,6 @@ export default function ProductEditPage() {
                         padding: "11px 14px",
                         borderRadius: 8,
                         fontWeight: 600,
-                        cursor: "pointer",
                     }}
                 >
                     {saving ? "수정 중..." : "수정하기"}
