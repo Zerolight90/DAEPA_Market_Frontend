@@ -5,6 +5,7 @@ import BaseModal from "@/components/ui/modal/BaseModal";
 
 import { loadTossPayments } from '@tosspayments/payment-sdk';
 import { v4 as uuidv4 } from 'uuid';
+import PayWithPointModal from "@/components/product/modals/PayWithPointModal";
 
 export default function BuyModal({ id, close, itemId, title, price }) {
     const [qty, setQty] = useState(1);
@@ -49,6 +50,23 @@ export default function BuyModal({ id, close, itemId, title, price }) {
 
     }
 
+    // 대파 페이 결제 모달 열기
+    const openPayWithPointModal = () => {
+        // 현재 모달을 닫고 새 모달 열기 (선택 사항)
+        // close();
+
+        modal.open(({ id: newModalId, close: newModalClose }) => (
+            <PayWithPointModal
+                id={newModalId}
+                close={newModalClose}
+                itemId={itemId}
+                title={title}
+                qty={qty} // 수량 전달
+                total={total} // 총액 전달
+            />
+        ));
+    };
+
     return (
         <BaseModal id={id} close={close} title="안전결제">
             <div style={{ marginBottom: 10, fontWeight: 700 }}>{title}</div>
@@ -67,6 +85,7 @@ export default function BuyModal({ id, close, itemId, title, price }) {
             </div>
             <div>
                 <button onClick={pay} style={primaryBtn}>결제하기</button>
+                <button onClick={openPayWithPointModal} style={primaryBtn}>페이로 결제하기</button>
                 <button onClick={close} style={ghostBtn}>취소</button>
             </div>
         </BaseModal>
