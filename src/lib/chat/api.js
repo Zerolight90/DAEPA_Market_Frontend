@@ -95,3 +95,10 @@ export async function fetchLastSeen(roomId, userId) {
     });
     return data; // { lastSeenMessageId }
 }
+
+export async function leaveRoomRest(roomId, userId) {
+    const rid = normRoomId(roomId);
+    const headers = userId ? { "x-user-id": String(userId) } : undefined;
+    const { data } = await http.post(`/api/chats/${rid}/leave`, null, { headers });
+    return data; // { type:"LEAVE", roomId, actorId, time }
+}
