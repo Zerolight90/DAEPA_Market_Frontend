@@ -19,6 +19,7 @@ export default function MarketChat() {
         activeChat, myRole, otherName, otherAvatar,
         connected, messages, sendMessage,
         hasMoreBefore, loadingBefore, loadMoreBefore,
+        leaveActiveRoom
     } = useChatData();
 
     const priceText = activeChat ? formatKRW(activeChat.productPrice) : null;
@@ -60,11 +61,44 @@ export default function MarketChat() {
                                             }`}
                                             style={{ marginLeft: 6 }}
                                         >
-                      {myRole}
-                    </span>
+                                      {myRole}
+                                    </span>
+                                    )}
+                                    {activeChat?.productStatus && (
+                                        <span
+                                            className={`${s.statusBadge} ${
+                                                activeChat.productStatus === "판매완료" ? s.statusDone : s.statusOn
+                                            }`}
+                                            style={{ marginLeft: 6 }}
+                                        >
+                                      {activeChat.productStatus}
+                                    </span>
                                     )}
                                 </div>
                             </div>
+                            {/* ✅ 우측에 나가기 버튼 */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    if (window.confirm("이 채팅방에서 나가시겠어요? (상대에게는 남아 있을 수 있어요)")) {
+                                        leaveActiveRoom();
+                                    }
+                                }}
+                                className={s.leaveBtn}
+                                style={{
+                                    marginLeft: "auto",
+                                    alignSelf: "center",
+                                    padding: "6px 10px",
+                                    borderRadius: 8,
+                                    border: "1px solid #eee",
+                                    background: "#fafafa",
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap",
+                                }}
+                                aria-label="방 나가기"
+                            >
+                                나가기
+                            </button>
                         </div>
                     )}
 

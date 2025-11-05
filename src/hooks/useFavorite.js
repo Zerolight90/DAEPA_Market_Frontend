@@ -1,34 +1,43 @@
+// src/hooks/useFavorite.js
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import tokenStore from "@/app/store/TokenStore";
 
-/**
- * 제품별 찜 상태/개수 훅
- * - 마운트 시 GET /api/favorites/:id 로 { favorited, count } 로드
- * - 클릭 시 POST /api/favorites/:id/toggle
- */
+// 백엔드 고정
+const API_BASE = "http://localhost:8080";
+
 export default function useFavorite(productId) {
+    // 1) 여기서 토큰 뽑아옴
+    const accessToken = tokenStore((state) => state.accessToken);
+
     const [favorited, setFavorited] = useState(false);
     const [count, setCount] = useState(0);
     const [loading, setLoading] = useState(true);
 
-    // 초기 로드 (비로그인도 허용)
+    // 초기 조회
     useEffect(() => {
         let off = false;
-        if (!productId && productId !== 0) {
+        if (productId == null) {
             setFavorited(false);
             setCount(0);
             setLoading(false);
             return;
         }
+
         (async () => {
             try {
-                const res = await fetch(`/api/favorites/${productId}`, {
+                const headers = {};
+                if (accessToken) {
+                    headers.Authorization = `Bearer ${accessToken}`;
+                }
+                const res = await fetch(`${API_BASE}/api/favorites/${productId}`, {
                     credentials: "include",
                     cache: "no-store",
+                    headers,
                 });
                 if (!res.ok) return;
-                const data = await res.json(); // { favorited, count }
+                const data = await res.json();
                 if (!off) {
                     setFavorited(!!data.favorited);
                     setCount(Number(data.count || 0));
@@ -37,18 +46,21 @@ export default function useFavorite(productId) {
                 if (!off) setLoading(false);
             }
         })();
+
         return () => {
             off = true;
         };
-    }, [productId]);
+    }, [productId, accessToken]);
 
-    // 토글 (로그인 필요)
+    // 토글
     const toggle = useCallback(async () => {
-        if (!productId && productId !== 0) return { ok: false };
+        if (productId == null) return { ok: false };
         if (loading) return { ok: false };
-        setLoading(true);
 
-        // 낙관적 업데이트
+        // 지금 토큰이 있는지 먼저 확인 👇
+        console.log("❤️ toggle favorite, token = ", accessToken);
+
+        setLoading(true);
         const prevFav = favorited;
         const prevCnt = count;
         const optimisticFav = !prevFav;
@@ -57,13 +69,24 @@ export default function useFavorite(productId) {
         setCount(Math.max(0, optimisticCnt));
 
         try {
-            const res = await fetch(`/api/favorites/${productId}/toggle`, {
-                method: "POST",
-                credentials: "include",
-                headers: { "Content-Type": "application/json" },
-            });
+            const headers = {
+                "Content-Type": "application/json",
+            };
+            if (accessToken) {
+                headers.Authorization = `Bearer ${accessToken}`;
+            }
+
+            const res = await fetch(
+                `${API_BASE}/api/favorites/${productId}/toggle`,
+                {
+                    method: "POST",
+                    credentials: "include",
+                    headers,
+                }
+            );
+
             if (res.status === 401) {
-                // 롤백
+                // 여기서 alert 띄우는 거지
                 setFavorited(prevFav);
                 setCount(prevCnt);
                 return { ok: false, needLogin: true };
@@ -73,18 +96,18 @@ export default function useFavorite(productId) {
                 setCount(prevCnt);
                 return { ok: false };
             }
-            const data = await res.json(); // { favorited, count }
+            const data = await res.json();
             setFavorited(!!data.favorited);
             setCount(Number(data.count || 0));
             return { ok: true };
-        } catch {
+        } catch (e) {
             setFavorited(prevFav);
             setCount(prevCnt);
             return { ok: false };
         } finally {
             setLoading(false);
         }
-    }, [productId, favorited, count, loading]);
+    }, [productId, favorited, count, loading, accessToken]);
 
     return { favorited, count, loading, toggle };
 }
