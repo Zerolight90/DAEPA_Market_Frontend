@@ -5,7 +5,7 @@ import BaseModal from "@/components/ui/modal/BaseModal";
 
 import { loadTossPayments } from '@tosspayments/payment-sdk';
 import { v4 as uuidv4 } from 'uuid';
-import PayWithPointModal from "@/components/product/modals/PayWithPointModal";
+import SecPayWithPointModal from "@/components/product/modals/SecPayWithPointModal";
 
 export default function BuyModal({ id, close, itemId, title, price }) {
     const [qty, setQty] = useState(1);
@@ -56,7 +56,7 @@ export default function BuyModal({ id, close, itemId, title, price }) {
         // close();
 
         modal.open(({ id: newModalId, close: newModalClose }) => (
-            <PayWithPointModal
+            <SecPayWithPointModal
                 id={newModalId}
                 close={newModalClose}
                 itemId={itemId}
