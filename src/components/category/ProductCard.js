@@ -1,4 +1,3 @@
-// src/components/category/ProductCard.js
 "use client";
 
 import Link from "next/link";
@@ -6,30 +5,37 @@ import { useState, useEffect } from "react";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { API_BASE, Endpoints } from "@/app/sell/api";
-import tokenStore from "@/app/store/TokenStore"; // ✅ 토큰 가져오기
+import tokenStore from "@/app/store/TokenStore";
 import styles from "./ProductCard.module.css";
 
 export default function ProductCard({ item, hrefBase = "/store" }) {
     const [fav, setFav] = useState(false);
     const [count, setCount] = useState(0);
 
-    // ✅ zustand에서 토큰 구독
+    // ✅ dSell 도 본다
+    const soldOut =
+        item?.dSell === 1 ||
+        item?.d_sell === 1 ||
+        item?.dStatus === 1 ||
+        item?.d_status === 1 ||
+        item?.dealStatus === 1;
+
     const accessToken = tokenStore((state) => state.accessToken);
 
-    // 처음 찜 상태 가져오기
     useEffect(() => {
-        if (!item?.id) return;
+        if (!item?.id && !item?.pdIdx) return;
 
         (async () => {
             try {
                 const headers = {};
-                // 토큰 있으면 GET에도 같이 실어주자 (비로그인도 되긴 하지만 일관성 있게)
                 if (accessToken) {
                     headers.Authorization = `Bearer ${accessToken}`;
                 }
 
+                const productId = item.id ?? item.pdIdx;
+
                 const res = await fetch(
-                    `${API_BASE}${Endpoints.favoriteStatus(item.id)}`,
+                    `${API_BASE}${Endpoints.favoriteStatus(productId)}`,
                     {
                         credentials: "include",
                         cache: "no-store",
@@ -45,20 +51,19 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
                 console.error("찜 상태 조회 실패:", e);
             }
         })();
-    }, [item?.id, accessToken]);
+    }, [item?.id, item?.pdIdx, accessToken]);
 
-    // 하트 클릭
     const onToggle = async (e) => {
         e.preventDefault();
         e.stopPropagation();
 
-        const url = `${API_BASE}${Endpoints.favoriteToggle(item.id)}`;
+        const productId = item.id ?? item.pdIdx;
+        const url = `${API_BASE}${Endpoints.favoriteToggle(productId)}`;
 
         try {
             const headers = {
                 "Content-Type": "application/json",
             };
-            // ✅ 여기서 토큰을 꼭 붙여준다
             if (accessToken) {
                 headers.Authorization = `Bearer ${accessToken}`;
             }
@@ -90,15 +95,59 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
         }
     };
 
+    const productId = item.id ?? item.pdIdx;
+    const productTitle = item.title ?? item.pdTitle;
+    const productPrice = item.price ?? item.pdPrice;
+    const productThumb = item.thumbnail ?? item.pdThumb ?? "/no-image.png";
+
     return (
         <li className={styles.card}>
-            <Link href={`${hrefBase}/${item.id}`} className={styles.link}>
-                <div className={styles.thumbWrap}>
+            <Link href={`${hrefBase}/${productId}`} className={styles.link}>
+                <div className={styles.thumbWrap} style={{ position: "relative" }}>
                     <img
-                        src={item.thumbnail || "/no-image.png"}
-                        alt={item.title}
+                        src={productThumb}
+                        alt={productTitle}
                         className={styles.thumb}
+                        style={{
+                            filter: soldOut ? "brightness(0.45)" : "none",
+                            transition: "filter .15s",
+                        }}
                     />
+
+                    {soldOut && (
+                        <div
+                            style={{
+                                position: "absolute",
+                                inset: 0,
+                                background: "rgba(0,0,0,0.45)",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 6,
+                                borderRadius: "12px 12px 0 0",
+                                color: "#fff",
+                                fontWeight: 600,
+                            }}
+                        >
+                            <div
+                                style={{
+                                    width: 46,
+                                    height: 46,
+                                    borderRadius: "9999px",
+                                    border: "2px solid #fff",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 20,
+                                    lineHeight: 1,
+                                }}
+                            >
+                                ✓
+                            </div>
+                            <div>판매완료</div>
+                        </div>
+                    )}
 
                     <button
                         className={styles.heartBtn}
@@ -116,14 +165,14 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
                 </div>
 
                 <div className={styles.meta}>
-                    <h3 className={styles.name}>{item.title}</h3>
+                    <h3 className={styles.name}>{productTitle}</h3>
                     <div className={styles.price}>
-                        {item.price?.toLocaleString?.() ?? item.price}원
+                        {productPrice?.toLocaleString?.() ?? productPrice}원
                     </div>
                     <div className={styles.sub}>
-                        <span>{item.location}</span>
+                        <span>{item.location ?? item.pdLocation}</span>
                         <span className={styles.dot}>•</span>
-                        <span>{item.createdAt?.slice(0, 10) ?? ""}</span>
+                        <span>{item.createdAt?.slice(0, 10) ?? item.pdCreate ?? ""}</span>
                     </div>
                 </div>
             </Link>
