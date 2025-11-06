@@ -65,7 +65,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Next.js 빌드 검증 (에러나면 여기서 중단)
+      # Next.js 빌드 검증 (에러나면 여기서 중단)!
       - name: Build (validation only)
         run: npx next build --no-lint
 
