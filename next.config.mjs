@@ -6,10 +6,10 @@ const nextConfig = {
     images: {
         remotePatterns: [
             {
-                protocol: 'https',
-                hostname: 'daepa-s3.s3.ap-northeast-2.amazonaws.com',
-                port: '',
-                pathname: '/**', 
+                protocol: "https",
+                hostname: "daepa-s3.s3.ap-northeast-2.amazonaws.com",
+                port: "",
+                pathname: "/**",
             },
         ],
     },
@@ -17,7 +17,6 @@ const nextConfig = {
         if (!BACKEND) return []; // 값이 없으면 프록시 비활성화(빌드 통과)
         return [
             { source: '/api/:path*',     destination: `${BACKEND}/api/:path*` },
-            { source: '/uploads/:path*', destination: `${BACKEND}/uploads/:path*` },
         ];
     },
 };
