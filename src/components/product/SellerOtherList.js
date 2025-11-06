@@ -7,7 +7,7 @@ import SafeImage from "@/components/ui/image/SafeImage";
 import { useEffect, useMemo, useState } from "react";
 import { fetchSellerItems } from "@/lib/api/products";
 // 🔁 목업 폴백
-import { ALL_ITEMS } from "@/lib/mockItems";
+//import { ALL_ITEMS } from "@/lib/mockItems";
 
 export default function SellerOtherList({ sellerId, excludeId, limit = 12 }) {
     const [items, setItems] = useState(null); // null=로딩, []=없음

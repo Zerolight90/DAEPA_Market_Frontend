@@ -5,15 +5,9 @@ import { toKRW } from "@/lib/formatters";
 import { catHref } from "@/lib/urls";
 import { fetchProduct, fetchRelated } from "@/lib/api/products";
 
-// mock fallback
-import { getItemById, getRelatedItems } from "@/lib/mockItems";
-
-// Client
 import ProductGallery from "@/components/product/ProductGallery";
 import RightPanelClient from "@/components/product/RightPanelClient";
 import { ModalProvider } from "@/components/ui/modal/ModalProvider";
-
-// Server-ish
 import DetailsPanel from "@/components/product/DetailsPanel";
 import SellerProfilePanel from "@/components/product/SellerProfilePanel";
 import RelatedProducts from "@/components/product/RelateProducts";
@@ -41,15 +35,16 @@ export default async function ProductPage(props) {
                 related = (await fetchRelated(id, 10)) || [];
             } catch (e) {
                 console.warn("[fetchRelated failed] → fallback to mock", e);
-                related = getRelatedItems(id, 10);
+                // related = getRelatedItems(id, 10);
+                related = [];
             }
         }
     }
 
-    // 폴백
+    // 폴백 (필요하면 너네 mock 불러오던 거 다시 넣어)
     if (!item) {
-        item = getItemById(id);
-        related = getRelatedItems(id, 10);
+        // item = getItemById(id);
+        // related = getRelatedItems(id, 10);
     }
 
     if (!item) {
@@ -59,6 +54,17 @@ export default async function ProductPage(props) {
             </div>
         );
     }
+
+    // ✅ 여기서 판매완료 여부 하나로 만든다
+    // 백엔드 JSON 예시:
+    // "dstatus": 1, "dsell": 1, "ddeal": "DELIVERY"
+    const soldOut =
+        item.dStatus === 1 ||
+        item.d_status === 1 ||
+        item.dealStatus === 1 ||
+        item.dstatus === 1 || // 소문자 키
+        item.dsell === 1 ||
+        item.d_sell === 1;
 
     const images =
         Array.isArray(item.images) && item.images.length > 0
@@ -70,7 +76,13 @@ export default async function ProductPage(props) {
                     : [];
 
     const seller =
-        item.seller ?? { id: null, name: "알 수 없음", avatar: "/no-image.png" };
+        item.seller ??
+        {
+            id: item.sellerId ?? item.seller_id ?? null,
+            name: item.sellerName ?? "알 수 없음",
+            avatar: item.sellerAvatar ?? "/no-image.png",
+            manner: item.sellerManner ?? 0,
+        };
 
     return (
         <div className={styles.page}>
@@ -88,7 +100,10 @@ export default async function ProductPage(props) {
                         {item.mid && (
                             <>
                                 <span className={styles.sep}>›</span>
-                                <Link href={catHref(item.category, item.mid)} className={styles.bc}>
+                                <Link
+                                    href={catHref(item.category, item.mid)}
+                                    className={styles.bc}
+                                >
                                     {item.mid}
                                 </Link>
                             </>
@@ -112,7 +127,9 @@ export default async function ProductPage(props) {
                 <div className={styles.container}>
                     {/* 좌측 */}
                     <section className={styles.leftCol}>
-                        <ProductGallery images={images} />
+                        {/* 👇 판매완료 여부 내려줌 */}
+                        <ProductGallery images={images} soldOut={soldOut} />
+
                         <DetailsPanel item={item} />
 
                         {Array.isArray(related) && related.length > 0 && (
@@ -126,28 +143,47 @@ export default async function ProductPage(props) {
                     {/* 우측 */}
                     <aside className={styles.rightCol}>
                         <div className={styles.infoCard}>
-                            <h1 className={styles.title}>{item.title}</h1>
-                            <div className={styles.price}>{toKRW(item.price)}</div>
+                            <h1 className={styles.title}>
+                                {item.title ?? item.pdTitle}
+                                {soldOut && (
+                                    <span
+                                        style={{
+                                            marginLeft: 8,
+                                            fontSize: 12,
+                                            background: "#111827",
+                                            color: "#fff",
+                                            padding: "2px 8px",
+                                            borderRadius: 9999,
+                                            verticalAlign: "middle",
+                                        }}
+                                    >
+                    판매완료
+                  </span>
+                                )}
+                            </h1>
+                            <div className={styles.price}>
+                                {toKRW(item.price ?? item.pdPrice)}
+                            </div>
 
-                            {/* ✅ 여기! 개별 필드로 넘겨야 함 */}
                             <TradeInfoPanel
                                 condition={item.condition}
-                                dealType={item.dealType}
-                                meetLocation={item.meetLocation}
+                                dealType={item.dealType ?? item.ddeal ?? item.deal_type}
+                                meetLocation={item.meetLocation ?? item.location}
                             />
 
+                            {/* 오른쪽 액션 패널 */}
                             <RightPanelClient
-                                itemId={item.id}
-                                title={item.title}
-                                price={item.price}
+                                itemId={item.id ?? item.pdIdx}
+                                title={item.title ?? item.pdTitle}
+                                price={item.price ?? item.pdPrice}
                                 wishCount={item.wishCount ?? 0}
-                                description={item.description || ""}
+                                description={item.description || item.pdContent || ""}
                                 seller={seller}
+                                soldOut={soldOut}
                             />
                         </div>
 
                         <SellerProfilePanel seller={seller} />
-                        
                     </aside>
                 </div>
             </ModalProvider>

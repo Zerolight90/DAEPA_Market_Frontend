@@ -1,3 +1,4 @@
+//MarketChat.js
 "use client";
 import s from "./MarketChat.module.css";
 import { useChatData } from "@/lib/chat/useChatData";
