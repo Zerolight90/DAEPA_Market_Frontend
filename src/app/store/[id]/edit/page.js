@@ -1,3 +1,4 @@
+//src/app/store/[id]/edit/page.js
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -200,7 +201,17 @@ export default function ProductEditPage() {
                 </div>
             )}
 
-            <form onSubmit={submit} style={{ display: "grid", gap: 18 }}>
+            <form
+                onSubmit={submit}
+                onKeyDown={(e) => {
+                    // textarea에서는 엔터 허용
+                    const tag = e.target.tagName;
+                    if (e.key === "Enter" && tag !== "TEXTAREA") {
+                        e.preventDefault();
+                    }
+                }}
+                style={{ display: "grid", gap: 18 }}
+            >
                 {/* 이미지 */}
                 <div>
                     <div style={{ fontWeight: 600, marginBottom: 6 }}>상품 이미지</div>
