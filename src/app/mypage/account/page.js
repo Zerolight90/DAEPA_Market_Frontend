@@ -16,8 +16,6 @@ export default function AccountPage() {
 
     const [accounts, setAccounts] = useState([]);   // 서버 저장 계좌 목록(데모)
     const [openForm, setOpenForm] = useState(false);
-
-    // 내 정보(예금주)
     const [myName, setMyName] = useState("");
 
     // 폼 상태
@@ -28,41 +26,57 @@ export default function AccountPage() {
     useEffect(() => {
         (async () => {
             try {
-                const atk = accessToken || localStorage.getItem("accessToken");
+                const atk =
+                    accessToken ||
+                    (typeof window !== "undefined"
+                        ? localStorage.getItem("accessToken")
+                        : null);
+
                 const res = await fetch("/api/sing/me", {
                     headers: atk ? { Authorization: `Bearer ${atk}` } : {},
                     credentials: "include",
                     cache: "no-store",
                 });
+
                 if (res.ok) {
                     const me = await res.json();
                     setMyName(me.uName || "");
                 }
-            } catch {}
+            } catch (e) {
+                // 조용히 무시 (계좌 등록할 때 이름만 있으면 되니까)
+            }
         })();
     }, [accessToken]);
 
     const canSubmit = useMemo(() => {
         const cleaned = acct.replaceAll("-", "").trim();
-        return myName && bank && /^[0-9]{6,20}$/.test(cleaned);
+        return (
+            myName &&
+            bank &&
+            /^[0-9]{6,20}$/.test(cleaned) // 숫자 6~20자리
+        );
     }, [myName, bank, acct]);
 
     const onSubmit = async (e) => {
         e.preventDefault();
         if (!canSubmit) return;
-        // TODO: 실제 API로 교체
+
         const payload = {
             holder: myName,
             bank,
             accountNumber: acct.replaceAll("-", ""),
             primary,
         };
-        setAccounts(prev => [
+
+        setAccounts((prev) => [
             { id: Date.now(), ...payload },
-            ...prev.map(a => (primary ? { ...a, primary: false } : a)),
+            ...prev.map((a) => (primary ? { ...a, primary: false } : a)),
         ]);
+
         setOpenForm(false);
-        setBank(""); setAcct(""); setPrimary(true);
+        setBank("");
+        setAcct("");
+        setPrimary(true);
     };
 
     return (
@@ -76,28 +90,22 @@ export default function AccountPage() {
             <main className={styles.main}>
                 {!openForm && accounts.length === 0 ? (
                     <>
-                        <header className={styles.topBar}>
-                            <h1 className={styles.title}>계좌 관리</h1>
-                        </header>
+                        <h1 className={styles.pageTitle}>계좌 관리</h1>
 
-                        {/* 빈 상태 – 버튼을 위로 끌어올리기 위해 높이와 여백을 확 줄였음 */}
-                        <section className={styles.emptyBox}>
-                            <div className={styles.emptyIcon} aria-hidden />
-                            <p className={styles.emptyTitle}>등록된 계좌가 없습니다.</p>
-                            <p className={styles.emptySub}>
-                                판매금 및 환불금을 빠르게 정산받으시려면 계좌를 등록해 주세요.
-                            </p>
-                            <button
-                                className={`${styles.btn} ${styles.btnPrimary}`}
-                                onClick={() => setOpenForm(true)}
-                            >
-                                + 계좌 등록하기
-                            </button>
+                        <section className={styles.emptyCard}>
+                            <div className={styles.emptyInner}>등록된 계좌가 없습니다.</div>
                         </section>
+
+                        <button
+                            className={`${styles.btn} ${styles.btnPrimary} ${styles.fullBtn}`}
+                            onClick={() => setOpenForm(true)}
+                        >
+                            계좌 추가하기
+                        </button>
                     </>
                 ) : (
                     <>
-                        <header className={styles.topBar}>
+                        <header className={styles.formHeader}>
                             <button
                                 className={styles.backBtn}
                                 onClick={() => setOpenForm(false)}
@@ -105,13 +113,17 @@ export default function AccountPage() {
                             >
                                 ←
                             </button>
-                            <h1 className={styles.title}>계좌 신규 등록</h1>
+                            <h1 className={styles.formTitle}>계좌 신규 등록</h1>
                             <span />
                         </header>
 
                         <form className={styles.form} onSubmit={onSubmit}>
                             <label className={styles.label}>예금주</label>
-                            <input className={`${styles.input} ${styles.readonly}`} value={myName} readOnly />
+                            <input
+                                className={`${styles.input} ${styles.readonly}`}
+                                value={myName}
+                                readOnly
+                            />
 
                             <label className={styles.label}>은행명</label>
                             <div className={styles.selectWrap}>
@@ -122,10 +134,14 @@ export default function AccountPage() {
                                 >
                                     <option value="">은행명</option>
                                     {BANKS.map((b) => (
-                                        <option key={b} value={b}>{b}</option>
+                                        <option key={b} value={b}>
+                                            {b}
+                                        </option>
                                     ))}
                                 </select>
-                                <span className={styles.chev} aria-hidden>▾</span>
+                                <span className={styles.chev} aria-hidden>
+                  ▾
+                </span>
                             </div>
 
                             <label className={styles.label}>계좌번호</label>
@@ -134,7 +150,9 @@ export default function AccountPage() {
                                 placeholder="계좌번호 (-없이 숫자만 입력)"
                                 inputMode="numeric"
                                 value={acct}
-                                onChange={(e) => setAcct(e.target.value.replace(/[^0-9-]/g, ""))}
+                                onChange={(e) =>
+                                    setAcct(e.target.value.replace(/[^0-9-]/g, ""))
+                                }
                             />
 
                             <label className={styles.checkRow}>
@@ -147,13 +165,16 @@ export default function AccountPage() {
                             </label>
 
                             <p className={styles.notice}>
-                                안전한 중고거래를 위해 <b>본인 인증된 명의의 계좌</b>만 사용하실 수 있습니다.
+                                안전한 중고거래를 위해 <b>본인 인증된 명의의 계좌</b>만 사용하실 수
+                                있습니다.
                             </p>
 
                             <div className={styles.footer}>
                                 <button
                                     type="submit"
-                                    className={`${styles.footerBtn} ${canSubmit ? styles.footerBtnActive : ""}`}
+                                    className={`${styles.footerBtn} ${
+                                        canSubmit ? styles.footerBtnActive : ""
+                                    }`}
                                     disabled={!canSubmit}
                                 >
                                     완료

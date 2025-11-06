@@ -1,89 +1,221 @@
 /* ===== 레이아웃 ===== */
-.wrapper{
-    max-width: 1180px;
+.wrapper {
+    max-width: 1120px;
     margin: 0 auto;
-    padding: 16px;
+    padding: 16px 16px;
     display: grid;
-    grid-template-columns: 260px 1fr; /* 사이드바 + 본문 */
-    gap: 20px;
-}
-@media (max-width: 960px){
-    .wrapper{ grid-template-columns: 1fr; }
-    .sidebar{ position: static; top: auto; }
+    grid-template-columns: 260px 1fr;
+    gap: 24px;
 }
 
-/* Sidebar 칸 */
-.sidebar{ position: sticky; top: 12px; height: fit-content; }
+@media (max-width: 960px) {
+    .wrapper {
+        grid-template-columns: 1fr;
+    }
+    .sidebar {
+        position: static;
+        top: auto;
+    }
+}
 
-/* 본문 공통 */
-.main{ min-height: 60vh; }
-.topBar{
+.sidebar {
+    position: sticky;
+    top: 12px;
+    height: fit-content;
+}
+
+.main {
+    min-height: 60vh;
+}
+
+/* ===== 페이지 제목 (배송지랑 비슷하게) ===== */
+.pageTitle {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    justify-content: center; /* 가운데 정렬 */
-    height: 44px;
-    margin-bottom: 8px;
-    position: relative;
-}
-.title{ text-align: center; font-weight: 800; font-size: 18px; }
-.backBtn{
-    margin-right: 15px; background: transparent; border: 0; font-size: 18px; cursor: pointer; color: #374151;
+    margin-bottom: 15px;     /* 아래 간격 더 줄임 */
+    gap: 8px;               /* 제목과 버튼 간격 축소 */
+    min-height: unset;
+    margin-left: 5px;
+    margin-top: 5px;
 }
 
-/* ===== 빈 상태 (버튼을 위쪽으로) ===== */
-.emptyBox{
-    margin-top: 24px;
-    padding: 32px 16px;            /* 과한 여백 제거 */
+/* ===== 빈 상태 카드: 주소 카드처럼 흰 배경 + 테두리 ===== */
+.emptyCard {
+    background: #fff;
     border: 1px solid #e5e7eb;
     border-radius: 16px;
-    background: #fff;
-    text-align: center;
+    padding: 14px 16px 12px;
 }
-.emptyIcon{
-    width: 44px; height: 44px; margin: 0 auto 8px;
-    border-radius: 12px; background: linear-gradient(180deg,#f3f4f6,#e5e7eb);
+
+.emptyInner {
+    border: 2px dashed #e5e7eb;
+    border-radius: 14px;
+    padding: 28px 12px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+/* ===== 버튼 (배송지처럼 가운데 큰 버튼) ===== */
+.btn {
+    border: 0;
+    border-radius: 16px;
+    padding: 12px 16px;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+.btnPrimary {
+    background: #10b981;
+    color: #fff;
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.1);
+}
+
+.fullBtn {
+    background: #10b981;
+    border: 1px solid #10b981;
+    color: #fff;
+    font-weight: 700;
+    border-radius: 12px;
+    padding: 12px 0;
+    font-size: 15px;
+    text-align: center;
+    transition: background 0.2s ease, transform 0.1s ease;
+    display: block;              /* 가로 전체 사용 */
+    width: 60%;                  /* 전체의 60% 정도 */
+    max-width: 420px;            /* 너무 커지지 않게 제한 */
+    margin: 20px auto 0;
+}
+
+.fullBtn:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.fullBtn:active {
+    transform: translateY(0);
+}
+
+/* ===== 폼 모드 (배송지 모달 느낌만 살짝) ===== */
+.formHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.backBtn {
+    background: transparent;
+    border: 0;
+    font-size: 18px;
+    cursor: pointer;
+    color: #374151;
+}
+
+.formTitle {
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.form {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 16px;
+    display: grid;
+    gap: 10px;
+}
+
+/* ===== 입력 공통 ===== */
+.label {
+    font-size: 13px;
+    color: #374151;
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.input {
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 15px;
+}
+
+.input:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.readonly {
+    background: #f9fafb;
+    color: #6b7280;
+}
+
+/* ===== 셀렉트 ===== */
+.selectWrap {
     position: relative;
 }
-.emptyIcon::after{ content: "💾"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 22px; }
-.emptyTitle{ font-weight: 800; margin-bottom: 6px; }
-.emptySub{ font-size: 14px; color: #6b7280; margin-bottom: 10px; }
-
-/* 버튼을 상단으로 끌어올리기 위해 마진 최소화 */
-.btn{
-    border: 0; border-radius: 12px; padding: 10px 14px;
-    font-weight: 700; cursor: pointer;
+.select {
+    appearance: none;
+    width: 100%;
+    border: 1px solid #d1d5db;
+    border-radius: 12px;
+    padding: 12px 38px 12px 14px;
+    font-size: 15px;
+    background: #fff;
 }
-.btnPrimary{ background:#10b981; color:#fff; box-shadow:0 4px 10px rgba(16,185,129,.2); }
-
-/* ===== 폼 ===== */
-.form{
-    background:#fff; border:1px solid #e5e7eb; border-radius:16px;
-    padding:16px; display:grid; gap:10px;
+.select:focus {
+    outline: none;
+    border-color: #10b981;
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
-.label{ font-size:13px; color:#374151; font-weight:600; margin-top:4px; }
-.input{
-    border:1px solid #d1d5db; border-radius:12px; padding:12px 14px; font-size:15px;
+.chev {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6b7280;
+    pointer-events: none;
 }
-.input:focus{ outline:none; border-color:#10b981; box-shadow:0 0 0 2px rgba(16,185,129,.2); }
-.readonly{ background:#f9fafb; color:#6b7280; }
 
-/* 셀렉트 */
-.selectWrap{ position:relative; }
-.select{
-    appearance:none; width:100%;
-    border:1px solid #d1d5db; border-radius:12px; padding:12px 38px 12px 14px; font-size:15px; background:#fff;
+/* ===== 체크박스 ===== */
+.checkRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+    color: #111827;
 }
-.select:focus{ outline:none; border-color:#10b981; box-shadow:0 0 0 2px rgba(16,185,129,.2); }
-.chev{ position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#6b7280; }
 
-/* 체크박스 */
-.checkRow{ display:flex; align-items:center; gap:8px; margin-top:6px; color:#111827; }
-
-/* 안내문 + 하단 버튼 */
-.notice{ font-size:13px; color:#374151; text-align:center; margin:8px 0 0; }
-.footer{ margin-top:12px; display:flex; justify-content:center; }
-.footerBtn{
-    width: 260px; height: 44px; border:0; border-radius:12px;
-    background:#e5e7eb; color:#9ca3af; font-weight:800; cursor:not-allowed;
+/* ===== 안내문 + 하단 버튼 ===== */
+.notice {
+    font-size: 13px;
+    color: #374151;
+    margin-top: 4px;
 }
-.footerBtnActive{ background:#10b981; color:#fff; cursor:pointer; }
+
+.footer {
+    margin-top: 12px;
+    display: flex;
+    justify-content: center;
+}
+
+.footerBtn {
+    width: 260px;
+    height: 44px;
+    border: 0;
+    border-radius: 12px;
+    background: #e5e7eb;
+    color: #9ca3af;
+    font-weight: 800;
+    cursor: not-allowed;
+}
+
+.footerBtnActive {
+    background: #10b981;
+    color: #fff;
+    cursor: pointer;
+}

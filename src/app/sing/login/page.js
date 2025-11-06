@@ -68,7 +68,8 @@ export default function Page() {
             });
 
             if (!res.ok) {
-                alert("로그인 실패");
+                const data = await res.json().catch(() => ({}));
+                alert(data.message || '로그인 실패');
                 return;
             }
 
@@ -79,7 +80,7 @@ export default function Page() {
                 setToken(data.accessToken);
             }
 
-            alert("로그인 성공");
+            // alert("로그인 성공");
             router.push("/");
         } catch (err) {
             console.error(err);
