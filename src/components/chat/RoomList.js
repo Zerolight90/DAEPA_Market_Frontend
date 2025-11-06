@@ -1,3 +1,4 @@
+//RoomList.js
 "use client";
 import ScrollArea from "./ScrollArea";
 import { fmtHHMM, resolveRole, formatKRW } from "@/lib/chat/chat-utils";
@@ -18,7 +19,7 @@ export default function RoomList({ rooms, meId, activeId, onSelect }) {
                 {(rooms || []).map((r) => {
                     const role = resolveRole(r, meId); // "판매자" | "구매자" | null
                     const active = String(activeId) === String(r.roomId);
-                    const priceText = formatKRW(r.productPrice);
+                    const priceText = formatKRW(r.productPrice ?? r.displayPrice ?? null);
                     const thumb = safeSrc(r.productThumb) || "/images/placeholder.jpg";
 
                     return (

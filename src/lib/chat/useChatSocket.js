@@ -1,3 +1,4 @@
+//lib/chat/useChatSocket.js
 import { useEffect, useRef, useState, useCallback } from "react";
 import SockJS from "sockjs-client";
 import { Client } from "@stomp/stompjs";
@@ -154,6 +155,12 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
         });
     }, []);
 
+    const sendLeave = useCallback(() => {
+        const rid = roomIdRef.current, uid = meIdRef.current;
+        if (!rid || !uid) return;
+        publishJson(`/app/chats/${rid}/leave`, { roomId: Number(rid) });
+    }, [publishJson]);
+
     const sendText = useCallback((text, tempId) => {
         const rid = roomIdRef.current, uid = meIdRef.current;
         if (!rid || !uid) return;
@@ -197,5 +204,6 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
         sendRead,
         setOnServerMessage,
         setOnBadge,
+        sendLeave,
     };
 }

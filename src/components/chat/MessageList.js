@@ -1,3 +1,4 @@
+//MessageList.js
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import ScrollArea from "./ScrollArea";
