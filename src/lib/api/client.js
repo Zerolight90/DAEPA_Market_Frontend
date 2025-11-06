@@ -1,4 +1,4 @@
-process.env.NEXT_PUBLIC_API_BASE;
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 /** 내부: 절대/상대 경로 처리 + /api prefix 보장 */
 function buildUrl(path) {
     if (!path) throw new Error("api(): path is required");
