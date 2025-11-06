@@ -5,7 +5,7 @@ function buildUrl(path) {
     if (/^https?:\/\//i.test(path)) return path;         // 절대 URL이면 그대로
     const clean = path.startsWith("/") ? path : `/${path}`;
     const withApi = clean.startsWith("/api/") ? clean : `/api${clean}`;
-    return `${API_BASE}${withApi}`;                   // /api/...
+    return `${API_BASE}${withApi}`;                  // /api/...
 }
 
 /**
