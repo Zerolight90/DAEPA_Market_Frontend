@@ -1,3 +1,4 @@
+//RoomList.js
 "use client";
 import ScrollArea from "./ScrollArea";
 import { fmtHHMM, resolveRole, formatKRW } from "@/lib/chat/chat-utils";
