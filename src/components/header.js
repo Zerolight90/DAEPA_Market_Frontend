@@ -20,7 +20,7 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
 import TokeStore from "@/app/store/TokenStore";
 import styles from "./css/header.module.css";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+import { api } from "@/lib/api/client";
 
 // 여러 형태로 올 수 있는 이름을 하나로 골라주는 함수
 function getDisplayName(me) {
@@ -67,18 +67,10 @@ export default function Header() {
 
         (async () => {
             try {
-                const res = await fetch(`${API_BASE}/api/users/me`, {
+                const data = await api("/users/me", {
                     headers: { Authorization: `Bearer ${accessToken}` },
                     credentials: "include",
-                    cache: "no-store",
                 });
-
-                if (!res.ok) {
-                    setMe(null);
-                    return;
-                }
-
-                const data = await res.json();
                 setMe(data);
             } catch (e) {
                 console.error("me fetch error", e);
