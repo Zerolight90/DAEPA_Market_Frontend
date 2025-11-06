@@ -1,7 +1,8 @@
+//lib/chat/api.js
 import axios from "axios";
 
 export const http = axios.create({
-    baseURL: "/",
+    baseURL: "/api",
     withCredentials: true,
 });
 
@@ -10,7 +11,7 @@ http.interceptors.response.use(
     (res) => res,
     (err) => {
         const url = err?.config?.url || "";
-        if (url.startsWith("/api/auth/me")) {
+        if (url.startsWith("/auth/me")) {
             return Promise.resolve({ data: null, status: 200, config: err.config });
         }
         return Promise.reject(err);
@@ -23,26 +24,26 @@ function normRoomId(id) {
 }
 
 export async function fetchMe() {
-    const { data } = await http.get("/api/auth/me");
+    const { data } = await http.get("/auth/me");
     return data; // { userId } | null
 }
 
 export async function fetchRooms(userId) {
     const params = userId ? { userId } : undefined;
-    const { data } = await http.get("/api/chats/my-rooms", { params });
+    const { data } = await http.get("/chats/my-rooms", { params });
     return data;
 }
 
 export async function fetchMessages(roomId, size = 30, before) {
     const rid = normRoomId(roomId);
-    const { data } = await http.get(`/api/chats/${rid}/messages`, {
+    const { data } = await http.get(`/chats/${rid}/messages`, {
         params: { size, before },
     });
     return data;
 }
 
 export async function openChatRoom({ productId, sellerId }) {
-    const { data } = await http.post("/api/chats/open", { productId, sellerId });
+    const { data } = await http.post("/chats/open", { productId, sellerId });
     return data; // { roomId, created, identifier }
 }
 
@@ -50,10 +51,10 @@ export async function openChatRoom({ productId, sellerId }) {
 export async function uploadChatImage(file) {
     const form = new FormData();
     form.append("file", file);
-    // const { data } = await http.post("/api/chats/upload", form);
+    // const { data } = await http.post("/chats/upload", form);
     // return data; // { url, ... }
     try {
-        const { data } = await http.post("/api/chats/upload", form);
+        const { data } = await http.post("/chats/upload", form);
         return data; // { url, ... }
     } catch (e) {
         throw e;
@@ -63,7 +64,7 @@ export async function uploadChatImage(file) {
 /** REST 폴백: 메시지 전송 */
 export async function sendMessageRest(roomId, { text, imageUrl = null, tempId = null, senderId }) {
     const rid = normRoomId(roomId);
-    const { data } = await http.post(`/api/chats/${rid}/send`, {
+    const { data } = await http.post(`/chats/${rid}/send`, {
         roomId: Number(rid),
         senderId: Number(senderId),
         text: text ?? null,
@@ -77,7 +78,7 @@ export async function sendMessageRest(roomId, { text, imageUrl = null, tempId = 
 export async function markReadUpTo(roomId, readerId, upTo) {
     const rid = normRoomId(roomId);
     const { data } = await http.post(
-        `/api/chats/${rid}/read-up-to`,
+        `/chats/${rid}/read-up-to`,
         null,
         {
             params: { upTo },
@@ -90,7 +91,7 @@ export async function markReadUpTo(roomId, readerId, upTo) {
 // ✅ 상대의 마지막 읽음 위치 조회
 export async function fetchLastSeen(roomId, userId) {
     const rid = normRoomId(roomId);
-    const { data } = await http.get(`/api/chats/${rid}/last-seen`, {
+    const { data } = await http.get(`/chats/${rid}/last-seen`, {
         params: { userId: Number(userId) },
     });
     return data; // { lastSeenMessageId }
@@ -99,6 +100,6 @@ export async function fetchLastSeen(roomId, userId) {
 export async function leaveRoomRest(roomId, userId) {
     const rid = normRoomId(roomId);
     const headers = userId ? { "x-user-id": String(userId) } : undefined;
-    const { data } = await http.post(`/api/chats/${rid}/leave`, null, { headers });
+    const { data } = await http.post(`/chats/${rid}/leave`, null, { headers });
     return data; // { type:"LEAVE", roomId, actorId, time }
 }

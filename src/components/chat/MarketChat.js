@@ -1,3 +1,4 @@
+//MarketChat.js
 "use client";
 import s from "./MarketChat.module.css";
 import { useChatData } from "@/lib/chat/useChatData";
@@ -61,8 +62,18 @@ export default function MarketChat() {
                                             }`}
                                             style={{ marginLeft: 6 }}
                                         >
-                      {myRole}
-                    </span>
+                                      {myRole}
+                                    </span>
+                                    )}
+                                    {activeChat?.productStatus && (
+                                        <span
+                                            className={`${s.statusBadge} ${
+                                                activeChat.productStatus === "판매완료" ? s.statusDone : s.statusOn
+                                            }`}
+                                            style={{ marginLeft: 6 }}
+                                        >
+                                      {activeChat.productStatus}
+                                    </span>
                                     )}
                                 </div>
                             </div>
