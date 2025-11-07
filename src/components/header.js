@@ -67,7 +67,7 @@ export default function Header() {
 
         (async () => {
             try {
-                const data = await api("/users/me", {
+                const data = await api("/api/users/me", {
                     headers: { Authorization: `Bearer ${accessToken}` },
                     credentials: "include",
                 });
