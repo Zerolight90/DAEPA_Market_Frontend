@@ -11,22 +11,32 @@ async function j(url) {
 export async function fetchUpperMeta(upperName) {
     // 1) by-name API가 있다면 우선 시도
     try {
-        const meta = await j(`${BASE}/api/category/uppers/by-name?name=${encodeURIComponent(upperName)}`);
+        const meta = await j(
+            `${BASE}/api/category/uppers/by-name?name=${encodeURIComponent(upperName)}`
+        );
         if (meta?.upperIdx || meta?.id) {
-            return { id: meta.upperIdx ?? meta.id, name: meta.upperCt ?? meta.name ?? upperName };
+            return {
+                id: meta.upperIdx ?? meta.id,
+                name: meta.upperCt ?? meta.name ?? upperName,
+            };
         }
     } catch (_) {}
 
     // 2) 전체 조회 후 매칭
     try {
         const list = await j(`${BASE}/api/category/uppers`);
-        const found = Array.isArray(list) && list.find(
-            (u) =>
-                (u.upperCt ?? u.name) === upperName ||
-                String(u.upperIdx ?? u.id) === String(upperName)
-        );
+        const found =
+            Array.isArray(list) &&
+            list.find(
+                (u) =>
+                    (u.upperCt ?? u.name) === upperName ||
+                    String(u.upperIdx ?? u.id) === String(upperName)
+            );
         if (found) {
-            return { id: found.upperIdx ?? found.id, name: found.upperCt ?? found.name ?? upperName };
+            return {
+                id: found.upperIdx ?? found.id,
+                name: found.upperCt ?? found.name ?? upperName,
+            };
         }
     } catch (_) {}
 
@@ -51,5 +61,16 @@ export async function fetchLows(middleId) {
         id: l.lowIdx ?? l.id,
         name: l.lowCt ?? l.name,
         count: l.count ?? undefined,
+    }));
+}
+
+/** ✅ 전체 상위카테고리 목록 가져오기 */
+export async function fetchUppers() {
+    const data = await j(`${BASE}/api/category/uppers`);
+    return (Array.isArray(data) ? data : []).map((u) => ({
+        id: u.upperIdx ?? u.id,
+        name: u.upperCt ?? u.name,
+        // 메인에서 쓰는 것처럼 개수도 있으면 넘겨주기
+        count: u.productCount ?? u.count ?? undefined,
     }));
 }

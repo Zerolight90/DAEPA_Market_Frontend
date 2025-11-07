@@ -77,6 +77,7 @@ export async function fetchProducts({
 
     return {
         items: items.map((p) => ({
+            ...p,
             id: p.pdIdx,
             title: p.pdTitle,
             price: p.pdPrice,

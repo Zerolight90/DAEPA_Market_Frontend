@@ -9,6 +9,10 @@ export const fetchProduct = async (id) => {
     const res = await api(`/products/${id}`, { next: { revalidate: 0 } });
     if (!res) return null;
 
+    // 1) 백엔드에서 온 원본 전체를 일단 살려둔다
+    //    (여기에 dsell, dstatus, ddeal 이 이미 들어있음)
+    const raw = { ...res };
+
     // 이미지 배열
     const images = Array.isArray(res.images) ? res.images : [];
 
@@ -18,15 +22,14 @@ export const fetchProduct = async (id) => {
         condition = res.pdStatus === 0 ? "중고상품" : "새상품";
     }
 
-    // 🔥 거래방식 여러 이름으로 들어오는 거 전부 커버
-    // 지금 백엔드 JSON에선 "ddeal" 로 내려오니까 그걸 반드시 포함시켜야 함
+    // 거래방식 여러 이름 커버
     const rawDeal = (
-        res.dDeal ??       // camel
-        res.ddeal ??       // ← 실제로 오는 이름
-        res.d_deal ??      // snake
-        res.deal ??        // 짧게
-        res.tradeMethod ?? // 혹시 프론트에서 보낼 때 이렇게
-        res.dealType ??    // 다른 API 스타일
+        res.dDeal ??
+        res.ddeal ??
+        res.d_deal ??
+        res.deal ??
+        res.tradeMethod ??
+        res.dealType ??
         ""
     )
         .toString()
@@ -40,10 +43,13 @@ export const fetchProduct = async (id) => {
         dealType = "만나서 직거래";
     }
 
-    // 직거래 위치 (지금은 상품 위치랑 같게)
     const meetLocation = res.location || res.pdLocation || null;
 
     return {
+        // 2) 먼저 원본을 펼쳐서 dsell/dstatus/ddeal 안 날아가게 한다
+        ...raw,
+
+        // 3) 그다음 프론트에서 쓰기 좋은 이름을 덧씌운다
         id: res.pdIdx,
         title: res.pdTitle,
         price: res.pdPrice,
@@ -53,14 +59,12 @@ export const fetchProduct = async (id) => {
         images,
         createdAt: res.pdCreate,
 
-        // ⭐ 판매자 - 컴포넌트가 nickname / avatarUrl 을 먼저 보는 구조라 이렇게 맞춤
-        // 🟢 판매자
+        // 판매자
         seller: {
             id: res.sellerId,
             nickname: res.sellerName,
             name: res.sellerName,
             avatarUrl: res.sellerAvatar ?? "/images/avatar-default.png",
-            // 🟢 여기! 백엔드가 내려준 sellerManner 사용
             manner: typeof res.sellerManner === "number" ? res.sellerManner : 0,
             deals: res.sellerDeals ?? 0,
         },
@@ -71,9 +75,9 @@ export const fetchProduct = async (id) => {
         sub: res.lowName || res.sub || null,
 
         // 거래/상태
-        condition,     // "중고상품" / "새상품"
-        dealType,      // "택배거래" / "만나서 직거래"
-        meetLocation,  // 직거래 위치 (없으면 null)
+        condition,
+        dealType,
+        meetLocation,
     };
 };
 
@@ -87,31 +91,14 @@ export const fetchRelated = async (id, limit = 10) => {
 
     if (!Array.isArray(list)) return [];
     return list.map((p) => ({
-        id: p.pdIdx ?? p.id,
-        title: p.pdTitle ?? p.title,
-        price: p.pdPrice ?? p.price,
-        thumbnail: p.pdThumb ?? p.thumbnail,
-        location: p.pdLocation ?? p.location,
-        createdAt: p.pdCreate ?? p.createdAt,
-    }));
-};
+        ...p, // ← 백엔드 원본 필드들(dsell, dstatus 등) 모두 보존
 
-/**
- * 판매자의 다른 상품
- */
-export const fetchSellerItems = async (sellerId, excludeId, limit = 8) => {
-    const list = await api(
-        `/sellers/${sellerId}/products?exclude=${excludeId}&limit=${limit}`,
-        { next: { revalidate: 60 } }
-    );
-
-    if (!Array.isArray(list)) return [];
-    return list.map((p) => ({
-        id: p.pdIdx ?? p.id,
-        title: p.pdTitle ?? p.title,
-        price: p.pdPrice ?? p.price,
-        thumbnail: p.pdThumb ?? p.thumbnail,
-        location: p.pdLocation ?? p.location,
-        createdAt: p.pdCreate ?? p.createdAt,
+        id: p.pdIdx,
+        title: p.pdTitle,
+        price: p.pdPrice,
+        thumbnail: p.pdThumb,
+        location: p.pdLocation,
+        createdAt: p.pdCreate,
     }));
+
 };
