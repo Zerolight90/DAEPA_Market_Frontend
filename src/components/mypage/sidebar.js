@@ -12,13 +12,13 @@ export const SIDE_SECTIONS = [
             { href: "/mypage/buy", label: "구매내역" },
             { href: "/mypage/shipping", label: "택배" },
             { href: "/mypage/matching", label: "관심 상품 매칭" },
-            { href: "/mypage/safe-settle", label: "안심결제 정산내역" },
+            { href: "/mypage/safe_settle", label: "안심결제 정산내역" },
         ],
     },
     {
         title: "내 정보",
         items: [
-            { href: "/mypage/account", label: "계좌 관리" },
+            // { href: "/mypage/account", label: "계좌 관리" },
             { href: "/mypage/address", label: "배송지 관리" },
             { href: "/mypage/review", label: "거래 후기" },
             { href: "/mypage/leave", label: "탈퇴하기" },
