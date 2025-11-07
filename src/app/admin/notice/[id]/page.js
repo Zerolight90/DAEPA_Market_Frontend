@@ -129,96 +129,120 @@ export default function NoticeDetailPage() {
 
   return (
     <div className={styles.pageContainer}>
-      {/* 헤더 */}
-      <div className={styles.pageHeader}>
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
-          <Link href="/admin/notice" style={{ textDecoration: "none" }}>
-            <button style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.5rem",
-              padding: "0.5rem 1rem",
-              background: "#f8fafc",
-              border: "1px solid #e2e8f0",
-              borderRadius: "0.5rem",
-              color: "#64748b",
-              cursor: "pointer",
-              transition: "all 0.2s ease"
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.background = "#f1f5f9";
-              e.target.style.borderColor = "#cbd5e1";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = "#f8fafc";
-              e.target.style.borderColor = "#e2e8f0";
-            }}
-            >
-              <ArrowLeft size={16} />
-              목록으로
-            </button>
-          </Link>
-        </div>
-        <h1 className={styles.pageTitle}>공지사항 상세</h1>
-        <p className={styles.pageSubtitle}>
-          공지사항의 상세 내용을 확인하고 관리하세요
-        </p>
+      {/* 네비게이션 바 */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginBottom: "2rem",
+        paddingBottom: "1rem",
+        borderBottom: "1px solid #e5e7eb"
+      }}>
+        <Link href="/admin/notice" style={{ textDecoration: "none" }}>
+          <button style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            padding: "0.625rem 1.25rem",
+            background: "white",
+            border: "1px solid #e5e7eb",
+            borderRadius: "0.5rem",
+            color: "#64748b",
+            cursor: "pointer",
+            transition: "all 0.2s ease",
+            fontSize: "0.875rem",
+            fontWeight: "500",
+            boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#f8fafc";
+            e.currentTarget.style.borderColor = "#16a34a";
+            e.currentTarget.style.color = "#16a34a";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "white";
+            e.currentTarget.style.borderColor = "#e5e7eb";
+            e.currentTarget.style.color = "#64748b";
+          }}
+          >
+            <ArrowLeft size={18} />
+            목록으로 돌아가기
+          </button>
+        </Link>
       </div>
 
-      {/* 공지사항 상세 내용 */}
+      {/* 공지사항 카드 */}
       <div style={{
         background: "white",
-        borderRadius: "0.75rem",
-        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
-        border: "1px solid #e2e8f0",
-        overflow: "hidden"
+        borderRadius: "1rem",
+        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06)",
+        border: "1px solid #e5e7eb",
+        overflow: "hidden",
+        width: "100%",
+        maxWidth: "100%"
       }}>
-        {/* 공지사항 헤더 */}
+        {/* 헤더 섹션 */}
         <div style={{
-          padding: "2rem",
-          borderBottom: "1px solid #e2e8f0",
-          background: "linear-gradient(135deg, #f8fafc, #e2e8f0)"
+          padding: "2.5rem 3rem",
+          borderBottom: "2px solid #f1f5f9",
+          background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+          position: "relative"
         }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "0.5rem" }}>
-                {notice.isImportant && (
-                  <span style={{
-                    background: "linear-gradient(135deg, #ef4444, #dc2626)",
-                    color: "white",
-                    padding: "0.25rem 0.75rem",
-                    borderRadius: "0.375rem",
-                    fontSize: "0.75rem",
-                    fontWeight: "700",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    boxShadow: "0 2px 4px rgba(239, 68, 68, 0.3)"
-                  }}>
-                    중요
-                  </span>
-                )}
-                <span style={{
-                  ...categoryStyle,
-                  padding: "0.375rem 0.875rem",
-                  borderRadius: "9999px",
-                  fontSize: "0.75rem",
-                  fontWeight: "700",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.05em"
-                }}>
-                  {notice.category}
-                </span>
-              </div>
-              <h2 style={{
-                margin: 0,
-                fontSize: "1.875rem",
-                fontWeight: "700",
-                color: "#1e293b",
-                lineHeight: "1.3"
-              }}>
-                {notice.title}
-              </h2>
+          {/* 중요 배지 */}
+          {notice.isImportant && (
+            <div style={{
+              position: "absolute",
+              top: "1.5rem",
+              right: "1.5rem",
+              background: "linear-gradient(135deg, #ef4444, #dc2626)",
+              color: "white",
+              padding: "0.375rem 1rem",
+              borderRadius: "0.5rem",
+              fontSize: "0.75rem",
+              fontWeight: "700",
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)",
+              display: "flex",
+              alignItems: "center",
+              gap: "0.375rem"
+            }}>
+              <span style={{ width: "6px", height: "6px", background: "white", borderRadius: "50%" }}></span>
+              중요
             </div>
+          )}
+
+          {/* 카테고리 및 제목 */}
+          <div style={{ marginBottom: "1.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
+              <span style={{
+                background: categoryStyle.bg,
+                color: categoryStyle.color,
+                padding: "0.5rem 1rem",
+                borderRadius: "0.5rem",
+                fontSize: "0.8125rem",
+                fontWeight: "700",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "0.5rem"
+              }}>
+                <Tag size={14} />
+                {notice.category}
+              </span>
+            </div>
+            <h1 style={{
+              margin: 0,
+              fontSize: "2rem",
+              fontWeight: "700",
+              color: "#1e293b",
+              lineHeight: "1.4",
+              letterSpacing: "-0.02em",
+              maxWidth: "90%"
+            }}>
+              {notice.title}
+            </h1>
           </div>
           
           {/* 메타 정보 */}
@@ -226,67 +250,118 @@ export default function NoticeDetailPage() {
             display: "flex",
             alignItems: "center",
             gap: "2rem",
-            fontSize: "0.875rem",
-            color: "#64748b"
+            paddingTop: "1.5rem",
+            borderTop: "1px solid #f1f5f9"
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <User size={16} />
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.625rem",
+              fontSize: "0.875rem",
+              color: "#64748b",
+              fontWeight: "500"
+            }}>
+              <div style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #dcfce7, #bbf7d0)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#16a34a"
+              }}>
+                <User size={16} />
+              </div>
               <span>{notice.author}</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <Calendar size={16} />
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.625rem",
+              fontSize: "0.875rem",
+              color: "#64748b",
+              fontWeight: "500"
+            }}>
+              <div style={{
+                width: "32px",
+                height: "32px",
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #f0f9ff, #e0f2fe)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#0284c7"
+              }}>
+                <Calendar size={16} />
+              </div>
               <span>{notice.createdAt}</span>
             </div>
           </div>
         </div>
 
-        {/* 공지사항 내용 */}
-        <div style={{ padding: "2rem" }}>
+        {/* 본문 내용 */}
+        <div style={{ 
+          padding: "3rem",
+          minHeight: "400px",
+          background: "white"
+        }}>
           <div style={{
-            fontSize: "1rem",
-            lineHeight: "1.7",
+            fontSize: "1.0625rem",
+            lineHeight: "1.9",
             color: "#374151",
-            whiteSpace: "pre-wrap"
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+            overflowWrap: "break-word",
+            maxWidth: "100%",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif"
           }}>
-            {notice.content}
+            {notice.content.split('\n').map((line, index) => (
+              <div key={index} style={{ marginBottom: line.trim() ? "1rem" : "0.5rem" }}>
+                {line || '\u00A0'}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* 액션 버튼 */}
+        {/* 액션 버튼 영역 */}
         <div style={{
-          padding: "1.5rem 2rem",
-          borderTop: "1px solid #e2e8f0",
-          background: "#f8fafc",
+          padding: "2rem 3rem",
+          borderTop: "1px solid #f1f5f9",
+          background: "linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)",
           display: "flex",
           justifyContent: "flex-end",
-          gap: "1rem"
+          gap: "0.75rem"
         }}>
           <Link href={`/admin/notice/edit/${params.id}`} style={{ textDecoration: "none" }}>
             <button style={{
               display: "flex",
               alignItems: "center",
               gap: "0.5rem",
-              padding: "0.75rem 1.5rem",
-              background: "#3b82f6",
+              padding: "0.75rem 1.75rem",
+              background: "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)",
               color: "white",
               border: "none",
-              borderRadius: "0.5rem",
+              borderRadius: "0.625rem",
               fontWeight: "600",
               cursor: "pointer",
               transition: "all 0.2s ease",
-              fontSize: "0.875rem"
+              fontSize: "0.875rem",
+              boxShadow: "0 2px 4px rgba(22, 163, 74, 0.2)"
             }}
             onMouseEnter={(e) => {
-              e.target.style.background = "#2563eb";
-              e.target.style.transform = "translateY(-1px)";
+              e.currentTarget.style.background = "linear-gradient(135deg, #15803d 0%, #16a34a 100%)";
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = "0 4px 8px rgba(22, 163, 74, 0.3)";
             }}
             onMouseLeave={(e) => {
-              e.target.style.background = "#3b82f6";
-              e.target.style.transform = "translateY(0)";
+              e.currentTarget.style.background = "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)";
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 2px 4px rgba(22, 163, 74, 0.2)";
             }}
             >
-              <Edit size={16} />
-              수정
+              <Edit size={18} />
+              수정하기
             </button>
           </Link>
           <button 
@@ -295,27 +370,32 @@ export default function NoticeDetailPage() {
               display: "flex",
               alignItems: "center",
               gap: "0.5rem",
-              padding: "0.75rem 1.5rem",
-              background: "#ef4444",
-              color: "white",
-              border: "none",
-              borderRadius: "0.5rem",
+              padding: "0.75rem 1.75rem",
+              background: "white",
+              color: "#ef4444",
+              border: "1px solid #fecaca",
+              borderRadius: "0.625rem",
               fontWeight: "600",
               cursor: "pointer",
               transition: "all 0.2s ease",
-              fontSize: "0.875rem"
+              fontSize: "0.875rem",
+              boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)"
             }}
             onMouseEnter={(e) => {
-              e.target.style.background = "#dc2626";
-              e.target.style.transform = "translateY(-1px)";
+              e.currentTarget.style.background = "#fee2e2";
+              e.currentTarget.style.borderColor = "#fca5a5";
+              e.currentTarget.style.transform = "translateY(-2px)";
+              e.currentTarget.style.boxShadow = "0 4px 8px rgba(239, 68, 68, 0.2)";
             }}
             onMouseLeave={(e) => {
-              e.target.style.background = "#ef4444";
-              e.target.style.transform = "translateY(0)";
+              e.currentTarget.style.background = "white";
+              e.currentTarget.style.borderColor = "#fecaca";
+              e.currentTarget.style.transform = "translateY(0)";
+              e.currentTarget.style.boxShadow = "0 1px 2px rgba(0, 0, 0, 0.05)";
             }}
           >
-            <Trash2 size={16} />
-            삭제
+            <Trash2 size={18} />
+            삭제하기
           </button>
         </div>
       </div>
