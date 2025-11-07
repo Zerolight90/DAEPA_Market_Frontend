@@ -177,11 +177,12 @@
 .stepBar {
     display: flex;
     align-items: center;
-    gap: 30px;
+    gap: 60px;
     margin-top: 4px;
     margin-bottom: 2px;
     padding: 6px 0 2px;
     border-top: 1px solid #f1f5f9;
+    margin-left: 80px;
 }
 
 .step {
@@ -237,4 +238,102 @@
     padding: 28px 10px;
     text-align: center;
     color: #94a3b8;
+}
+
+.stepSquare {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 90px;
+    padding: 4px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #f8fafc;
+    gap: 6px;
+    transition: all 0.15s ease-in-out;
+}
+
+.stepSquareActive {
+    border-color: #22c55e;
+    background: #ecfdf3;
+    color: #16a34a;
+    font-weight: 600;
+}
+
+.stepSquareLabel {
+    color: #16a34a;
+    font-weight: 600;
+}
+.outlineBtn {
+    width: 100%;
+    border: 1.5px solid #22c55e;   /* 초록 테두리 */
+    background: #fff;
+    color: #16a34a;
+    border-radius: 10px;
+    padding: 10px 0;
+    font-weight: 600;
+    font-size: 14px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.12s ease-out;
+    margin-top: 6px;
+}
+
+.outlineBtn:hover {
+    background: #ecfdf5;           /* 연녹색 배경 */
+    color: #15803d;
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.12);
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+/* 연회색 버튼 (배송 보냄 확인 / 배송 완료 확인) */
+.grayBtn {
+    display: block;               /* 가로로 꽉 차게 */
+    width: 100%;                  /* 부모(actions div)의 전체 폭 사용 */
+    border: none;
+    background: #22c55e;          /* 대파그린 */
+    color: #ffffff;
+    border-radius: 10px;
+    padding: 10px 0;              /* 위아래 여백 늘려서 보기 좋게 */
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.grayBtn:hover {
+    border-color: #22c55e;
+    color: #22c55e;
+    background: #ecfdf3;
+}
+
+/* 초록 버튼 (후기 보내기) */
+.greenBtn {
+    display: block;               /* 가로로 꽉 차게 */
+    width: 100%;                  /* 부모(actions div)의 전체 폭 사용 */
+    border: none;
+    background: #22c55e;          /* 대파그린 */
+    color: #ffffff;
+    border-radius: 10px;
+    padding: 10px 0;              /* 위아래 여백 늘려서 보기 좋게 */
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.greenBtn:hover {
+    background: #16a34a;          /* hover 시 진한 초록 */
+    transform: translateY(-1px);
+}
+
+.greenBtn:active {
+    transform: translateY(0);     /* 클릭 시 원래 위치로 */
 }
