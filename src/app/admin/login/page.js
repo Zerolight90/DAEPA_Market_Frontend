@@ -72,7 +72,7 @@ export default function AdminLoginPage() {
         {/* 로고 섹션 */}
         <div className={styles.logoSection}>
           <div className={styles.logoIcon}>
-            <Shield size={48} color="#3b82f6" />
+            <Shield size={48} color="#ffffff" />
           </div>
           <h1 className={styles.logoTitle}>대파마켓</h1>
           <p className={styles.logoSubtitle}>관리자 로그인</p>

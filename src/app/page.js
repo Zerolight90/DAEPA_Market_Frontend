@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Card, CardContent } from "@mui/material";
 import Bener from "@/components/bener";
 import styles from "./page.module.css";
-import { apiFetch, Endpoints } from "../app/sell/api";  // ✅ 경로 맞게 수정
+import { apiFetch, Endpoints } from "../app/sell/api";
+import ProductRowSection from "@/components/product/ProductRowSection";  // ✅ 경로 맞게 수정
 
 export default function Home() {
     const [categories, setCategories] = useState([]);
@@ -68,6 +69,16 @@ export default function Home() {
                     ))}
 
                 </div>
+                <ProductRowSection
+                    title="전체 보기"
+                    sort="recent"
+                    link="/all"
+                />
+                <ProductRowSection
+                    title="찜이 많은 상품"
+                    sort="favorite"
+                    link="/all?sort=favorite"
+                />
             </div>
         </>
     );

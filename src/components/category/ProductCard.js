@@ -12,19 +12,25 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
     const [fav, setFav] = useState(false);
     const [count, setCount] = useState(0);
 
-    // ✅ dSell 도 본다
+    // ✅ dSell / dsell / d_status / dstatus 전부 본다
     const soldOut =
-        item?.dSell === 1 ||
-        item?.d_sell === 1 ||
-        item?.dStatus === 1 ||
-        item?.d_status === 1 ||
-        item?.dealStatus === 1;
+        Number(
+            item?.dSell ??
+            item?.d_sell ??
+            item?.dsell ??      // ← 이게 목록에서 오는 값
+            item?.dStatus ??
+            item?.d_status ??
+            item?.dstatus ??    // ← 이것도 목록에서 올 수 있음
+            item?.dealStatus ??
+            0
+        ) === 1;
+
 
     const accessToken = tokenStore((state) => state.accessToken);
 
     useEffect(() => {
         if (!item?.id && !item?.pdIdx) return;
-
+        console.log("card item >>>", item);
         (async () => {
             try {
                 const headers = {};

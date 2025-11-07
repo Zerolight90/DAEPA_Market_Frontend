@@ -31,12 +31,57 @@ export default function ContactDetailPage() {
         if (!res.ok) throw new Error("문의 상세를 불러오지 못했습니다.");
         
         const data = await res.json();
-        setInquiry(data);
-        setProcessingStatus(data.status);
+        // API 응답 데이터 구조에 맞게 처리
+        const inquiryData = {
+          id: data.id || data.oo_idx || params.id,
+          name: data.name || data.u_name || "알 수 없음",
+          category: data.category || data.oo_category || 1,
+          title: data.title || data.oo_title || "제목 없음",
+          content: data.content || data.oo_content || "내용 없음",
+          date: data.date || data.oo_date || new Date().toISOString().split('T')[0],
+          status: data.status || data.oo_status || "pending",
+          reply: data.reply || data.oo_re || ""
+        };
+        setInquiry(inquiryData);
+        setProcessingStatus(inquiryData.status);
       } catch (err) {
         console.error("API 호출 실패, 더미 데이터 사용:", err);
-        setInquiry(createDummyInquiry(params.id));
-        setProcessingStatus("pending");
+        // API 목록에서 해당 ID 찾기 시도
+        try {
+          const listRes = await fetch("http://localhost:8080/api/admin/contact");
+          if (listRes.ok) {
+            const listData = await listRes.json();
+            const foundInquiry = listData.find(item => 
+              item.id === Number(params.id) || 
+              item.oo_idx === Number(params.id) ||
+              String(item.id) === String(params.id)
+            );
+            if (foundInquiry) {
+              const inquiryData = {
+                id: foundInquiry.id || foundInquiry.oo_idx || params.id,
+                name: foundInquiry.name || foundInquiry.u_name || "알 수 없음",
+                category: foundInquiry.category || foundInquiry.oo_category || 1,
+                title: foundInquiry.title || foundInquiry.oo_title || "제목 없음",
+                content: foundInquiry.content || foundInquiry.oo_content || "내용 없음",
+                date: foundInquiry.date || foundInquiry.oo_date || new Date().toISOString().split('T')[0],
+                status: foundInquiry.status || foundInquiry.oo_status || "pending",
+                reply: foundInquiry.reply || foundInquiry.oo_re || ""
+              };
+              setInquiry(inquiryData);
+              setProcessingStatus(inquiryData.status);
+            } else {
+              setInquiry(createDummyInquiry(params.id));
+              setProcessingStatus("pending");
+            }
+          } else {
+            setInquiry(createDummyInquiry(params.id));
+            setProcessingStatus("pending");
+          }
+        } catch (listErr) {
+          console.error("목록 조회 실패, 더미 데이터 사용:", listErr);
+          setInquiry(createDummyInquiry(params.id));
+          setProcessingStatus("pending");
+        }
       } finally {
         setLoading(false);
       }
@@ -64,8 +109,27 @@ export default function ContactDetailPage() {
       if (!res.ok) throw new Error("답변 등록 실패");
 
       alert("답변이 등록되었습니다.");
-      setProcessingStatus("completed");
-      setInquiry((prev) => (prev ? { ...prev, status: "completed" } : null));
+      
+      // 답변 저장 후 최신 데이터 다시 불러오기
+      const detailRes = await fetch(`http://localhost:8080/api/admin/contact/${params.id}`);
+      if (detailRes.ok) {
+        const detailData = await detailRes.json();
+        setInquiry({
+          id: detailData.id || params.id,
+          name: detailData.name || "알 수 없음",
+          category: detailData.category || 1,
+          title: detailData.title || "제목 없음",
+          content: detailData.content || "내용 없음",
+          date: detailData.date || new Date().toISOString().split('T')[0],
+          status: detailData.status || "completed",
+          reply: detailData.reply || replyText
+        });
+        setProcessingStatus("completed");
+      } else {
+        // API 호출 실패 시 로컬 상태만 업데이트
+        setProcessingStatus("completed");
+        setInquiry((prev) => (prev ? { ...prev, status: "completed", reply: replyText } : null));
+      }
       setReplyText("");
     } catch (err) {
       console.error(err);
@@ -89,7 +153,11 @@ export default function ContactDetailPage() {
 
       setProcessingStatus(newStatus);
       setInquiry((prev) => (prev ? { ...prev, status: newStatus } : null));
-      alert(`문의가 "${newStatus === "processing" ? "처리중" : newStatus === "completed" ? "완료" : "종료"}"으로 변경되었습니다.`);
+      if (newStatus === "pending") {
+        alert("문의가 보류 처리되었습니다.");
+      } else {
+        alert(`문의가 "${newStatus === "completed" ? "완료" : "대기"}"으로 변경되었습니다.`);
+      }
     } catch (err) {
       console.error(err);
       alert("상태 변경 중 오류가 발생했습니다.");
@@ -100,27 +168,48 @@ export default function ContactDetailPage() {
     switch (status) {
       case "pending":
         return <span className={styles.statusWarning}>대기</span>;
-      case "processing":
-        return <span className={styles.statusSuccess}>처리중</span>;
       case "completed":
         return <span className={styles.statusSuccess}>완료</span>;
-      case "closed":
-        return <span className={styles.statusError}>종료</span>;
       default:
         return <span className={styles.statusWarning}>대기</span>;
     }
   };
 
   const getCategoryText = (category) => {
-    switch (category) {
+    // 숫자와 문자열 모두 처리
+    const cat = typeof category === 'string' ? category : String(category);
+    const num = typeof category === 'number' ? category : Number(category);
+    
+    // 숫자 기반 처리 (API에서 주로 사용)
+    if (!isNaN(num)) {
+      switch (num) {
+        case 1:
+          return "계정/로그인";
+        case 2:
+          return "거래 관련";
+        case 3:
+          return "불편 신고";
+        case 4:
+          return "기타 문의";
+        default:
+          return "기타 문의";
+      }
+    }
+    
+    // 문자열 기반 처리 (더미 데이터용)
+    switch (cat) {
       case "general":
-        return "거래/결제";
+      case "General":
+        return "거래 관련";
       case "technical":
+      case "Technical":
         return "계정/로그인";
       case "complaint":
-        return "신고/사기";
+      case "Complaint":
+        return "불편 신고";
       case "other":
-        return "검수/배송";
+      case "Other":
+        return "기타 문의";
       default:
         return "기타 문의";
     }
@@ -130,7 +219,7 @@ export default function ContactDetailPage() {
     return {
       id: id,
       name: "홍길동",
-      category: "general",
+      category: 2, // 숫자로 통일 (거래 관련)
       title: "거래 결제 문의",
       content: `안녕하세요. 거래 결제 관련해서 문의드립니다.
       
@@ -166,7 +255,7 @@ export default function ContactDetailPage() {
     );
   }
 
-  const canProcess = processingStatus === "pending" || processingStatus === "processing";
+  const canProcess = processingStatus === "pending";
 
   return (
     <div className={styles.pageContainer}>
@@ -235,7 +324,7 @@ export default function ContactDetailPage() {
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <Calendar size={16} />
-                <span>{inquiry.date}</span>
+                <span>{inquiry.date ? (inquiry.date.includes('T') ? inquiry.date.split('T')[0] : inquiry.date) : "날짜 없음"}</span>
               </div>
             </div>
           </div>
@@ -263,108 +352,10 @@ export default function ContactDetailPage() {
               color: "#374151",
               minHeight: "100px"
             }}>
-              {inquiry.content}
+              {inquiry.content || "내용이 없습니다."}
             </div>
           </div>
 
-          {/* 상태 변경 버튼 */}
-          {canProcess && (
-            <div style={{
-              borderTop: "1px solid #e2e8f0",
-              paddingTop: "1.5rem",
-              marginBottom: "1.5rem"
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                marginBottom: "1rem",
-                fontSize: "1rem",
-                fontWeight: 600,
-                color: "#1e293b"
-              }}>
-                문의 처리 상태
-              </div>
-
-              <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
-                {processingStatus === "pending" && (
-                  <button
-                    onClick={() => handleStatusChange("processing")}
-                    style={{
-                      padding: "0.75rem 1.5rem",
-                      border: "1px solid #3b82f6",
-                      borderRadius: "0.5rem",
-                      backgroundColor: "#ffffff",
-                      color: "#3b82f6",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      transition: "all 0.2s"
-                    }}
-                    onMouseOver={(e) => {
-                      e.target.style.backgroundColor = "#eff6ff";
-                      e.target.style.borderColor = "#2563eb";
-                    }}
-                    onMouseOut={(e) => {
-                      e.target.style.backgroundColor = "#ffffff";
-                      e.target.style.borderColor = "#3b82f6";
-                    }}
-                  >
-                    처리중으로 변경
-                  </button>
-                )}
-                {(processingStatus === "pending" || processingStatus === "processing") && (
-                  <>
-                    <button
-                      onClick={() => handleStatusChange("completed")}
-                      style={{
-                        padding: "0.75rem 1.5rem",
-                        border: "1px solid #10b981",
-                        borderRadius: "0.5rem",
-                        backgroundColor: "#ffffff",
-                        color: "#10b981",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        transition: "all 0.2s"
-                      }}
-                      onMouseOver={(e) => {
-                        e.target.style.backgroundColor = "#ecfdf5";
-                        e.target.style.borderColor = "#059669";
-                      }}
-                      onMouseOut={(e) => {
-                        e.target.style.backgroundColor = "#ffffff";
-                        e.target.style.borderColor = "#10b981";
-                      }}
-                    >
-                      완료 처리
-                    </button>
-                    <button
-                      onClick={() => handleStatusChange("closed")}
-                      style={{
-                        padding: "0.75rem 1.5rem",
-                        border: "1px solid #ef4444",
-                        borderRadius: "0.5rem",
-                        backgroundColor: "#ffffff",
-                        color: "#ef4444",
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        transition: "all 0.2s"
-                      }}
-                      onMouseOver={(e) => {
-                        e.target.style.backgroundColor = "#fef2f2";
-                        e.target.style.borderColor = "#dc2626";
-                      }}
-                      onMouseOut={(e) => {
-                        e.target.style.backgroundColor = "#ffffff";
-                        e.target.style.borderColor = "#ef4444";
-                      }}
-                    >
-                      종료 처리
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* 답변 섹션 */}
           {canProcess ? (
@@ -453,16 +444,45 @@ export default function ContactDetailPage() {
             </div>
           ) : (
             <div style={{
-              padding: "1.5rem",
-              borderRadius: "0.75rem",
-              backgroundColor: "#ecfdf5",
-              border: "1px solid #a7f3d0",
-              color: "#059669"
+              borderTop: "1px solid #e2e8f0",
+              paddingTop: "1.5rem"
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontWeight: 600 }}>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                marginBottom: "1rem",
+                fontSize: "1.125rem",
+                fontWeight: 600,
+                color: "#059669"
+              }}>
                 <CheckCircle size={20} />
-                {processingStatus === "completed" ? "답변이 완료된 문의입니다" : "종료된 문의입니다"}
+                답변 완료
               </div>
+              
+              {inquiry.reply ? (
+                <div style={{
+                  padding: "1.5rem",
+                  borderRadius: "0.75rem",
+                  border: "1px solid #a7f3d0",
+                  backgroundColor: "#ecfdf5",
+                  whiteSpace: "pre-wrap",
+                  lineHeight: "1.7",
+                  color: "#374151"
+                }}>
+                  {inquiry.reply}
+                </div>
+              ) : (
+                <div style={{
+                  padding: "1.5rem",
+                  borderRadius: "0.75rem",
+                  backgroundColor: "#ecfdf5",
+                  border: "1px solid #a7f3d0",
+                  color: "#059669"
+                }}>
+                  답변이 완료된 문의입니다
+                </div>
+              )}
             </div>
           )}
         </div>

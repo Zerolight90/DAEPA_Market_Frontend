@@ -1,66 +1,229 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import styles from './buy.module.css';
 import Sidebar from '@/components/mypage/sidebar';
+import tokenStore from '@/app/store/TokenStore';
 
 export default function SellHistoryPage() {
-    // 화면에 쓸 더미 데이터
-    const [list] = useState([
-        {
-            id: 101,
-            date: '2025.11.04',
-            tradeType: '직거래',
-            status: '구매완료',
-            title: '스타벅스 아이스 클래식 밀크티 T',
-            price: 5000,
-            thumb: '', // 없으면 빈 박스로 처리
-            step: 3, // 1=결제완료, 2=주문확인, 3=판매완료
-        },
-        {
-            id: 102,
-            date: '2025.10.30',
-            tradeType: '다른곳거래',
-            status: '구매완료',
-            title: '스타벅스 아이스 클래식 밀크티 T',
-            price: 50000,
-            thumb: '',
-            step: 3,
-        },
-        {
-            id: 103,
-            date: '2025.10.30',
-            tradeType: '직거래',
-            status: '구매완료',
-            title: '강아지 그림',
-            price: 12000,
-            thumb: '',
-            step: 2,
-        },
-    ]);
-
+    const { accessToken } = tokenStore();
+    const [list, setList] = useState([]);
     const [keyword, setKeyword] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [err, setErr] = useState('');
 
-    // 검색어로 필터
-    const filtered = list.filter((item) =>
-        item.title.toLowerCase().includes(keyword.toLowerCase())
-    );
+    // 목록 가져오기
+    async function fetchSell() {
+        try {
+            setLoading(true);
+            setErr('');
+
+            const res = await fetch('/api/deal/mySell', {
+                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                credentials: 'include',
+                cache: 'no-store',
+            });
+
+            if (!res.ok) {
+                const txt = await res.text();
+                setErr(txt || '판매내역을 불러오지 못했습니다.');
+                setList([]);
+                return;
+            }
+
+            const data = await res.json();
+            setList(Array.isArray(data) ? data : []);
+        } catch (e) {
+            setErr('네트워크 오류가 발생했습니다.');
+            setList([]);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    useEffect(() => {
+        fetchSell();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [accessToken]);
+
+    // d_sell 여러 형태 대응
+    function getDSell(item) {
+        return (
+            item?.dSell ??
+            item?.d_sell ??
+            item?.dsell ??
+            item?.D_SELL ??
+            null
+        );
+    }
+
+    // d_status 여러 형태 대응
+    function getDStatus(item) {
+        return (
+            item?.dStatus ??
+            item?.d_status ??
+            item?.dstatus ??
+            item?.D_STATUS ??
+            null
+        );
+    }
+
+    // 1=판매중, 2=결제완료, 3=판매완료 (계산은 그대로 두고)
+    function calcBaseStep(item) {
+        const dStatus = getDStatus(item);
+        const dSell = getDSell(item);
+
+        if (dStatus === 1 || dStatus === 1n) return 3;
+        if (dSell === 1 || dSell === 1n) return 2;
+        return 1;
+    }
+
+    // 배송 단계 계산
+    function calcDeliverySteps(item) {
+        const steps = {
+            step4: false, // 배송 보냄 확인
+            step5: false, // 배송
+            step6: false, // 대파에서 검수 중
+            step7: false, // 배송
+            step8: false, // 후기 보내기
+        };
+
+        const baseStep = calcBaseStep(item);
+        // 판매완료(3) 전이면 뒤 단계 안 보여줌
+        if (baseStep < 3) return steps;
+
+        const dv = item.dvStatus ?? item.dv_status ?? null;
+        const ck = item.ckStatus ?? item.ck_status ?? null;
+
+        // dv = 1 이상 → 배송보냄확인 + 배송
+        if (dv != null && dv >= 1) {
+            steps.step4 = true;
+            steps.step5 = true;
+        }
+        // dv = 2 → 검수중
+        if (dv != null && dv >= 2) {
+            steps.step6 = true;
+        } else if (ck != null && ck === 0) {
+            steps.step6 = true;
+        }
+        // dv = 3 → 다음 배송
+        if (dv != null && dv >= 3) {
+            steps.step7 = true;
+        }
+        // dv = 5 → 후기
+        if (dv != null && dv >= 5) {
+            steps.step8 = true;
+        }
+
+        return steps;
+    }
+
+    // 날짜 포맷
+    function formatDate(dateStr) {
+        if (!dateStr) return '';
+        const normalized = String(dateStr).replace(' ', 'T').split('.')[0];
+        const d = new Date(normalized);
+        if (Number.isNaN(d.getTime())) {
+            const only = String(dateStr).split(' ')[0];
+            const parts = only.split('-');
+            if (parts.length === 3) return `${parts[0]}.${parts[1]}.${parts[2]}`;
+            return only;
+        }
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${y}.${m}.${day}`;
+    }
+
+    // 검색 필터
+    const filtered = useMemo(() => {
+        const kw = keyword.toLowerCase();
+        return list.filter((item) =>
+            (item.title || '').toLowerCase().includes(kw)
+        );
+    }, [list, keyword]);
+
+    // 거래방식 텍스트
+    function getTradeText(item) {
+        const raw =
+            (item?.dDeal ?? item?.ddeal ?? item?.d_deal ?? '').toString().trim();
+
+        const upper = raw.toUpperCase();
+        if (upper === 'MEET') return '직거래';
+        if (upper === 'DELIVERY') return '택배거래';
+        return raw;
+    }
+
+    // 배송 보냄 확인 → dv_status = 1
+    async function handleSendClick(dealId) {
+        try {
+            const res = await fetch(`/api/delivery/${dealId}/sent`, {
+                method: 'PATCH',
+                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                credentials: 'include',
+            });
+            if (!res.ok) {
+                alert('배송 보냄 확인에 실패했습니다.');
+                return;
+            }
+            fetchSell();
+        } catch (e) {
+            alert('네트워크 오류가 발생했습니다.');
+        }
+    }
+
+    // dv_status = 3 → dv_status = 5
+    async function handleDoneClick(dealId) {
+        try {
+            const res = await fetch(`/api/delivery/${dealId}/done`, {
+                method: 'PATCH',
+                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                credentials: 'include',
+            });
+            if (!res.ok) {
+                alert('처리 중 오류가 발생했습니다.');
+                return;
+            }
+            fetchSell();
+        } catch (e) {
+            alert('네트워크 오류가 발생했습니다.');
+        }
+    }
+
+    // 동그라미 스텝
+    function Step({ active, label }) {
+        return (
+            <div className={`${styles.step} ${active ? styles.stepActive : ''}`}>
+                <span className={styles.stepDot} />
+                <span className={styles.stepLabel}>{label}</span>
+            </div>
+        );
+    }
+
+    // 네모 스텝
+    function SquareStep({ active, label }) {
+        return (
+            <div
+                className={`${styles.step} ${styles.stepSquare} ${
+                    active ? styles.stepSquareActive : ''
+                }`}
+            >
+                <span className={styles.stepSquareLabel}>{label}</span>
+            </div>
+        );
+    }
 
     return (
         <div className={styles.wrapper}>
-            {/* 왼쪽 사이드바 */}
             <aside className={styles.sidebar}>
                 <Sidebar />
             </aside>
 
-            {/* 오른쪽 컨텐츠 */}
             <main className={styles.content}>
-                {/* 상단 바 */}
                 <header className={styles.topBar}>
-                    <h1 className={styles.pageTitle}>구매내역</h1>
+                    <h1 className={styles.pageTitle}>판매내역</h1>
                 </header>
 
-                {/* 검색 + 필터행 */}
                 <div className={styles.searchRow}>
                     <div className={styles.searchBox}>
                         <input
@@ -75,84 +238,137 @@ export default function SellHistoryPage() {
                     </div>
                 </div>
 
-                {/* 목록 */}
-                <section className={styles.listArea}>
-                    {filtered.map((item) => (
-                        <article key={item.id} className={styles.block}>
-                            {/* 날짜줄 */}
-                            <div className={styles.dateRow}>
-                                <span>{item.date}</span>
-                                <span className={styles.dot}>|</span>
-                                <span>{item.tradeType}</span>
-                                <button className={styles.closeBtn} aria-label="닫기">
-                                    ×
-                                </button>
-                            </div>
+                {loading && <div className={styles.empty}>불러오는 중...</div>}
+                {!loading && err && <div className={styles.empty}>{err}</div>}
 
-                            {/* 본문 카드 */}
-                            <div className={styles.card}>
-                                <p className={styles.status}>{item.status}</p>
+                {!loading && !err && (
+                    <section className={styles.listArea}>
+                        {filtered.map((item) => {
+                            const baseStep = calcBaseStep(item);
+                            const tradeText = getTradeText(item);
 
-                                <div className={styles.productRow}>
-                                    {/* 썸네일 */}
-                                    <div className={styles.thumbBox}>
-                                        {item.thumb ? (
-                                            // eslint-disable-next-line @next/next/no-img-element
-                                            <img src={item.thumb} alt={item.title} className={styles.thumb} />
-                                        ) : (
-                                            <div className={styles.thumbPlaceholder} />
-                                        )}
+                            const isDelivery =
+                                tradeText === '택배거래' ||
+                                ((item?.dDeal ?? item?.ddeal ?? item?.d_deal ?? '')
+                                    .toString()
+                                    .trim()
+                                    .toUpperCase() === 'DELIVERY');
+
+                            const {
+                                step4,
+                                step5,
+                                step6,
+                                step7,
+                                step8,
+                            } = isDelivery ? calcDeliverySteps(item) : {};
+
+                            // 위에서 계산은 1~3하지만 화면에서는 판매완료부터만 보여줄 거라
+                            const dStatus = getDStatus(item);
+                            const dSell = getDSell(item);
+                            const statusText =
+                                dStatus === 1 || dStatus === 1n
+                                    ? '판매완료'
+                                    : dSell === 1 || dSell === 1n
+                                        ? '결제완료'
+                                        : '판매중';
+
+                            const showSendBtn = item.showSendBtn === true;
+                            const currentDv = item.dvStatus ?? item.dv_status ?? null;
+                            const showAfterDeliveryBtn =
+                                isDelivery && currentDv !== null && currentDv === 3;
+                            const showReviewBtn = item.showReviewBtn === true;
+
+                            return (
+                                <article key={item.dealId} className={styles.block}>
+                                    {/* 날짜 + 거래방식 */}
+                                    <div className={styles.dateRow}>
+                                        <span>{formatDate(item.dealEndDate)}</span>
+                                        <span className={styles.dot}>|</span>
+                                        <span>{tradeText || '거래방식 미정'}</span>
                                     </div>
 
-                                    {/* 상품정보 */}
-                                    <div className={styles.prodInfo}>
-                                        <p className={styles.prodTitle}>{item.title}</p>
-                                        <p className={styles.prodPrice}>
-                                            {item.price.toLocaleString()}원
-                                        </p>
-                                    </div>
-                                </div>
+                                    <div className={styles.card}>
+                                        <p className={styles.status}>{statusText}</p>
 
-                                {/* 진행바 */}
-                                <div className={styles.stepBar}>
-                                    <div
-                                        className={`${styles.step} ${
-                                            item.step >= 1 ? styles.stepActive : ''
-                                        }`}
-                                    >
-                                        <span className={styles.stepDot} />
-                                        <span className={styles.stepLabel}>결제완료</span>
-                                    </div>
-                                    <div
-                                        className={`${styles.step} ${
-                                            item.step >= 2 ? styles.stepActive : ''
-                                        }`}
-                                    >
-                                        <span className={styles.stepDot} />
-                                        <span className={styles.stepLabel}>주문확인</span>
-                                    </div>
-                                    <div
-                                        className={`${styles.step} ${
-                                            item.step >= 3 ? styles.stepActive : ''
-                                        }`}
-                                    >
-                                        <span className={styles.stepDot} />
-                                        <span className={styles.stepLabel}>판매완료</span>
-                                    </div>
-                                </div>
+                                        <div className={styles.productRow}>
+                                            <div className={styles.thumbBox}>
+                                                <div className={styles.thumbPlaceholder} />
+                                            </div>
 
-                                {/* 버튼 */}
-                                <button type="button" className={styles.reviewBtn}>
-                                    후기 보내기
-                                </button>
-                            </div>
-                        </article>
-                    ))}
+                                            <div className={styles.prodInfo}>
+                                                <p className={styles.prodTitle}>
+                                                    {item.title || '(제목 없음)'}
+                                                </p>
+                                                <p className={styles.prodPrice}>
+                                                    {(
+                                                        (item.agreedPrice ?? item.pdPrice) ||
+                                                        0
+                                                    ).toLocaleString()}
+                                                    원
+                                                </p>
+                                            </div>
+                                        </div>
 
-                    {filtered.length === 0 && (
-                        <div className={styles.empty}>구매내역이 없습니다.</div>
-                    )}
-                </section>
+                                        {/* 🔴 여기부터만 보이게: 판매 완료 → ... */}
+                                        <div className={styles.stepBar}>
+                                            {/* 3. 판매 완료 (앞에 1,2는 안 보이게) */}
+                                            <Step active={baseStep >= 3} label="판매 완료" />
+
+                                            {isDelivery && (
+                                                <>
+                                                    <SquareStep
+                                                        active={step4}
+                                                        label="배송 보냄 확인"
+                                                    />
+                                                    <Step active={step5} label="배송" />
+                                                    <Step active={step6} label="대파에서 검수 중" />
+                                                    <Step active={step7} label="배송" />
+                                                    <SquareStep
+                                                        active={step8}
+                                                        label="후기 보내기"
+                                                    />
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* 버튼 영역 */}
+                                        <div className={styles.actions}>
+                                            {showSendBtn && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.grayBtn}
+                                                    onClick={() => handleSendClick(item.dealId)}
+                                                >
+                                                    배송 보냄 확인
+                                                </button>
+                                            )}
+
+                                            {showAfterDeliveryBtn && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.grayBtn}
+                                                    onClick={() => handleDoneClick(item.dealId)}
+                                                >
+                                                    배송 완료 확인
+                                                </button>
+                                            )}
+
+                                            {showReviewBtn && (
+                                                <button type="button" className={styles.greenBtn}>
+                                                    후기 보내기
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </article>
+                            );
+                        })}
+
+                        {filtered.length === 0 && (
+                            <div className={styles.empty}>판매내역이 없습니다.</div>
+                        )}
+                    </section>
+                )}
             </main>
         </div>
     );

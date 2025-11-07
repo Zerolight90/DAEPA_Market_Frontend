@@ -1,0 +1,260 @@
+.page {
+    background: #fafafa;
+    min-height: 100vh;
+}
+
+/* 위쪽 빵부스러기 */
+.bcWrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 16px 20px 0;
+    display: flex;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #999;
+}
+.bc {
+    color: #777;
+    text-decoration: none;
+}
+.sep {
+    color: #ccc;
+}
+
+/* 메인 2열 레이아웃 */
+.container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 28px 20px 60px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) 360px;
+    gap: 28px;
+    align-items: flex-start;
+}
+
+/* 왼쪽 컬럼 */
+.leftCol {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* 오른쪽 컬럼 */
+.rightCol {
+    position: sticky;
+    top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 오른쪽 카드 */
+.infoCard {
+    background: #fff;
+    border: 1px solid #ececec;
+    border-radius: 14px;
+    padding: 16px 16px 12px;
+}
+
+/* 안쪽 큰 박스 */
+.section {
+    background: #fff;
+    border: 1px solid #ececec;
+    border-radius: 14px;
+    padding: 16px 16px 20px;
+}
+
+/* 타이틀 + 정렬 탭 */
+.listHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.title {
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.sortTabs {
+    display: flex;
+    gap: 10px;
+}
+
+.sortTab,
+.activeSort {
+    font-size: 0.85rem;
+    padding: 5px 10px;
+    border-radius: 999px;
+    text-decoration: none;
+    border: 1px solid transparent;
+}
+
+.sortTab {
+    color: #666;
+    background: #f5f5f5;
+}
+
+.activeSort {
+    background: #fff;
+    border-color: #ddd;
+    color: #222;
+    font-weight: 600;
+}
+
+/* 상품 그리드 */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+/* 카드 공통 */
+.card {
+    background: #fff;
+    border: 1px solid #f1f1f1;
+    border-radius: 12px;
+    overflow: hidden;
+    text-decoration: none;
+    color: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+}
+
+/* 썸네일 영역: 비율 고정 */
+.thumbWrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: #f5f5f5;
+    overflow: hidden;
+}
+
+.thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+/* 판매완료 오버레이 */
+.soldOverlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 600;
+}
+
+.soldCircle {
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    border: 2px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+/* 카드 메타 */
+.meta {
+    padding: 10px 12px 12px;
+}
+
+.prodTitle {
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.3;
+    margin-bottom: 6px;
+    min-height: 2.4em; /* 두 줄 자리 */
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+}
+
+.price {
+    font-weight: 700;
+    margin-bottom: 5px;
+    font-size: 0.95rem;
+}
+
+.date {
+    font-size: 0.78rem;
+    color: #999;
+}
+
+/* 스켈레톤 */
+.skeleton {
+    height: 240px;
+    background: linear-gradient(90deg, #f5f5f5 0%, #fefefe 50%, #f5f5f5 100%);
+    border-radius: 12px;
+    animation: pulse 1.1s linear infinite;
+}
+@keyframes pulse {
+    0% { opacity: .8; }
+    50% { opacity: .4; }
+    100% { opacity: .8; }
+}
+
+.moreBtn {
+    margin: 20px auto 0;
+    display: inline-block;
+    background: #f3f3f3;
+    border: 1px solid #e2e2e2;
+    border-radius: 999px;
+    padding: 8px 18px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+.moreBtn:hover {
+    background: #ececec;
+}
+
+.empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #aaa;
+    padding: 30px 0;
+}
+
+/* 반응형 */
+@media (max-width: 960px) {
+    .container {
+        grid-template-columns: 1fr;
+    }
+    .rightCol {
+        position: static;
+    }
+}
+/* ... 네가 위에 적어둔 all.module.css 그대로 두고, 맨 아래에 추가해 */
+
+.heartBtn {
+    position:absolute;
+    right:8px;
+    bottom:8px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    background: rgba(255,255,255,.9);
+    border:1px solid #eee;
+    border-radius:999px;
+    padding:6px 10px;
+    cursor:pointer;
+}
+.heartOn { color:#e53935; }
+.heartOff { color:#9aa0a6; }
+.heartCnt { font-size:12px; color:#333; }
+
