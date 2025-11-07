@@ -26,7 +26,8 @@ export default function ContactPage() {
     const matchesSearch = (inquiry.name ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (inquiry.title ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
                          (inquiry.content ?? "").toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterCategory === "all" || inquiry.category === filterCategory;
+    const matchesFilter =
+        filterCategory === "all" || inquiry.category === Number(filterCategory);
     return matchesSearch && matchesFilter;
   });
 
@@ -40,12 +41,8 @@ export default function ContactPage() {
     switch (status) {
       case "pending":
         return <span className={styles.statusWarning}>대기</span>;
-      case "processing":
-        return <span className={styles.statusSuccess}>처리중</span>;
       case "completed":
         return <span className={styles.statusSuccess}>완료</span>;
-      case "closed":
-        return <span className={styles.statusError}>종료</span>;
       default:
         return <span className={styles.statusWarning}>대기</span>;
     }
@@ -53,16 +50,16 @@ export default function ContactPage() {
 
   const getCategoryText = (category) => {
     switch (category) {
-      case "general":
-        return "거래/결제";
-      case "technical":
+      case 1:
         return "계정/로그인";
-      case "complaint":
-        return "신고/사기";
-      case "other":
-        return "검수/배송";
-      default:
+      case 2:
+        return "거래 관련";
+      case 3:
+        return "불편 신고";
+      case 4:
         return "기타 문의";
+      default:
+        return "기타";
     }
   };
 
@@ -122,11 +119,10 @@ export default function ContactPage() {
           className={styles.filterSelect}
         >
           <option value="all">전체 문의</option>
-          <option value="general">{getCategoryText("general")}</option>
-          <option value="technical">{getCategoryText("technical")}</option>
-          <option value="complaint">{getCategoryText("complaint")}</option>
-          <option value="other">{getCategoryText("other")}</option>
-          <option value="etc">기타 문의</option>
+          <option value={1}>계정/로그인</option>
+          <option value={2}>거래 관련</option>
+          <option value={3}>불편 신고</option>
+          <option value={4}>기타 문의</option>
         </select>
       </div>
 
@@ -204,7 +200,7 @@ export default function ContactPage() {
                 <div className={styles.actionButtons}>
                   <Link href={`/admin/contact/${inquiry.id}`} className={`${styles.actionButton} ${styles.blue}`}>
                     <Eye size={16} />
-                    상세
+                    답변
                   </Link>
                 </div>
               </div>
