@@ -17,10 +17,8 @@ import ChatIcon from "@mui/icons-material/Chat";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 
-import TokeStore from "@/app/store/TokenStore";
+import TokeStore from "@/app/store/TokenStore"; // 너의 스토어 이름 그대로 유지
 import styles from "./css/header.module.css";
-
-import { api } from "@/lib/api/client";
 
 // 여러 형태로 올 수 있는 이름을 하나로 골라주는 함수
 function getDisplayName(me) {
@@ -58,7 +56,7 @@ export default function Header() {
         }
     }, [accessToken, setToken]);
 
-    // 토큰 있으면 내 정보 가져오기
+    // 토큰 있으면 내 정보 가져오기 (리라이트 경유)
     useEffect(() => {
         if (!accessToken) {
             setMe(null);
@@ -67,11 +65,16 @@ export default function Header() {
 
         (async () => {
             try {
-                const data = await api("/users/me", {
-                    headers: { Authorization: `Bearer ${accessToken}` },
+                const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+                const res = await fetch("/api/users/me", {
                     credentials: "include",
+                    headers,
                 });
-                setMe(data);
+                if (res.ok) {
+                    setMe(await res.json());
+                } else {
+                    setMe(null);
+                }
             } catch (e) {
                 console.error("me fetch error", e);
                 setMe(null);
@@ -83,9 +86,10 @@ export default function Header() {
     const onLogout = async () => {
         if (!confirm("로그아웃 하시겠습니까?")) return;
         try {
+            const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
             await fetch("/api/sing/logout", {
                 method: "POST",
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                headers,
                 credentials: "include",
             });
         } finally {
@@ -118,6 +122,17 @@ export default function Header() {
             return;
         }
         router.push("/sell");
+    };
+
+    // 🔒 채팅 접근 가드 (비로그인 차단)
+    const onClickChat = (e) => {
+        e.preventDefault();
+        if (!me) {
+            alert("로그인 후 이용할 수 있어요.");
+            router.push(`/sing/login?next=${encodeURIComponent("/chat")}`);
+            return;
+        }
+        router.push("/chat");
     };
 
     // ✅ 여기서 최종 이름 결정
@@ -184,9 +199,7 @@ export default function Header() {
                                     height: 40,
                                     fontSize: 14,
                                     "& input": { padding: "8px" },
-                                    "& .MuiOutlinedInput-notchedOutline": {
-                                        borderColor: "#ccc",
-                                    },
+                                    "& .MuiOutlinedInput-notchedOutline": { borderColor: "#ccc" },
                                     "&:hover .MuiOutlinedInput-notchedOutline": {
                                         borderColor: "#999",
                                     },
@@ -203,7 +216,8 @@ export default function Header() {
                             <AccountCircleIcon />
                         </Link>
 
-                        <Link href="/chat" className={styles.chatBadgeWrap}>
+                        {/* 🔒 비로그인 차단 */}
+                        <a href="/chat" onClick={onClickChat} className={styles.chatBadgeWrap}>
                             <Badge
                                 badgeContent={chatUnread}
                                 color="error"
@@ -212,7 +226,7 @@ export default function Header() {
                             >
                                 <ChatIcon />
                             </Badge>
-                        </Link>
+                        </a>
 
                         <Link href="/like">
                             <FavoriteBorderIcon />
