@@ -182,3 +182,147 @@ export function formatKRW(n) {
     if (!Number.isFinite(num) || num <= 0) return null;
     return num.toLocaleString("ko-KR") + "원";
 }
+
+/** 원화 정규화 */
+function coercePriceToWon(raw) {
+    if (raw == null) return null;
+    if (typeof raw === "string") {
+        const onlyNum = raw.replace(/[^0-9]/g, "");
+        if (!onlyNum) return null;
+        const n = Number(onlyNum);
+        return Number.isFinite(n) ? n : null;
+    }
+    if (typeof raw === "number") {
+        if (!Number.isFinite(raw) || raw <= 0) return null;
+        return Math.round(raw);
+    }
+    return null;
+}
+
+/** 서버 DTO -> 프론트 공통 모델 정규화 (S3 URL 그대로 사용) */
+export function normalizeRoomDto(raw, meId) {
+    if (!raw) return null;
+
+    const productTitle =
+        raw.productTitle ?? raw.title ?? raw.product?.title ?? raw.itemTitle ?? null;
+
+    // 서버가 주는 S3 절대경로를 우선 사용
+    const productThumb =
+        raw.productThumb ??
+        raw.productImage ??
+        raw.imageUrl ??
+        raw.thumb ??
+        raw.product?.thumbUrl ??
+        raw.product?.imageUrl ??
+        null;
+
+    // 가격 보정
+    const priceCandidates = [
+        raw.displayPrice,
+        raw.productPrice,
+        raw.price,
+        raw.product_price,
+        raw.product?.price,
+        raw.priceWon,
+        raw.priceKRW,
+        raw.price_krw,
+        raw.product?.priceWon,
+        raw.product?.priceKRW,
+    ];
+    let productPrice = null;
+    for (const c of priceCandidates) {
+        const won = coercePriceToWon(c);
+        if (won != null) {
+            productPrice = won;
+            break;
+        }
+    }
+    if (productPrice == null) {
+        const cents =
+            raw.price_cents ?? raw.product?.price_cents ?? raw.priceCents ?? null;
+        if (cents != null && Number.isFinite(Number(cents))) {
+            const won = Math.round(Number(cents) / 100);
+            productPrice = won > 0 ? won : null;
+        }
+    }
+
+    const productStatus =
+        raw.statusBadge ??
+        raw.productStatus ??
+        raw.status ??
+        raw.product_status ??
+        raw.product?.status ??
+        null;
+
+    const sellerId =
+        raw.sellerId ?? raw.seller_id ?? raw.product?.sellerId ?? raw.seller?.id ?? null;
+    const buyerId =
+        raw.buyerId ?? raw.buyer_id ?? raw.product?.buyerId ?? raw.buyer?.id ?? null;
+
+    const computedIsSeller =
+        meId != null && sellerId != null
+            ? Number(meId) === Number(sellerId)
+            : typeof raw.isSeller === "boolean"
+                ? raw.isSeller
+                : undefined;
+
+    const role =
+        raw.myRole ??
+        raw.role ??
+        (computedIsSeller === true ? "판매자" : computedIsSeller === false ? "구매자" : undefined);
+
+    const counterpartyName =
+        raw.counterpartyName ??
+        raw.counterparty ??
+        raw.partnerName ??
+        raw.otherName ??
+        raw.opponentName ??
+        (meId != null && sellerId != null
+            ? Number(meId) === Number(sellerId)
+                ? raw.buyerName
+                : raw.sellerName
+            : raw.userName) ??
+        "상대";
+
+    const counterpartyProfile =
+        raw.counterpartyProfile ??
+        raw.partnerProfile ??
+        raw.otherProfile ??
+        raw.avatar ??
+        raw.avatarUrl ??
+        "";
+
+    const unread = Number(raw.unread ?? raw.unreadCount ?? 0) || 0;
+    const lastAt = raw.lastAt ?? raw.lastTime ?? raw.lastMessageTime ?? raw.updatedAt ?? null;
+    const lastMessage = raw.lastMessage ?? raw.preview ?? raw.lastText ?? raw.lastContent ?? null;
+
+    return {
+        ...raw,
+        roomId: raw.roomId ?? raw.id ?? raw.chatRoomId,
+        productTitle,
+        productThumb,
+        productPrice,
+        productStatus,
+        sellerId,
+        buyerId,
+        counterpartyName,
+        counterpartyProfile,
+        unread,
+        lastAt,
+        lastMessage,
+        isSeller: typeof computedIsSeller === "boolean" ? computedIsSeller : undefined,
+        role: role ?? undefined,
+    };
+}
+
+export const resolvePeerId = (room, myId, role) => {
+    if (!room) return null;
+    if (room.counterpartyId) return Number(room.counterpartyId);
+    const buyerId = room.buyerId != null ? Number(room.buyerId) : null;
+    const sellerId = room.sellerId != null ? Number(room.sellerId) : null;
+    if (role === "판매자") return buyerId;
+    if (role === "구매자") return sellerId;
+    if (sellerId && Number(myId) === sellerId) return buyerId;
+    if (buyerId && Number(myId) === buyerId) return sellerId;
+    return null;
+};
