@@ -1,4 +1,4 @@
-// 날짜/문자열 유틸
+// chat-utill.js
 export const pad2 = (n) => String(n).padStart(2, "0");
 const toDate = (v) => (v instanceof Date ? v : new Date(v));
 const isToday = (d) => {

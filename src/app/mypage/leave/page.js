@@ -2,9 +2,10 @@
 
 import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
-import styles from './leave.module.css';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/mypage/sidebar';
-import { usePathname } from 'next/navigation';
+import styles from './leave.module.css';
+import TokeStore from "@/app/store/TokenStore";
 
 const REASONS = [
     { id: 'low_usage', label: '사용 빈도가 낮고 개인정보 및 보안 우려' },
@@ -15,15 +16,12 @@ const REASONS = [
 ];
 
 export default function LeavePage() {
-    const pathname = usePathname();
+    const router = useRouter();
+    const { clearToken } = TokeStore(); // ✅ zustand에서 clearToken 가져옴
 
     const [checked, setChecked] = useState([]);
-    const [detail] = useState(''); // 편집 불가이므로 상태만 유지
     const [etcText, setEtcText] = useState('');
     const [agree, setAgree] = useState(false);
-
-    const MAX = 200;
-    const count = detail.length;
 
     const toggle = (id) => {
         setChecked((prev) =>
@@ -31,41 +29,95 @@ export default function LeavePage() {
         );
     };
 
+    // 기타 선택했으면 내용 채워야 제출 가능
     const canSubmit = useMemo(() => {
         const etcOk =
-            !checked.includes('etc') || (checked.includes('etc') && etcText.trim().length > 0);
-        return agree && checked.length > 0 && count <= MAX && etcOk;
-    }, [agree, checked, count, etcText]);
+            !checked.includes('etc') ||
+            (checked.includes('etc') && etcText.trim().length > 0);
 
-    const onSubmit = (e) => {
+        return agree && checked.length > 0 && etcOk;
+    }, [agree, checked, etcText]);
+
+    const onSubmit = async (e) => {
         e.preventDefault();
         if (!canSubmit) return;
 
+        const atk =
+            typeof window !== 'undefined'
+                ? localStorage.getItem('accessToken')
+                : null;
+
         const payload = {
             reasons: checked,
-            etc: checked.includes('etc') ? etcText.trim() : null,
-            detail: detail.trim(),
-            agreed: agree,
+            ...(checked.includes('etc') && etcText.trim().length > 0
+                ? { etc: etcText.trim() }
+                : { etc: '' }),
         };
 
-        // TODO: 실제 API 연결
-        console.log('withdraw payload', payload);
-        alert('탈퇴 신청이 접수되었습니다. (데모)');
+        try {
+            const base =
+                process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
+
+            const res = await fetch(`${base}/api/sing/bye`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(atk ? { Authorization: `Bearer ${atk}` } : {}),
+                },
+                // 🔥 쿠키 삭제(Set-Cookie) 받으려면 필수
+                credentials: 'include',
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                const txt = await res.text();
+                alert(txt || '탈퇴 처리에 실패했습니다.');
+                return;
+            }
+
+            let msg = '회원 탈퇴가 완료되었습니다.';
+            try {
+                const data = await res.json();
+                if (data && (data.message || typeof data === 'string')) {
+                    msg = data.message || data;
+                }
+            } catch (_) {
+                // text 응답이면 무시
+            }
+
+            alert(msg);
+
+            // 1) 브라우저 저장 토큰 제거
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+            }
+
+            // 2) zustand 상태도 제거 → 헤더가 바로 로그인해제 UI로
+            clearToken();
+
+            // 3) 홈으로 보내고 새로 렌더
+            router.replace('/');
+            router.refresh?.();
+        } catch (err) {
+            console.error(err);
+            alert('탈퇴 요청 중 오류가 발생했습니다.');
+        }
     };
 
     return (
         <div className={styles.wrapper}>
-            {/* 좌측 사이드바 (공용) */}
+            {/* 사이드바 */}
             <aside className={styles.sidebar}>
                 <Sidebar />
             </aside>
 
-            {/* 우측 본문 */}
+            {/* 본문 */}
             <main className={styles.main}>
                 <header className={styles.header}>
-                    <Link href="/mypage" className={styles.backLink} aria-label="뒤로가기">
-                        ←
-                    </Link>
+                    {/*<Link href="/mypage" className={styles.backLink} aria-label="뒤로가기">*/}
+                    {/*    ←*/}
+                    {/*</Link>*/}
                     <h1 className={styles.pageTitle}>회원 탈퇴</h1>
                 </header>
 
@@ -95,38 +147,18 @@ export default function LeavePage() {
 
                         {checked.includes('etc') && (
                             <div className={styles.etcBox}>
-                                <label className={styles.label}>기타 사유</label>
-                                <input
-                                    type="text"
+                                <label className={styles.label}>기타 사유 (최대 100자)</label>
+                                <textarea
                                     value={etcText}
-                                    onChange={(e) => setEtcText(e.target.value)}
+                                    onChange={(e) => setEtcText(e.target.value.slice(0, 100))}
                                     maxLength={100}
+                                    rows={3}
                                     placeholder="기타 사유를 간단히 입력하세요"
-                                    className={styles.input}
+                                    className={styles.textarea}
                                 />
+                                <div className={styles.counter}>{etcText.length}/100</div>
                             </div>
                         )}
-                    </section>
-
-                    {/* 상세 사유 (편집 불가) */}
-                    <section className={styles.card}>
-                        <div className={styles.cardTitleRow}>
-                            <h3 className={styles.cardTitle}>상세 사유를 작성해 주세요.</h3>
-                            <span className={`${styles.counter} ${count > MAX ? styles.counterOver : ''}`}>
-                {count}/{MAX}
-              </span>
-                        </div>
-
-                        <textarea
-                            value={detail}
-                            readOnly
-                            disabled
-                            rows={6}
-                            maxLength={MAX}
-                            placeholder="예: 타 서비스 이용"
-                            className={`${styles.textarea} ${styles.textareaDisabled}`}
-                            aria-disabled="true"
-                        />
                     </section>
 
                     {/* 유의사항 */}
@@ -137,38 +169,49 @@ export default function LeavePage() {
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>01</span>
                                 <span>
-                  탈퇴 신청일로부터 <b>30일</b> 이내 동일 아이디와 휴대폰 번호로 재가입 불가하며 신규 가입
-                  혜택은 적용되지 않습니다.
+                  탈퇴 신청일로부터 <b>30일</b> 이내 동일 아이디와 휴대폰 번호로 재가입
+                  불가하며 신규 가입 혜택은 적용되지 않습니다.
                 </span>
                             </li>
-
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>02</span>
                                 <span>
-                  회원 탈퇴 시 본인 계정에 등록/작성한 게시물은 삭제됩니다. 단, 스크랩/공용 게시물 등은 직접
-                  삭제한 후 진행해 주세요.
+                  회원 탈퇴 시 본인 계정에 등록/작성한 게시물은 삭제됩니다. 단,
+                  스크랩/공용 게시물 등은 직접 삭제한 후 진행해 주세요.
                 </span>
                             </li>
-
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>03</span>
                                 <div className={styles.noticeBlock}>
-                                    <div>전자상거래법에 따라 아래 기록을 보관하며 다른 목적으로 이용하지 않습니다.</div>
+                                    <div>
+                                        전자상거래법에 따라 아래 기록을 보관하며 다른 목적으로 이용하지 않습니다.
+                                    </div>
                                     <div className={styles.keepGrid}>
-                                        <div className={styles.keepItem}>표시·광고에 대한 기록 <b>6개월</b></div>
-                                        <div className={styles.keepItem}>계약/청약철회·대금결제·재화공급 <b>5년</b></div>
-                                        <div className={styles.keepItem}>소비자 불만/분쟁 처리 기록 <b>3년</b></div>
-                                        <div className={styles.keepItem}>로그인 기록 <b>3개월</b></div>
-                                        <div className={`${styles.keepItem} ${styles.keepItemWide}`}>전자금융거래기록 <b>5년</b></div>
+                                        <div className={styles.keepItem}>
+                                            표시·광고에 대한 기록 <b>6개월</b>
+                                        </div>
+                                        <div className={styles.keepItem}>
+                                            계약/청약철회·대금결제·재화공급 <b>5년</b>
+                                        </div>
+                                        <div className={styles.keepItem}>
+                                            소비자 불만/분쟁 처리 기록 <b>3년</b>
+                                        </div>
+                                        <div className={styles.keepItem}>
+                                            로그인 기록 <b>3개월</b>
+                                        </div>
+                                        <div className={`${styles.keepItem} ${styles.keepItemWide}`}>
+                                            전자금융거래기록 <b>5년</b>
+                                        </div>
                                     </div>
                                 </div>
                             </li>
-
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>04</span>
-                                <span>탈퇴 신청 후 <b>72시간(3일)</b> 이내 동일 계정 로그인 시 탈퇴 신청이 자동 철회됩니다.</span>
+                                <span>
+                  탈퇴 신청 후 <b>72시간(3일)</b> 이내 동일 계정 로그인 시 탈퇴 신청이 자동
+                  철회됩니다.
+                </span>
                             </li>
-
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>05</span>
                                 <span>연동 서비스 권한이 해제될 수 있으며, 등급/권한 변경에 유의해 주세요.</span>
@@ -194,7 +237,9 @@ export default function LeavePage() {
                         <button
                             type="submit"
                             disabled={!canSubmit}
-                            className={`${styles.btn} ${canSubmit ? styles.btnPrimary : styles.btnDisabled}`}
+                            className={`${styles.btn} ${
+                                canSubmit ? styles.btnPrimary : styles.btnDisabled
+                            }`}
                         >
                             회원 탈퇴
                         </button>

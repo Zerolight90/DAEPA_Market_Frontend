@@ -33,14 +33,15 @@ export default function UsersPage() {
     const matchesSearch =
         user.uname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.uid?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.ulocation?.toLowerCase().includes(searchTerm.toLowerCase());
+        (user.ulocation || "").toLowerCase().includes(searchTerm.toLowerCase());
 
-    // backend status = number ⇒ convert to string to compare with dropdown
+    // u_status: 1=활성, 2=탈퇴, 3=정지, 9=보류
     const matchesFilter =
         filterStatus === "all" ||
         (filterStatus === "active" && user.ustatus === 1) ||
-        (filterStatus === "suspended" && user.ustatus === 0) ||
-        (filterStatus === "pending" && user.ustatus !== 1 && user.ustatus !== 0);
+        (filterStatus === "suspended" && user.ustatus === 3) ||
+        (filterStatus === "pending" && user.ustatus === 9) ||
+        (filterStatus === "withdrawn" && user.ustatus === 2);
 
     return matchesSearch && matchesFilter;
   });
@@ -51,10 +52,20 @@ export default function UsersPage() {
   const currentUsers = filteredUsers.slice(startIndex, endIndex);
 
   const getStatusBadge = (statusNum) => {
-    if (statusNum === 1) return <span className={styles.statusSuccess}>활성</span>;
-    if (statusNum === 0) return <span className={styles.statusError}>정지</span>;
-    return <span className={styles.statusWarning}>대기</span>;
+    switch (statusNum) {
+      case 1:
+        return <span className={styles.statusSuccess}>활성</span>;
+      case 2:
+        return <span className={styles.statusGray}>탈퇴</span>;
+      case 3:
+        return <span className={styles.statusError}>정지</span>;
+      case 9:
+        return <span className={styles.statusWarning}>보류</span>;
+      default:
+        return <span className={styles.statusWarning}>보류</span>;
+    }
   };
+
 
 
   const getVisiblePages = () => {
@@ -110,7 +121,8 @@ export default function UsersPage() {
             <option value="all">전체 상태</option>
             <option value="active">활성</option>
             <option value="suspended">정지</option>
-            <option value="pending">대기</option>
+            <option value="pending">보류</option>
+            <option value="withdrawn">탈퇴</option>
           </select>
         </div>
 
@@ -149,7 +161,9 @@ export default function UsersPage() {
                       <Link href={`/admin/users/${user.uidx}`} className={`${styles.actionButton} ${styles.blue}`}>
                         상세
                       </Link>
-                      <button className={`${styles.actionButton} ${styles.gray}`}>수정</button>
+                      <Link href={`/admin/users/${user.uidx}/edit`} className={`${styles.actionButton} ${styles.gray}`}>
+                        수정
+                      </Link>
                     </div>
                   </div>
                 </div>

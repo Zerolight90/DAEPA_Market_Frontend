@@ -5,8 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./oauth.module.css";
 import tokenStore from "@/app/store/TokenStore";
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8080";
+import { api } from "@/lib/api/client";
 
 export default function OAuthClient() {
     const router = useRouter();
@@ -67,17 +66,11 @@ export default function OAuthClient() {
             }
 
             try {
-                const res = await fetch(`${BACKEND_URL}/api/users/me`, {
+                const data = await api("/users/me", {
                     headers: { Authorization: `Bearer ${atk}` },
                     credentials: "include",
-                    cache: "no-store",
                 });
-                if (!res.ok) {
-                    setLoading(false);
-                    return;
-                }
 
-                const data = await res.json();
                 if (data.u_status === 1 && !forceShow) {
                     router.replace("/");
                     return;
@@ -93,6 +86,9 @@ export default function OAuthClient() {
                 setLocation(data.u_location || "");
                 setAddressDetail(data.u_location_detail || "");
                 setZipcode(data.u_address || "");
+            } catch (err) {
+                console.error(err);
+                setLoading(false);
             } finally {
                 setLoading(false);
             }
@@ -137,12 +133,9 @@ export default function OAuthClient() {
 
         const timer = setTimeout(async () => {
             try {
-                const res = await fetch(
-                    `${BACKEND_URL}/api/sing/join/check_nickname?u_nickname=${encodeURIComponent(
-                        nickname
-                    )}`
+                const exists = await api(
+                    `/sing/join/check_nickname?u_nickname=${encodeURIComponent(nickname)}`
                 );
-                const exists = await res.json();
                 if (exists) {
                     setNicknameMsg({ text: "이미 사용 중인 별명입니다.", color: "red" });
                 } else {
@@ -166,12 +159,9 @@ export default function OAuthClient() {
         const timer = setTimeout(async () => {
             try {
                 const cleanPhone = phone.replace(/[^0-9]/g, "");
-                const res = await fetch(
-                    `${BACKEND_URL}/api/sing/join/check_phone?u_phone=${encodeURIComponent(
-                        cleanPhone
-                    )}`
+                const exists = await api(
+                    `/sing/join/check_phone?u_phone=${encodeURIComponent(cleanPhone)}`
                 );
-                const exists = await res.json();
                 if (exists) {
                     setPhoneMsg({ text: "이미 사용 중인 전화번호입니다.", color: "red" });
                 } else {
@@ -210,13 +200,12 @@ export default function OAuthClient() {
         const atk = accessTokenFromQuery || localStorage.getItem("accessToken");
 
         try {
-            const res = await fetch(`${BACKEND_URL}/api/users/oauth-complete`, {
+            await api("/users/oauth-complete", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json",
                     Authorization: atk ? `Bearer ${atk}` : "",
                 },
-                body: JSON.stringify({
+                body: {
                     email,
                     uname,
                     nickname,
@@ -228,10 +217,9 @@ export default function OAuthClient() {
                     addressDetail,
                     provider,
                     agree: marketingChecked ? "1" : "0",
-                }),
+                },
             });
 
-            if (!res.ok) throw new Error("저장 실패");
             alert("정보가 저장되었습니다.");
             router.replace("/");
         } catch (err) {

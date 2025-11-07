@@ -19,7 +19,7 @@ export default function Page() {
     const { setToken } = tokenStore();
 
     // ✅ 백엔드 주소
-    const BACKEND_URL = "http://localhost:8080";
+    const BACKEND_URL = "http://52.79.241.142:8080";
 
     // ✅ 네이버 로그인 버튼
     const handleNaverLogin = () => {
@@ -68,7 +68,8 @@ export default function Page() {
             });
 
             if (!res.ok) {
-                alert("로그인 실패");
+                const data = await res.json().catch(() => ({}));
+                alert(data.message || '로그인 실패');
                 return;
             }
 
@@ -79,7 +80,7 @@ export default function Page() {
                 setToken(data.accessToken);
             }
 
-            alert("로그인 성공");
+            // alert("로그인 성공");
             router.push("/");
         } catch (err) {
             console.error(err);
