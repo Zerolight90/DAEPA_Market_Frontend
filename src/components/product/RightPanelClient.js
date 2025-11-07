@@ -81,7 +81,7 @@ export default function RightPanelClient({
     // 찜
     const addWish = () => setWishes((v) => v + 1);
 
-    // 채팅
+    // ✅ 채팅
     const openChat = async () => {
         if (chatLoading) return;
         try {
@@ -91,8 +91,10 @@ export default function RightPanelClient({
             const myUid =
                 meInfo?.userId ?? meInfo?.id ?? meInfo?.uIdx ?? meInfo?.u_idx;
 
+            // ✅ 로그인 안 되어 있으면 알림 + 로그인페이지로 이동
             if (!myUid) {
-                router.push(`/login?next=${encodeURIComponent(window.location.href)}`);
+                alert("로그인 후 이용해주세요.");
+                router.push(`/sing/login?next=${encodeURIComponent("/chat")}`);
                 return;
             }
 
