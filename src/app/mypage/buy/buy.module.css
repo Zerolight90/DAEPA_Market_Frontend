@@ -1,0 +1,240 @@
+.wrapper {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 16px 16px;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 24px;
+    min-height: 100vh;
+    background: #fff;
+}
+
+.sidebar {
+    min-height: 100%;
+}
+
+.content {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.topBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.pageTitle {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.4px;
+}
+
+.searchRow {
+    display: flex;
+    gap: 10px;
+}
+
+.searchBox {
+    flex: 1;
+    position: relative;
+}
+
+.searchInput {
+    width: 100%;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 34px 10px 12px;
+    font-size: 14px;
+}
+
+.searchInput:focus {
+    outline: 2px solid #22c55e44;
+    background: #fff;
+}
+
+.searchIcon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    color: #94a3b8;
+}
+
+.filterBtn {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 8px 14px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.filterBtn:hover {
+    background: #f8fafc;
+}
+
+.listArea {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 전체 블록 */
+.block {
+    background: #fff;
+}
+
+.dateRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: #6b7280;
+    margin-bottom: 6px;
+}
+
+.dot {
+    color: #d1d5db;
+}
+
+.closeBtn {
+    margin-left: auto;
+    background: transparent;
+    border: 0;
+    font-size: 16px;
+    line-height: 1;
+    color: #94a3b8;
+    cursor: pointer;
+}
+
+.card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 14px 16px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.status {
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 2px;
+}
+
+.productRow {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.thumbBox {
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+}
+
+.thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+}
+
+.thumbPlaceholder {
+    width: 100%;
+    height: 100%;
+    background: #e2e8f0;
+    border-radius: 8px;
+}
+
+.prodInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.prodTitle {
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.prodPrice {
+    font-weight: 700;
+    font-size: 14px;
+    color: #111827;
+}
+
+/* 진행바 */
+.stepBar {
+    display: flex;
+    align-items: center;
+    gap: 30px;
+    margin-top: 4px;
+    margin-bottom: 2px;
+    padding: 6px 0 2px;
+    border-top: 1px solid #f1f5f9;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    align-items: center;
+    color: #94a3b8;
+    font-size: 11px;
+    min-width: 60px;
+}
+
+.stepDot {
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    border: 2px solid #cbd5f5;
+    background: #fff;
+}
+
+.stepActive {
+    color: #22c55e;
+}
+
+.stepActive .stepDot {
+    border-color: #22c55e;
+    background: #22c55e;
+}
+
+.stepLabel {
+    white-space: nowrap;
+}
+
+.reviewBtn {
+    width: 100%;
+    background: #fff;
+    border: 1.5px solid #22c55e;
+    border-radius: 8px;
+    padding: 8px 0;
+    font-weight: 600;
+    color: #22c55e;
+    cursor: pointer;
+    margin-top: 2px;
+}
+
+.reviewBtn:hover {
+    background: #ecfdf5;
+}
+
+.empty {
+    border: 1px dashed #e2e8f0;
+    border-radius: 12px;
+    padding: 28px 10px;
+    text-align: center;
+    color: #94a3b8;
+}

@@ -13,7 +13,6 @@ export default function AddressPage() {
     const [err, setErr] = useState('');
     const [editTarget, setEditTarget] = useState(null);
 
-    // 모달
     const [open, setOpen] = useState(false);
     const [form, setForm] = useState({
         title: '',
@@ -25,7 +24,7 @@ export default function AddressPage() {
         primary: false,
     });
 
-    /* 1) 카카오 우편번호 스크립트 로드 */
+    // 카카오 주소 스크립트 로드
     useEffect(() => {
         const id = 'daum-postcode-script';
         if (document.getElementById(id)) return;
@@ -36,9 +35,9 @@ export default function AddressPage() {
         document.body.appendChild(s);
     }, []);
 
-    /* 2) 팝업 열기 */
+    // 주소 찾기 열기
     const openPostcode = () => {
-        if (!window.daum?.Postcode) {
+        if (!window.daum || !window.daum.Postcode) {
             alert('우편번호 서비스를 불러오는 중입니다. 잠시 후 다시 시도해 주세요.');
             return;
         }
@@ -51,13 +50,14 @@ export default function AddressPage() {
                     region: addr,
                 }));
                 setTimeout(() => {
-                    document.getElementById('addr-detail-input')?.focus();
+                    const detail = document.getElementById('addr-detail-input');
+                    if (detail) detail.focus();
                 }, 0);
             },
         }).open();
     };
 
-    /* 3) 내 정보 + 주소 목록 가져오기 */
+    // 내 정보 + 주소 목록 가져오기
     useEffect(() => {
         (async () => {
             try {
@@ -87,24 +87,27 @@ export default function AddressPage() {
         })();
     }, [accessToken]);
 
-    /* 4) 서버에서 내려준 location → 화면용 배열 */
+    // 서버 주소 → 화면용
     const addrList = useMemo(() => {
         if (!me || !Array.isArray(me.locations)) return [];
 
         const converted = me.locations.map((loc) => {
-            // 🔥 0 이 대표, true 도 대표로 해석
+            // loc_default = false(0) → 대표
             const isPrimary =
                 loc.locDefault === 0 ||
                 loc.locDefault === '0' ||
-                loc.locDefault === false; // JPA boolean → false가 0이었을 때
+                loc.locDefault === false;
 
             return {
-                // 큰 글씨로 보여줄 제목
-                title: loc.locTitle && loc.locTitle.trim().length > 0 ? loc.locTitle : isPrimary ? '대표 배송지' : '기본',
-                // 뱃지에 들어갈 텍스트
+                title:
+                    (loc.locTitle && loc.locTitle.trim().length > 0)
+                        ? loc.locTitle
+                        : isPrimary
+                            ? '대표 배송지'
+                            : '기본 배송지',
                 badge: isPrimary ? '대표 배송지' : '기본 배송지',
-                name: loc.locName || '',   // 받는 사람
-                phone: loc.locNum || '',   // 연락처
+                name: loc.locName || '',
+                phone: loc.locNum || '',
                 zipcode: loc.locCode || '',
                 region: loc.locAddress || '',
                 addr2: loc.locDetail || '',
@@ -115,11 +118,19 @@ export default function AddressPage() {
         });
 
         // 대표 먼저
-        return converted.sort((a, b) => (a.primary === b.primary ? 0 : a.primary ? -1 : 1));
+        return converted.sort((a, b) => {
+            if (a.primary === b.primary) return 0;
+            return a.primary ? -1 : 1;
+        });
     }, [me]);
 
-    /* 모달 열기 */
+    // 모달 열기
     const openModal = () => {
+        // 5개 제한
+        if ((me?.locations?.length || 0) >= 5) {
+            alert('배송지는 최대 5개까지만 등록할 수 있습니다.');
+            return;
+        }
         setForm({
             title: '',
             name: me?.uName ?? '',
@@ -131,15 +142,15 @@ export default function AddressPage() {
         });
         setOpen(true);
     };
+
     const closeModal = () => setOpen(false);
 
-    /* 폼 입력 변경 */
     const onChange = (e) => {
         const { name, value, type, checked } = e.target;
         setForm((s) => ({ ...s, [name]: type === 'checkbox' ? checked : value }));
     };
 
-    /* 5) 주소 저장 요청 */
+    // 주소 저장
     const onSubmit = async (e) => {
         e.preventDefault();
 
@@ -173,21 +184,109 @@ export default function AddressPage() {
                 body: JSON.stringify(payload),
             });
 
-            const data = await res.json().catch(() => ({}));
+            const data = await res.json();
 
             if (!res.ok) {
-                alert(data.message || '주소 저장에 실패했습니다.');
+                alert(data?.message || '주소 저장에 실패했습니다.');
                 return;
             }
 
             alert(data.message || '주소가 저장되었습니다.');
+            // {message, locations} 내려오므로 그대로 반영
             setMe((prev) =>
-                prev ? { ...prev, locations: data.locations } : prev
+                prev
+                    ? {
+                        ...prev,
+                        locations: data.locations,
+                    }
+                    : prev
             );
+
             setOpen(false);
         } catch (err) {
             console.error(err);
             alert('주소 저장 중 오류가 발생했습니다.');
+        }
+    };
+
+    // 삭제
+    const handleDelete = async (locKey, isPrimary) => {
+        if (isPrimary) {
+            alert('대표 배송지는 삭제할 수 없습니다.');
+            return;
+        }
+        if (!confirm('이 배송지를 삭제하시겠습니까?')) return;
+
+        try {
+            const res = await fetch(`/api/sing/location/${locKey}`, {
+                method: 'DELETE',
+                headers: {
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+                },
+                credentials: 'include',
+            });
+
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                alert(data?.message || '삭제에 실패했습니다.');
+                return;
+            }
+
+            alert(data?.message || '배송지가 삭제되었습니다.');
+
+            // 프론트에서 목록 갱신
+            setMe((prev) =>
+                prev
+                    ? {
+                        ...prev,
+                        locations: prev.locations.filter((l) => l.locKey !== locKey),
+                    }
+                    : prev
+            );
+        } catch (err) {
+            console.error(err);
+            alert('삭제 중 오류가 발생했습니다.');
+        }
+    };
+
+    // 🟢 대표 배송지 설정 (편집 안에서 누르는 거)
+    const handleSetPrimary = async (locKey, isPrimary) => {
+        if (isPrimary) {
+            alert('이미 대표 배송지입니다.');
+            return;
+        }
+        try {
+            const res = await fetch(`/api/sing/location/${locKey}/update`, {
+                method: 'PUT',
+                headers: {
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+                },
+                credentials: 'include',
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                alert(data?.message || '대표 배송지 설정에 실패했습니다.');
+                return;
+            }
+
+            // 서비스가 {message, locations}로 주게 해놨으니까 그대로 반영
+            alert(data.message || '대표 배송지가 변경되었습니다.');
+            setMe((prev) =>
+                prev
+                    ? {
+                        ...prev,
+                        locations: data.locations,
+                    }
+                    : prev
+            );
+            // 편집 닫기
+            setEditTarget(null);
+        } catch (err) {
+            console.error(err);
+            alert('대표 배송지 변경 중 오류가 발생했습니다.');
         }
     };
 
@@ -203,7 +302,6 @@ export default function AddressPage() {
                 {loading && <div className={styles.empty}>로딩 중…</div>}
                 {!loading && err && <div className={styles.empty}>{err}</div>}
 
-                {/* 리스트 */}
                 {!loading && !err && (
                     <section className={styles.addrList}>
                         {addrList.length === 0 ? (
@@ -214,17 +312,21 @@ export default function AddressPage() {
                                 return (
                                     <article
                                         key={a.locKey ?? idx}
-                                        className={`${styles.addrCard} ${a.primary ? styles.addrCardPrimary : styles.addrCardSecondary}`}
+                                        className={`${styles.addrCard} ${
+                                            a.primary ? styles.addrCardPrimary : styles.addrCardSecondary
+                                        }`}
                                     >
-                                        {/* 상단: 큰 제목 + 뱃지 + 편집 */}
+                                        {/* 상단: 제목 + 뱃지 + 편집 */}
                                         <div className={styles.addrCardTop}>
                                             <div className={styles.addrTitleBox}>
-                                                {/* 큰 제목: loc_title */}
                                                 <strong className={styles.addrTitleBig}>{a.title}</strong>
-                                                {/* 작은 뱃지: 대표/기본 */}
-                                                <span className={a.primary ? styles.addrBadgePrimary : styles.addrBadge}>
-                          {a.badge}
-                        </span>
+                                                <span
+                                                    className={
+                                                        a.primary ? styles.addrBadgePrimary : styles.addrBadge
+                                                    }
+                                                >
+                                                    {a.badge}
+                                                </span>
                                             </div>
                                             <button
                                                 type="button"
@@ -235,7 +337,6 @@ export default function AddressPage() {
                                             </button>
                                         </div>
 
-                                        {/* 받는 분 + 연락처 한 줄 */}
                                         {(a.name || a.phone) && (
                                             <div className={styles.addrLine}>
                                                 {a.name}
@@ -244,7 +345,6 @@ export default function AddressPage() {
                                             </div>
                                         )}
 
-                                        {/* 주소 라인 */}
                                         {(a.zipcode || a.region || a.addr2) && (
                                             <div className={styles.addrLine}>
                                                 {a.zipcode ? <span className={styles.addrZip}>[{a.zipcode}]</span> : null}
@@ -253,20 +353,13 @@ export default function AddressPage() {
                                             </div>
                                         )}
 
-                                        {/* 편집 모드 버튼들 */}
                                         {isEditing && (
                                             <div className={styles.addrActionBar}>
                                                 <button
                                                     type="button"
                                                     className={styles.addrAction}
                                                     disabled={a.primary}
-                                                    onClick={() => {
-                                                        if (a.primary) {
-                                                            alert('이미 대표 배송지입니다.');
-                                                            return;
-                                                        }
-                                                        alert('대표 설정은 새 주소 추가 시 "대표 배송지로 설정"으로 변경해 주세요.');
-                                                    }}
+                                                    onClick={() => handleSetPrimary(a.locKey, a.primary)}
                                                 >
                                                     대표 배송지 설정
                                                 </button>
@@ -274,16 +367,7 @@ export default function AddressPage() {
                                                 <button
                                                     type="button"
                                                     className={styles.addrActionDanger}
-                                                    onClick={() => {
-                                                        if (a.primary) {
-                                                            alert('대표 배송지는 삭제할 수 없습니다.');
-                                                            return;
-                                                        }
-                                                        if (a.fromDB) {
-                                                            alert('이 주소는 서버 API로 삭제해야 합니다.');
-                                                            return;
-                                                        }
-                                                    }}
+                                                    onClick={() => handleDelete(a.locKey, a.primary)}
                                                 >
                                                     삭제
                                                 </button>
@@ -301,6 +385,8 @@ export default function AddressPage() {
                     type="button"
                     className={`${styles.btn} ${styles.btnPrimary} ${styles.addBtn}`}
                     onClick={openModal}
+                    disabled={(me?.locations?.length || 0) >= 5}
+                    style={(me?.locations?.length || 0) >= 5 ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                 >
                     배송지 추가
                 </button>
@@ -318,7 +404,6 @@ export default function AddressPage() {
                         </header>
 
                         <form className={styles.formGrid} onSubmit={onSubmit}>
-                            {/* 배송지명 */}
                             <input
                                 name="title"
                                 value={form.title}
@@ -327,7 +412,6 @@ export default function AddressPage() {
                                 placeholder="배송지명 (예: 집, 회사)"
                             />
 
-                            {/* 받는 분 */}
                             <input
                                 name="name"
                                 value={form.name}
@@ -336,7 +420,6 @@ export default function AddressPage() {
                                 placeholder="받는 분"
                             />
 
-                            {/* 연락처 */}
                             <input
                                 name="phone"
                                 value={form.phone}
@@ -345,7 +428,6 @@ export default function AddressPage() {
                                 placeholder="연락처"
                             />
 
-                            {/* 도로명 주소 + 버튼 */}
                             <div className={styles.zipRow}>
                                 <input
                                     name="region"
@@ -360,7 +442,6 @@ export default function AddressPage() {
                                 </button>
                             </div>
 
-                            {/* 상세주소 */}
                             <input
                                 id="addr-detail-input"
                                 name="addr2"
@@ -370,7 +451,6 @@ export default function AddressPage() {
                                 placeholder="상세주소"
                             />
 
-                            {/* 우편번호 */}
                             <input
                                 name="zipcode"
                                 value={form.zipcode}
@@ -380,7 +460,6 @@ export default function AddressPage() {
                                 readOnly
                             />
 
-                            {/* 대표 체크 */}
                             <label className={styles.checkboxRow}>
                                 <input
                                     type="checkbox"

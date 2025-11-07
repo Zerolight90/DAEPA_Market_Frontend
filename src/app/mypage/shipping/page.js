@@ -8,100 +8,247 @@ import tokenStore from '@/app/store/TokenStore';
 export default function ShippingPage() {
     const { accessToken } = tokenStore();
 
-    // 상단 필터: 보낸/받은
-    const [mode, setMode] = useState('sent'); // 'sent' | 'received'
-    // 데이터
+    // sent: 보낸 택배, received: 받은 택배
+    const [mode, setMode] = useState('sent');
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [err, setErr] = useState('');
 
-    // 데모용 fetch (백엔드 연결 시 이 부분만 바꾸면 됨)
     useEffect(() => {
-        let mounted = true;
-        (async () => {
-            try {
-                setLoading(true);
-                // 실제 연결 시:
-                // const res = await fetch(`/api/shipping?mode=${mode}`, {
-                //   headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-                //   credentials: 'include',
-                // });
-                // const data = res.ok ? await res.json() : [];
+        let alive = true;
 
-                // 데모: 항상 빈 목록
-                const data = [];
-                if (mounted) setItems(data);
-            } catch {
-                if (mounted) setItems([]);
+        (async () => {
+            setLoading(true);
+            setErr('');
+            setItems([]); // 모드 바뀔 때 깔끔하게
+
+            // 모드별 엔드포인트
+            const url =
+                mode === 'sent'
+                    ? '/api/delivery/sent'
+                    : '/api/delivery/received';
+
+            try {
+                const res = await fetch(url, {
+                    headers: accessToken
+                        ? { Authorization: 'Bearer ' + accessToken }
+                        : {},
+                    credentials: 'include',
+                    cache: 'no-store',
+                });
+
+                if (!res.ok) {
+                    const txt = await res.text();
+                    if (alive) {
+                        setErr(txt || '목록을 불러오지 못했습니다.');
+                        setItems([]);
+                    }
+                    return;
+                }
+
+                const data = await res.json();
+
+                // 공통 normalize
+                const normalized = Array.isArray(data)
+                    ? data.map(function (row, idx) {
+                        return {
+                            // ✅ mode까지 섞어서 key 절대 안 겹치게
+                            key:
+                                'ship-' +
+                                mode +
+                                '-' +
+                                (row.dealId ?? 'x') +
+                                '-' +
+                                (row.deliveryId ?? idx),
+                            title:
+                                row.productTitle ||
+                                '배송건 #' + (row.dealId ?? ''),
+                            price: typeof row.agreedPrice === 'number'
+                                ? row.agreedPrice
+                                : 0,
+                            date: null, // 아직 DTO에 날짜 없음
+                            deliveryStatus: row.deliveryStatus,
+                            checkStatus: row.checkStatus,
+                            checkResult: row.checkResult,
+                            locKey: row.locKey,
+                        };
+                    })
+                    : [];
+
+                if (alive) {
+                    setItems(normalized);
+                }
+            } catch (e) {
+                if (alive) {
+                    setErr('네트워크 오류가 발생했습니다.');
+                    setItems([]);
+                }
             } finally {
-                if (mounted) setLoading(false);
+                if (alive) setLoading(false);
             }
         })();
-        return () => { mounted = false; };
+
+        return () => {
+            alive = false;
+        };
     }, [mode, accessToken]);
 
-    const empty = useMemo(() => !loading && items.length === 0, [loading, items]);
+    const empty = useMemo(
+        function () {
+            return !loading && !err && items.length === 0;
+        },
+        [loading, err, items],
+    );
+
+    // 날짜 예쁘게 (나중에 서버에서 내려주면 여기만 쓰면 됨)
+    function formatDate(str) {
+        if (!str) return '';
+        return String(str).slice(0, 10);
+    }
+
+    // 배송 상태 텍스트: dv_status
+    // 0: 배송전 ,1:배송중, 2: 검수배송완료, 3: 검수 후 배송, 4:반품(검수결과: 1) 5: 배송완료
+    function deliveryStatusText(s) {
+        switch (s) {
+            case 0:
+                return '배송 전';
+            case 1:
+                return '배송 중';
+            case 2:
+                return '검수 배송 완료';
+            case 3:
+                return '검수 후 배송';
+            case 4:
+                return '반품';
+            case 5:
+                return '배송 완료';
+            default:
+                return '알 수 없음';
+        }
+    }
+
+    // 검수 상태 + 결과 표시
+    function checkText(ckStatus, ckResult) {
+        if (ckStatus == null) return '검수 정보 없음';
+        if (ckStatus === 0) return '검수 중';
+        if (ckStatus === 1) {
+            if (ckResult == null) return '검수 완료';
+            if (ckResult === 0) return '검수 완료 (합격)';
+            if (ckResult === 1) return '검수 완료 (불합격)';
+        }
+        return '검수 정보 없음';
+    }
 
     return (
         <div className={styles.wrapper}>
-            {/* 좌측 사이드바 */}
+            {/* 왼쪽 사이드바 */}
             <aside className={styles.sidebar}>
                 <Sidebar />
             </aside>
 
-            {/* 우측 본문 */}
+            {/* 오른쪽 본문 */}
             <main className={styles.content}>
-                {/* 상단 탭(디자인용) */}
-                <header className={styles.topTabs}>
-                    {/*<button className={styles.tab} disabled>택배 신청</button>*/}
-                    <button className={`${styles.tab} ${styles.tabActive}`} aria-current="page">
-                        택배 내역
-                    </button>
+                {/* 제목 */}
+                <header className={styles.headerRow}>
+                    <h1 className={styles.pageTitle}>택배 내역</h1>
                 </header>
 
-                {/* 필터: 보낸/받은 */}
+                {/* 보낸/받은 토글 */}
                 <div className={styles.segmentRow}>
                     <button
                         type="button"
-                        className={`${styles.segment} ${mode === 'sent' ? styles.segmentActive : ''}`}
-                        onClick={() => setMode('sent')}
+                        className={
+                            mode === 'sent'
+                                ? styles.segmentActive
+                                : styles.segment
+                        }
+                        onClick={function () {
+                            setMode('sent');
+                        }}
                     >
                         보낸 택배
                     </button>
                     <button
                         type="button"
-                        className={`${styles.segment} ${mode === 'received' ? styles.segmentActive : ''}`}
-                        onClick={() => setMode('received')}
+                        className={
+                            mode === 'received'
+                                ? styles.segmentActive
+                                : styles.segment
+                        }
+                        onClick={function () {
+                            setMode('received');
+                        }}
                     >
                         받은 택배
                     </button>
                 </div>
 
-                {/* 리스트 */}
+                {/* 리스트 영역 */}
                 {loading ? (
                     <div className={styles.emptyWrap}>
                         <div className={styles.spinner} aria-hidden />
                         <p className={styles.emptyText}>불러오는 중…</p>
                     </div>
+                ) : err ? (
+                    <div className={styles.emptyWrap}>
+                        <p className={styles.emptyText}>{err}</p>
+                    </div>
                 ) : empty ? (
                     <div className={styles.emptyWrap}>
-                        <div className={styles.bubble} aria-hidden>…</div>
-                        <p className={styles.emptyText}>최근 배송 내역이 없습니다.</p>
+                        <p className={styles.emptyText}>
+                            최근 {mode === 'sent' ? '보낸' : '받은'} 택배가 없습니다.
+                        </p>
                     </div>
                 ) : (
-                    <ul className={styles.list}>
-                        {items.map((it) => (
-                            <li key={it.id} className={styles.card}>
-                                <div className={styles.cardRow}>
-                                    <strong className={styles.cardTitle}>{it.title}</strong>
-                                    <span className={styles.badge}>{it.statusLabel}</span>
-                                </div>
-                                <div className={styles.metaRow}>
-                                    <span>운송장: {it.trackingNo}</span>
-                                    <span>택배사: {it.carrier}</span>
-                                    <span>보낸 날짜: {it.sentAt}</span>
-                                </div>
-                            </li>
-                        ))}
+                    <ul className={styles.cardList}>
+                        {items.map(function (it) {
+                            return (
+                                <li key={it.key} className={styles.card}>
+                                    <div className={styles.cardTop}>
+                                        <h2 className={styles.cardTitle}>
+                                            {it.title}
+                                        </h2>
+                                        <span
+                                            className={
+                                                it.deliveryStatus === 5
+                                                    ? styles.badgeGreen
+                                                    : styles.badgeGray
+                                            }
+                                        >
+                                            {deliveryStatusText(
+                                                it.deliveryStatus,
+                                            )}
+                                        </span>
+                                    </div>
+
+                                    <div className={styles.cardBody}>
+                                        {/* 검수 상태 */}
+                                        <p className={styles.metaLine}>
+                                            검수 :{' '}
+                                            {checkText(
+                                                it.checkStatus,
+                                                it.checkResult,
+                                            )}
+                                        </p>
+                                        {/* 실거래가 */}
+                                        <p className={styles.metaLine}>
+                                            결제 금액 :{' '}
+                                            {it.price
+                                                ? it.price.toLocaleString() +
+                                                '원'
+                                                : '-'}
+                                        </p>
+                                        {/* 날짜는 아직 없음 */}
+                                        <p className={styles.metaLine}>
+                                            배송일자 :{' '}
+                                            {it.date
+                                                ? formatDate(it.date)
+                                                : '-'}
+                                        </p>
+                                    </div>
+                                </li>
+                            );
+                        })}
                     </ul>
                 )}
             </main>
