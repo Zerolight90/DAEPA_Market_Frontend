@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
 
 /** 내부: 절대/상대 경로 처리 + /api prefix 보장 */
 function buildUrl(path) {
@@ -6,7 +6,7 @@ function buildUrl(path) {
     if (/^https?:\/\//i.test(path)) return path;         // 절대 URL이면 그대로
     const clean = path.startsWith("/") ? path : `/${path}`;
     const withApi = clean.startsWith("/api/") ? clean : `/api${clean}`;
-    return `${API_BASE}${withApi}`;                       // /api/...
+    return `${API_BASE}${withApi}`;
 }
 
 /**

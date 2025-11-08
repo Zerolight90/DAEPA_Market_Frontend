@@ -20,6 +20,8 @@ services:
   nginx:
     image: nginx:stable
     container_name: daepa-nginx
+    env_file:
+      - .env
     depends_on:
       frontend:
         condition: service_healthy

@@ -81,7 +81,7 @@ export default function RightPanelClient({
     // 찜
     const addWish = () => setWishes((v) => v + 1);
 
-    // 채팅
+    // ✅ 채팅
     const openChat = async () => {
         if (chatLoading) return;
         try {
@@ -91,8 +91,10 @@ export default function RightPanelClient({
             const myUid =
                 meInfo?.userId ?? meInfo?.id ?? meInfo?.uIdx ?? meInfo?.u_idx;
 
+            // ✅ 로그인 안 되어 있으면 알림 + 로그인페이지로 이동
             if (!myUid) {
-                router.push(`/login?next=${encodeURIComponent(window.location.href)}`);
+                alert("로그인 후 이용해주세요.");
+                router.push(`/sing/login?next=${encodeURIComponent("/chat")}`);
                 return;
             }
 
@@ -175,26 +177,25 @@ export default function RightPanelClient({
 
     // ✅ 1) 내가 올린 상품일 때
     if (isOwner) {
-        // 👉 내가 올린 상품인데 이미 판매완료 상태면 채팅만
+        // 👉 내가 올린 상품인데 이미 판매완료 상태면 안내만
         if (localSoldOut) {
             return (
                 <>
                     <div className={styles.btnRow}>
                         <button
-                            className={styles.btnChat}
-                            onClick={openChat}
-                            disabled={chatLoading}
+                            className={styles.btnChat}   // 채팅하기랑 똑같은 버튼 스타일
+                            disabled                    // 클릭 안 되게
+                            style={{
+                                cursor: "default",
+                                opacity: 0.9,
+                            }}
                         >
-                            {chatLoading ? "연결 중…" : "채팅하기"}
+                            이미 판매한 상품입니다.
                         </button>
                     </div>
                     <div className={styles.utils}>
                         <button className={styles.link} onClick={openShare}>
-                            공유
-                        </button>
-                        <span className={styles.dot}>·</span>
-                        <button className={styles.link} onClick={openReport}>
-                            신고하기
+                            공유하기
                         </button>
                     </div>
                 </>
@@ -228,11 +229,7 @@ export default function RightPanelClient({
 
                 <div className={styles.utils}>
                     <button className={styles.link} onClick={openShare}>
-                        공유
-                    </button>
-                    <span className={styles.dot}>·</span>
-                    <button className={styles.link} onClick={openReport}>
-                        신고하기
+                        공유하기
                     </button>
                 </div>
             </>
@@ -254,9 +251,9 @@ export default function RightPanelClient({
                 </div>
                 <div className={styles.utils}>
                     <button className={styles.link} onClick={openShare}>
-                        공유
+                        공유하기
                     </button>
-                    <span className={styles.dot}>·</span>
+                    <span className={styles.dot}>.</span>
                     <button className={styles.link} onClick={openReport}>
                         신고하기
                     </button>
@@ -269,10 +266,6 @@ export default function RightPanelClient({
     return (
         <>
             <div className={styles.btnRow}>
-                <button className={styles.btnWish} onClick={addWish}>
-                    찜 {wishes}
-                </button>
-
                 <button
                     className={styles.btnChat}
                     onClick={openChat}
@@ -295,9 +288,9 @@ export default function RightPanelClient({
 
             <div className={styles.utils}>
                 <button className={styles.link} onClick={openShare}>
-                    공유
+                    공유하기
                 </button>
-                <span className={styles.dot}>·</span>
+                <span className={styles.dot}>.</span>
                 <button className={styles.link} onClick={openReport}>
                     신고하기
                 </button>

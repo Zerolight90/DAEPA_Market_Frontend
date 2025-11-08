@@ -4,7 +4,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #166534 0%, #14532d 50%, #1a4d2e 100%);
   padding: 2rem;
 }
 
@@ -26,7 +26,7 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(90deg, #3b82f6, #1d4ed8, #3b82f6);
+  background: linear-gradient(90deg, #16a34a, #22c55e, #16a34a);
 }
 
 /* 로고 섹션 */
@@ -41,10 +41,10 @@
   justify-content: center;
   width: 80px;
   height: 80px;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  background: linear-gradient(135deg, #22c55e, #16a34a);
   border-radius: 50%;
   margin-bottom: 1rem;
-  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.3);
 }
 
 .logoTitle {
@@ -128,8 +128,8 @@
 
 .input:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
 }
 
 .input:disabled {
@@ -170,7 +170,7 @@
 .loginButton {
   width: 100%;
   padding: 0.875rem 1.5rem;
-  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  background: linear-gradient(135deg, #22c55e, #16a34a);
   color: white;
   border: none;
   border-radius: 0.5rem;
@@ -183,12 +183,12 @@
   justify-content: center;
   gap: 0.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+  box-shadow: 0 4px 6px -1px rgba(34, 197, 94, 0.3);
 }
 
 .loginButton:hover:not(:disabled) {
-  background: linear-gradient(135deg, #2563eb, #1e40af);
-  box-shadow: 0 6px 8px -1px rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, #16a34a, #15803d);
+  box-shadow: 0 6px 8px -1px rgba(34, 197, 94, 0.4);
   transform: translateY(-1px);
 }
 
@@ -265,7 +265,7 @@
 }
 
 .footerLink:hover {
-  color: #3b82f6;
+  color: #22c55e;
 }
 
 .footerSeparator {
@@ -318,7 +318,7 @@
   }
   
   .input:focus {
-    border-color: #3b82f6;
+    border-color: #22c55e;
   }
   
   .helpText {

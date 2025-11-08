@@ -1,0 +1,87 @@
+.wrapper {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 16px 16px;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 24px;
+}
+
+.sidebar {
+    /* 사이드바는 컴포넌트에서 스타일이 있을 테니 최소 폭만 */
+}
+
+.content {
+    min-height: 100vh;
+}
+
+.header {
+    margin-bottom: 18px;
+}
+
+.pageTitle {
+    font-size: 30px;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+.subText {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.empty {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 32px 16px;
+    text-align: center;
+    color: #9ca3af;
+}
+
+.cardList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* 한 장씩 떨어져 나오는 카드 (배송지랑 비슷하게) */
+.card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    padding: 14px 16px 12px;
+    transition: box-shadow 0.1s ease, border 0.1s ease;
+}
+.card:hover {
+    border-color: #10b98166;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.03);
+}
+
+.cardTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.cardTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: #111827;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.amount {
+    font-weight: 700;
+    color: #111827;
+    white-space: nowrap;
+}
+
+.date {
+    font-size: 13px;
+    color: #6b7280;
+}
