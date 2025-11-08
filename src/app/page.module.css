@@ -11,15 +11,10 @@
 
 .categoryList {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* 화면 크기에 따라 열 개수가 유연하게 바뀌도록 수정 */
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 16px;
   margin-top: 8px;
-}
-@media (min-width: 768px) {
-  .categoryList { grid-template-columns: repeat(4, 1fr); gap: 18px; }
-}
-@media (min-width: 1280px) {
-  .categoryList { grid-template-columns: repeat(8, 1fr); gap: 20px; }
 }
 
 .cardLink { display: block; text-decoration: none; color: inherit; outline: none; }

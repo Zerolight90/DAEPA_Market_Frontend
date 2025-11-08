@@ -12,6 +12,11 @@
 
 @media (max-width: 1023px) {
     .topRow { grid-template-columns: 1fr; gap: 32px; }
+    .csPhone { font-size: 28px; } /* 모바일에서 전화번호 크기 조정 */
+    .blockTitle { font-size: 14px; }
+    .bizList li { font-size: 13.5px; }
+    .k { min-width: 100px; } /* 라벨 너비 조정 */
+    .disclaimer { font-size: 12px; }
 }
 
 .brandRow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
