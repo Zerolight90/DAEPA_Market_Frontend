@@ -1,53 +1,37 @@
 .wrap {
     width: 100%;
-    border-bottom: 1px solid #f3f3f3;
     background: #fff;
+    border-bottom: 1px solid #ddd;
 }
 
 .inner {
     max-width: 1180px;
     margin: 0 auto;
-    padding: 14px 20px 12px;
+    padding: 0 20px 10px;
     display: flex;
     flex-direction: column;
     gap: 10px;
 }
 
-/* 첫 줄: 상위카테고리 왼쪽, 정렬 오른쪽 */
-.topRow {
+/* 상단 타이틀 + 빵부스러기 */
+.headerRow {
     display: flex;
-    justify-content: space-between;
-    gap: 14px;
     align-items: center;
+    justify-content: space-between;
+    padding: 14px 0 4px;
+    gap: 12px;
 }
 
-/* 상위 카테고리 한 줄 */
-.upperRow {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+.title {
+    font-size: 1.1rem;
+    font-weight: 600;
 }
 
-/* 중위 카테고리 */
-.middleRow {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-/* 하위 카테고리 */
-.lowRow {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-/* 빵부스러기 */
 .breadcrumbs {
     display: flex;
     gap: 6px;
     font-size: 0.78rem;
-    color: #999;
+    color: #666;
 }
 
 .breadcrumbs a {
@@ -56,59 +40,63 @@
 }
 
 .sep {
-    color: #ddd;
+    color: #aaa;
 }
 
-/* 공통 필 버튼 */
-.pill {
-    display: inline-flex;
+/* 표 전체 */
+.table {
+    border-top: 1px solid #000;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr) 300px;
+    border-bottom: 1px solid #efefef;
+    align-items: stretch;
+}
+
+/* 왼쪽 제목칸 */
+.th {
+    background: #fafafa;
+    border-right: 1px solid #efefef;
+    font-weight: 500;
+    font-size: 0.74rem;
+    color: #333;
+    display: flex;
     align-items: center;
+    padding: 0 16px;
+}
+
+/* 가운데 내용칸 */
+.td {
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
     gap: 6px;
-    padding: 5px 14px 6px;
-    background: #f6f6f6;
-    border-radius: 999px;
-    font-size: 0.76rem;
-    color: #555;
-    text-decoration: none;
-    border: 1px solid transparent;
-    line-height: 1;
-    white-space: nowrap;
 }
 
-.pill:hover {
-    background: #efefef;
-}
-
-.active {
-    background: #fff;
-    border-color: #00aa55;
-    color: #00aa55;
-    font-weight: 600;
-}
-
-.pillText {
-    line-height: 1;
-}
-
-.count {
-    background: rgba(0,0,0,0.04);
-    padding: 2px 6px;
-    border-radius: 999px;
-    font-size: 0.68rem;
+/* 오른쪽 정렬칩 칸 */
+.sortCol {
+    border-left: 1px solid #efefef;
+    padding: 10px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
 }
 
 /* 정렬칩 */
-.actions {
+.sortChips {
     display: flex;
     gap: 8px;
 }
 
 .chip {
-    padding: 5px 13px;
+    padding: 5px 12px 6px;
     border-radius: 999px;
     border: 1px solid transparent;
     background: #f6f6f6;
-    font-size: 0.75rem;
+    font-size: 0.73rem;
     color: #555;
     cursor: pointer;
 }
@@ -124,13 +112,108 @@
     font-weight: 600;
 }
 
+/* ✅ 가격 필터 */
+.priceFilter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+}
+
+.priceFilter input {
+    width: 80px;
+    padding: 5px 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: #444;
+}
+
+.priceFilter input:focus {
+    outline: none;
+    border-color: #00aa55;
+}
+
+.tilde {
+    color: #888;
+    font-size: 0.8rem;
+}
+
+.applyBtn {
+    background: #000;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 0.76rem;
+    cursor: pointer;
+}
+
+.applyBtn:hover {
+    background: #222;
+}
+
+/* 카테고리 영역 */
+.block {
+    padding: 4px 0 8px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.block:last-child {
+    border-bottom: none;
+}
+
+.upperRow,
+.middleRow,
+.lowRow {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* pill */
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 14px 6px;
+    background: #f6f6f6;
+    border-radius: 999px;
+    font-size: 0.76rem;
+    color: #555;
+    text-decoration: none;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+
+.pill:hover {
+    background: #efefef;
+}
+
+.active {
+    background: #fff;
+    border-color: #00aa55;
+    color: #00aa55;
+    font-weight: 600;
+}
+
+.count {
+    background: rgba(0, 0, 0, 0.04);
+    padding: 2px 6px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+}
+
 /* 반응형 */
-@media (max-width: 880px) {
-    .topRow {
-        flex-direction: column;
-        align-items: flex-start;
+@media (max-width: 960px) {
+    .row {
+        grid-template-columns: 100px minmax(0, 1fr);
     }
-    .actions {
-        order: 2;
+    .sortCol {
+        grid-column: 1 / -1;
+        align-items: flex-start;
+        border-left: none;
+        border-top: 1px solid #efefef;
+        margin-top: 6px;
     }
 }
