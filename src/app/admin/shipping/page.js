@@ -14,7 +14,7 @@ export default function ShippingPage() {
   useEffect(() => {
     const fetchDeliveries = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/deliveries`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/deliveries`);
         if (!res.ok) throw new Error("배송 목록을 불러오지 못했습니다.");
         const data = await res.json();
         setShippings(data.map(item => ({
@@ -135,7 +135,7 @@ export default function ShippingPage() {
     if (!selectedShipping) return;
     
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/deliveries/${selectedShipping.id}/status`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/deliveries/${selectedShipping.id}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json"
@@ -146,7 +146,7 @@ export default function ShippingPage() {
       if (!res.ok) throw new Error("배송 상태 변경에 실패했습니다.");
 
       // 목록 다시 불러오기
-      const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/deliveries`);
+      const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/deliveries`);
       if (refreshRes.ok) {
         const refreshData = await refreshRes.json();
         setShippings(refreshData.map(item => ({

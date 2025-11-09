@@ -27,7 +27,7 @@ export default function ReportsPage() {
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/reports`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/reports`);
         if (!res.ok) throw new Error("신고 목록을 불러오지 못했습니다.");
         const data = await res.json();
         setReports(data);
@@ -82,7 +82,7 @@ export default function ReportsPage() {
   const handleAction = async (reportId, action, formData = {}) => {
     setActionLoading(`${reportId}-${action}`);
     try {
-      const endpoint = `${process.env.NEXT_PUBLIC_API_URL}/api/admin/reports/${reportId}/${action}`;
+      const endpoint = `${process.env.NEXT_PUBLIC_API_BASE}/api/admin/reports/${reportId}/${action}`;
       let method = "POST";
 
       const body = action === "suspend" 
@@ -114,7 +114,7 @@ export default function ReportsPage() {
       closeModal();
       
       // 신고 목록 다시 불러오기
-      const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/reports`);
+      const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/reports`);
       if (refreshRes.ok) {
         const refreshData = await refreshRes.json();
         setReports(refreshData);

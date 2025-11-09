@@ -47,7 +47,7 @@ export default function UserDetailPage({ params }) {
     }
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}/manner`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users/${id}/manner`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ manner: newTemp })
@@ -68,13 +68,13 @@ export default function UserDetailPage({ params }) {
       setIsLoading(true);
       try {
         // 사용자 상세 정보
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users/${id}`);
         if (!res.ok) throw new Error("사용자 정보를 불러오지 못했습니다.");
         const data = await res.json();
         setUser(data);
 
         // 판매/구매 후기
-        const reviewRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}/reviews/sell`);
+        const reviewRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users/${id}/reviews/sell`);
         if (reviewRes.ok) {
           const reviewData = await reviewRes.json();
           setReviews({

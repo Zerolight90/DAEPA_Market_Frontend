@@ -15,7 +15,7 @@ export default function UsersPage() {
   useEffect(() => {
     async function fetchUsers() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users`);
         const data = await res.json();
         setUsers(data);
       } catch (err) {

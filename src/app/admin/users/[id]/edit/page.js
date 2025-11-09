@@ -22,7 +22,7 @@ export default function EditUserPage({ params }) {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users/${id}`);
         if (!res.ok) throw new Error("사용자 정보를 불러오지 못했습니다.");
         const data = await res.json();
         setUser(data);
@@ -58,7 +58,7 @@ export default function EditUserPage({ params }) {
 
     try {
       // 1. 사용자 목록에서 해당 사용자 찾기
-      const listRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`);
+      const listRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users`);
       if (!listRes.ok) throw new Error("사용자 목록 조회 실패");
       const users = await listRes.json();
       const targetUser = users.find(u => u.uidx === Number(id));
@@ -76,7 +76,7 @@ export default function EditUserPage({ params }) {
       };
 
       // 3. 수정 API 호출
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

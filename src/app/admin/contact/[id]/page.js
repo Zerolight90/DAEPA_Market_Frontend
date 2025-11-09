@@ -15,13 +15,13 @@ export default function ContactDetailPage({ params }) {
     const fetchInquiry = async () => {
       try {
         // 1. 상세 정보 조회
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/contact/${params.id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${params.id}`);
         if (!res.ok) throw new Error("문의 상세 정보를 불러오지 못했습니다.");
         const data = await res.json();
         setInquiry(data);
 
         // 2. 해당 사용자의 다른 문의 목록 조회
-        const listRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/contact`);
+        const listRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact`);
         if (listRes.ok) {
           const listData = await listRes.json();
           setOtherInquiries(
@@ -86,7 +86,7 @@ export default function ContactDetailPage({ params }) {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/contact/${params.id}/reply`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${params.id}/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ replyContent: reply })
@@ -95,7 +95,7 @@ export default function ContactDetailPage({ params }) {
       if (!res.ok) throw new Error("답변 등록에 실패했습니다.");
 
       // 답변 등록 후 상세 정보 다시 불러오기
-      const detailRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/contact/${params.id}`);
+      const detailRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${params.id}`);
       if (detailRes.ok) {
         const updatedData = await detailRes.json();
         setInquiry(updatedData);
@@ -115,7 +115,7 @@ export default function ContactDetailPage({ params }) {
     if (!confirm(`상태를 '${newStatus === "pending" ? "답변 대기" : "답변 완료"}'로 변경하시겠습니까?`)) return;
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/contact/${params.id}/status`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${params.id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus })

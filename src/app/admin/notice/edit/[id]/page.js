@@ -19,7 +19,7 @@ export default function EditNoticePage({ params }) {
   useEffect(() => {
     const fetchNotice = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/notices/${params.id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${params.id}`);
         if (!res.ok) throw new Error("공지사항을 불러오지 못했습니다.");
         const data = await res.json();
 
@@ -81,7 +81,7 @@ export default function EditNoticePage({ params }) {
         nIp: "127.0.0.1"
       };
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/notices/${params.id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${params.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

@@ -49,7 +49,7 @@ export default function CreateNoticePage() {
               nIp: "127.0.0.1"
           };
 
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/notices`, {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload)
