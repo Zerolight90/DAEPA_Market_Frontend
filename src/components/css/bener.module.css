@@ -92,3 +92,13 @@
     font-size: 1rem;
     font-weight: 500;
 }
+
+/* 반응형: 모바일 */
+@media (max-width: 767px) {
+    .swiper,
+    .slide,
+    .loadingContainer {
+        height: auto;
+        aspect-ratio: 16 / 9; /* 16:9 비율로 조정 */
+    }
+}
