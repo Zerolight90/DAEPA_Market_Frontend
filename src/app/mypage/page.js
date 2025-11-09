@@ -197,12 +197,9 @@ export default function MyPage() {
                     </div>
 
                     <div className={styles.headerRight}>
-                        <Link href="/mypage/connect-cafe" className={styles.bannerCard}>
+                        <Link href="/payCharge" className={styles.bannerCard}>
                             <div className={styles.bannerIcon} aria-hidden />
-                            <div className={styles.bannerText}>
-                                <strong>내 상품 2배로 노출시키기</strong>
-                                <span>카페에 상품 자동 등록하기</span>
-                            </div>
+                            <div className={styles.bannerText}><strong>대파 페이 충전하기</strong></div>
                             <span className={styles.bannerArrow} aria-hidden>›</span>
                         </Link>
 

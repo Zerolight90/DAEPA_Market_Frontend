@@ -203,52 +203,6 @@ export default function MyPage() {
 
             {/* 우측 본문 */}
             <section className={styles.content}>
-                {/* 프로필/지표 */}
-                <header className={styles.header}>
-                    <div className={styles.profile}>
-                        <div className={styles.avatar} aria-hidden>
-                            {user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : <span className={styles.avatarFallback} />}
-                        </div>
-
-                        <div className={styles.profileMeta}>
-                            <div className={styles.nicknameRow}>
-                                <strong className={styles.nickname}>{user.nickname}</strong>
-                                <Link href="/store/intro" className={styles.openStore} aria-label="가게 소개 작성하기" title="가게 소개 작성">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
-                                        <path d="M14 3l7 7-11 11H3v-7L14 3zM16.5 5.5l2 2" fill="none" stroke="currentColor" strokeWidth="1.6" />
-                                    </svg>
-                                </Link>
-                            </div>
-
-                            <div className={styles.trustRow}>
-                                <span className={styles.trustLabel}>신뢰지수 <b>{user.trust}</b></span>
-                                <div className={styles.trustBar}>
-                                    <span className={styles.trustGauge} style={{ width: `${trustPercent}%` }} />
-                                </div>
-                                <span className={styles.trustMax}>1,000</span>
-                            </div>
-
-                            <p className={styles.trustDesc}>앱에서 가게 소개 작성하고 신뢰도를 높여 보세요.</p>
-                        </div>
-                    </div>
-
-                    <div className={styles.headerRight}>
-                        <Link href="/payCharge" className={styles.bannerCard}>
-                            <div className={styles.bannerIcon} aria-hidden />
-                            <div className={styles.bannerText}><strong>대파 페이 충전하기</strong></div>
-                            <span className={styles.bannerArrow} aria-hidden>›</span>
-                        </Link>
-
-                        <ul className={styles.metricRow}>
-                            {METRICS.map(m => (
-                                <li key={m.key} className={styles.metricItem}>
-                                    <span className={styles.metricLabel}>{m.label}</span>
-                                    <strong className={styles.metricValue}>{m.value}</strong>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </header>
 
                 {/* 관심 매칭 상품 패널 */}
                 <div className={styles.panel}>
