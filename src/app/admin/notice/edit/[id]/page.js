@@ -22,7 +22,7 @@ export default function EditNoticePage() {
   useEffect(() => {
     const fetchNotice = async () => {
       try {
-        const res = await fetch(`http://localhost:8080/api/admin/notices/${params.id}`);
+        const res = await fetch(`http://3.34.181.73/api/admin/notices/${params.id}`);
         if (!res.ok) throw new Error("공지사항 불러오기 실패");
 
         const data = await res.json();
@@ -86,7 +86,7 @@ export default function EditNoticePage() {
               // 이미지 업로드 기능은 나중 처리
           };
 
-          const res = await fetch(`http://localhost:8080/api/admin/notices/${params.id}`, {
+          const res = await fetch(`http://3.34.181.73/api/admin/notices/${params.id}`, {
               method: "PUT",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(payload),

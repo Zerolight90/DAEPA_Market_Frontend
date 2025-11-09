@@ -14,7 +14,7 @@ export default function InspectionPage() {
   useEffect(() => {
     const fetchInspections = async () => {
       try {
-        const res = await fetch("http://localhost:8080/api/admin/checks");
+        const res = await fetch("http://3.34.181.73/api/admin/checks");
         if (!res.ok) throw new Error("검수 목록을 불러오지 못했습니다.");
         const data = await res.json();
         setInspections(data.map(item => ({

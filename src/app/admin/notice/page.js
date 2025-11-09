@@ -15,7 +15,8 @@ export default function NoticePage() {
   useEffect(() => {
     const fetchNotices = async () => {
       try {
-        const res = await fetch("http://localhost:8080/api/admin/notices");
+        // const res = await fetch("http://localhost:8080/api/admin/notices");
+        const res = await fetch("http://3.34.181.73/api/admin/notices");
         if (!res.ok) throw new Error("공지 목록 불러오기 실패");
 
         const data = await res.json();
@@ -379,7 +380,7 @@ export default function NoticePage() {
                           if (!confirm("이 공지사항을 삭제하시겠습니까?")) return;
 
                           try {
-                            const res = await fetch(`http://localhost:8080/api/admin/notices/${notice.id}`, {
+                            const res = await fetch(`http://3.34.181.73/api/admin/notices/${notice.id}`, {
                               method: "DELETE",
                             });
 

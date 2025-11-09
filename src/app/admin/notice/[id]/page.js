@@ -15,7 +15,7 @@ export default function NoticeDetailPage() {
   useEffect(() => {
     const fetchNotice = async () => {
       try {
-        const res = await fetch(`http://localhost:8080/api/admin/notices/${params.id}`);
+        const res = await fetch(`http://3.34.181.73/api/admin/notices/${params.id}`);
         if (!res.ok) throw new Error("공지사항 불러오기 실패");
 
         const data = await res.json();
