@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {useEffect, useState, Suspense} from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { apiFetch, API_BASE, Endpoints } from "@/app/sell/api";
@@ -8,8 +8,9 @@ import tokenStore from "@/app/store/TokenStore";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import styles from "./all.module.css";
+import {CircularProgress, Box, Typography} from "@mui/material";
 
-export default function AllProductsPage() {
+function AllProductsContent() {
     const searchParams = useSearchParams();
     const sort = searchParams.get("sort") || "recent";
 
@@ -293,5 +294,18 @@ export default function AllProductsPage() {
                 </div>
             </main>
         </div>
+    );
+}
+
+export default function AllProductsPage() {
+    return (
+        <Suspense fallback={
+            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
+                <CircularProgress />
+                <Typography sx={{ml: 2}}>페이지를 불러오는 중...</Typography>
+            </Box>
+        }>
+            <AllProductsContent />
+        </Suspense>
     );
 }
