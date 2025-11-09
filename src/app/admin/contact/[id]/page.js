@@ -1,488 +1,445 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Send, CheckCircle, Clock, User, Calendar, Tag, MessageSquare } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  User as UserIcon,
-  Calendar,
-  CheckCircle,
-  MessageSquare,
-  Mail,
-  MapPin
-} from "lucide-react";
 import styles from "../../admin.module.css";
 
-export default function ContactDetailPage() {
-  const params = useParams();
-  const router = useRouter();
+export default function ContactDetailPage({ params }) {
   const [inquiry, setInquiry] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [replyText, setReplyText] = useState("");
-  const [isSavingReply, setIsSavingReply] = useState(false);
-  const [processingStatus, setProcessingStatus] = useState("");
+  const [reply, setReply] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [otherInquiries, setOtherInquiries] = useState([]);
 
   useEffect(() => {
     const fetchInquiry = async () => {
       try {
-        const res = await fetch(`http://localhost:8080/api/admin/contact/${params.id}`);
-        if (!res.ok) throw new Error("문의 상세를 불러오지 못했습니다.");
-        
+        // 1. 상세 정보 조회
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/contact/${params.id}`);
+        if (!res.ok) throw new Error("문의 상세 정보를 불러오지 못했습니다.");
         const data = await res.json();
-        // API 응답 데이터 구조에 맞게 처리
-        const inquiryData = {
-          id: data.id || data.oo_idx || params.id,
-          name: data.name || data.u_name || "알 수 없음",
-          category: data.category || data.oo_category || 1,
-          title: data.title || data.oo_title || "제목 없음",
-          content: data.content || data.oo_content || "내용 없음",
-          date: data.date || data.oo_date || new Date().toISOString().split('T')[0],
-          status: data.status || data.oo_status || "pending",
-          reply: data.reply || data.oo_re || ""
-        };
-        setInquiry(inquiryData);
-        setProcessingStatus(inquiryData.status);
-      } catch (err) {
-        console.error("API 호출 실패, 더미 데이터 사용:", err);
-        // API 목록에서 해당 ID 찾기 시도
-        try {
-          const listRes = await fetch("http://localhost:8080/api/admin/contact");
-          if (listRes.ok) {
-            const listData = await listRes.json();
-            const foundInquiry = listData.find(item => 
-              item.id === Number(params.id) || 
-              item.oo_idx === Number(params.id) ||
-              String(item.id) === String(params.id)
-            );
-            if (foundInquiry) {
-              const inquiryData = {
-                id: foundInquiry.id || foundInquiry.oo_idx || params.id,
-                name: foundInquiry.name || foundInquiry.u_name || "알 수 없음",
-                category: foundInquiry.category || foundInquiry.oo_category || 1,
-                title: foundInquiry.title || foundInquiry.oo_title || "제목 없음",
-                content: foundInquiry.content || foundInquiry.oo_content || "내용 없음",
-                date: foundInquiry.date || foundInquiry.oo_date || new Date().toISOString().split('T')[0],
-                status: foundInquiry.status || foundInquiry.oo_status || "pending",
-                reply: foundInquiry.reply || foundInquiry.oo_re || ""
-              };
-              setInquiry(inquiryData);
-              setProcessingStatus(inquiryData.status);
-            } else {
-              setInquiry(createDummyInquiry(params.id));
-              setProcessingStatus("pending");
-            }
-          } else {
-            setInquiry(createDummyInquiry(params.id));
-            setProcessingStatus("pending");
-          }
-        } catch (listErr) {
-          console.error("목록 조회 실패, 더미 데이터 사용:", listErr);
-          setInquiry(createDummyInquiry(params.id));
-          setProcessingStatus("pending");
+        setInquiry(data);
+
+        // 2. 해당 사용자의 다른 문의 목록 조회
+        const listRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/contact`);
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          setOtherInquiries(
+              listData.filter(item => item.name === data.name && item.id !== data.id)
+          );
         }
-      } finally {
-        setLoading(false);
+      } catch (err) {
+        console.error("데이터 조회 실패:", err);
       }
     };
 
-    if (params.id) fetchInquiry();
+    fetchInquiry();
   }, [params.id]);
 
-  const handleReply = async () => {
-    if (!replyText.trim()) {
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case "pending":
+        return (
+          <span style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            padding: "0.375rem 0.75rem",
+            borderRadius: "9999px",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            backgroundColor: "#fef3c7",
+            color: "#92400e"
+          }}>
+            <Clock size={16} />
+            답변 대기
+          </span>
+        );
+      case "completed":
+        return (
+          <span style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.5rem",
+            padding: "0.375rem 0.75rem",
+            borderRadius: "9999px",
+            fontSize: "0.875rem",
+            fontWeight: 600,
+            backgroundColor: "#dcfce7",
+            color: "#166534"
+          }}>
+            <CheckCircle size={16} />
+            답변 완료
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const handleSubmitReply = async (e) => {
+    e.preventDefault();
+    if (!reply.trim()) {
       alert("답변 내용을 입력해주세요.");
       return;
     }
+    setIsSubmitting(true);
 
-    setIsSavingReply(true);
     try {
-      const res = await fetch(`http://localhost:8080/api/admin/contact/${params.id}/reply`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/contact/${params.id}/reply`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ reply: replyText })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ replyContent: reply })
       });
 
-      if (!res.ok) throw new Error("답변 등록 실패");
+      if (!res.ok) throw new Error("답변 등록에 실패했습니다.");
+
+      // 답변 등록 후 상세 정보 다시 불러오기
+      const detailRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/contact/${params.id}`);
+      if (detailRes.ok) {
+        const updatedData = await detailRes.json();
+        setInquiry(updatedData);
+      }
 
       alert("답변이 등록되었습니다.");
-      
-      // 답변 저장 후 최신 데이터 다시 불러오기
-      const detailRes = await fetch(`http://localhost:8080/api/admin/contact/${params.id}`);
-      if (detailRes.ok) {
-        const detailData = await detailRes.json();
-        setInquiry({
-          id: detailData.id || params.id,
-          name: detailData.name || "알 수 없음",
-          category: detailData.category || 1,
-          title: detailData.title || "제목 없음",
-          content: detailData.content || "내용 없음",
-          date: detailData.date || new Date().toISOString().split('T')[0],
-          status: detailData.status || "completed",
-          reply: detailData.reply || replyText
-        });
-        setProcessingStatus("completed");
-      } else {
-        // API 호출 실패 시 로컬 상태만 업데이트
-        setProcessingStatus("completed");
-        setInquiry((prev) => (prev ? { ...prev, status: "completed", reply: replyText } : null));
-      }
-      setReplyText("");
+      setReply("");
     } catch (err) {
-      console.error(err);
+      console.error("답변 등록 실패:", err);
       alert("답변 등록 중 오류가 발생했습니다.");
     } finally {
-      setIsSavingReply(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleStatusChange = async (newStatus) => {
+    if (!confirm(`상태를 '${newStatus === "pending" ? "답변 대기" : "답변 완료"}'로 변경하시겠습니까?`)) return;
+
     try {
-      const res = await fetch(`http://localhost:8080/api/admin/contact/${params.id}/status`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/contact/${params.id}/status`, {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus })
       });
 
       if (!res.ok) throw new Error("상태 변경 실패");
 
-      setProcessingStatus(newStatus);
-      setInquiry((prev) => (prev ? { ...prev, status: newStatus } : null));
-      if (newStatus === "pending") {
-        alert("문의가 보류 처리되었습니다.");
-      } else {
-        alert(`문의가 "${newStatus === "completed" ? "완료" : "대기"}"으로 변경되었습니다.`);
-      }
+      setInquiry(prev => ({ ...prev, status: newStatus }));
+      alert("상태가 변경되었습니다.");
     } catch (err) {
-      console.error(err);
+      console.error("상태 변경 실패:", err);
       alert("상태 변경 중 오류가 발생했습니다.");
     }
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "pending":
-        return <span className={styles.statusWarning}>대기</span>;
-      case "completed":
-        return <span className={styles.statusSuccess}>완료</span>;
-      default:
-        return <span className={styles.statusWarning}>대기</span>;
-    }
-  };
-
-  const getCategoryText = (category) => {
-    // 숫자와 문자열 모두 처리
-    const cat = typeof category === 'string' ? category : String(category);
-    const num = typeof category === 'number' ? category : Number(category);
-    
-    // 숫자 기반 처리 (API에서 주로 사용)
-    if (!isNaN(num)) {
-      switch (num) {
-        case 1:
-          return "계정/로그인";
-        case 2:
-          return "거래 관련";
-        case 3:
-          return "불편 신고";
-        case 4:
-          return "기타 문의";
-        default:
-          return "기타 문의";
-      }
-    }
-    
-    // 문자열 기반 처리 (더미 데이터용)
-    switch (cat) {
-      case "general":
-      case "General":
-        return "거래 관련";
-      case "technical":
-      case "Technical":
-        return "계정/로그인";
-      case "complaint":
-      case "Complaint":
-        return "불편 신고";
-      case "other":
-      case "Other":
-        return "기타 문의";
-      default:
-        return "기타 문의";
-    }
-  };
-
-  const createDummyInquiry = (id) => {
-    return {
-      id: id,
-      name: "홍길동",
-      category: 2, // 숫자로 통일 (거래 관련)
-      title: "거래 결제 문의",
-      content: `안녕하세요. 거래 결제 관련해서 문의드립니다.
-      
-제가 최근에 구매한 상품의 결제가 정상적으로 처리되었는지 확인하고 싶습니다.
-결제일은 지난주 월요일이고, 계좌 이체로 진행했습니다.
-하지만 판매자님께서 입금 확인이 안 되신다고 하시는데, 저는 확실히 이체를 완료했습니다.
-
-계좌번호나 이체 내역 등 추가 정보가 필요하시면 말씀해주시기 바랍니다.
-빠른 확인 부탁드립니다. 감사합니다.`,
-      date: new Date().toISOString().split('T')[0],
-      status: "pending"
-    };
-  };
-
-  if (loading) {
-    return (
-      <div className={styles.pageContainer}>
-        <div style={{ display: "flex", justifyContent: "center", padding: "4rem", color: "#64748b" }}>
-          문의 내용을 불러오는 중...
-        </div>
-      </div>
-    );
-  }
-
   if (!inquiry) {
     return (
-      <div className={styles.pageContainer}>
-        <p style={{ color: "#ef4444" }}>{error || "문의를 찾을 수 없습니다."}</p>
-        <Link href="/admin/contact" className={styles.actionButton}>
-          <ArrowLeft size={16} /> 목록으로
-        </Link>
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        fontSize: "1.25rem",
+        color: "#64748b"
+      }}>
+        로딩 중...
       </div>
     );
   }
-
-  const canProcess = processingStatus === "pending";
 
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
-        <Link
-          href="/admin/contact"
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            color: "#64748b",
-            textDecoration: "none",
-            fontSize: "0.875rem",
-            marginBottom: "0.75rem"
-          }}
-        >
-          <ArrowLeft size={16} /> 목록으로 돌아가기
-        </Link>
-        <h1 className={styles.pageTitle}>문의 상세</h1>
-        <p className={styles.pageSubtitle}>
-          문의 내용을 확인하고 처리하세요
-        </p>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
+          <Link 
+            href="/admin/contact" 
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "0.5rem", 
+              color: "#64748b", 
+              textDecoration: "none",
+              fontSize: "0.875rem"
+            }}
+          >
+            <ArrowLeft size={16} />
+            목록으로 돌아가기
+          </Link>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div>
+            <h1 className={styles.pageTitle}>문의 상세</h1>
+            <p className={styles.pageSubtitle}>
+              문의 내용 확인 및 답변
+            </p>
+          </div>
+          {getStatusBadge(inquiry.status)}
+        </div>
       </div>
 
-      <div className={styles.tableContainer}>
-        <div style={{ padding: "2rem" }}>
-          {/* 기본 정보 */}
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "1.5rem",
-            marginBottom: "2rem"
-          }}>
-            <div>
-              <div style={{ color: "#64748b", fontSize: "0.875rem", marginBottom: "0.5rem" }}>문의 번호</div>
-              <div style={{ fontWeight: 600, fontSize: "1.125rem" }}>#{inquiry.id}</div>
-            </div>
-            <div>
-              <div style={{ color: "#64748b", fontSize: "0.875rem", marginBottom: "0.5rem" }}>
-                문의인
-              </div>
-              <div style={{ fontWeight: 600, fontSize: "1.125rem" }}>{inquiry.name}</div>
-            </div>
-            <div>
-              <div style={{ color: "#64748b", fontSize: "0.875rem", marginBottom: "0.5rem" }}>
-                문의 종류
-              </div>
-              <span style={{
-                padding: "0.25rem 0.75rem",
-                borderRadius: "0.5rem",
-                fontSize: "0.875rem",
-                backgroundColor: "#f3f4f6",
-                color: "#374151",
-                fontWeight: 600
-              }}>
-                {getCategoryText(inquiry.category)}
-              </span>
-            </div>
-            <div>
-              <div style={{ color: "#64748b", fontSize: "0.875rem", marginBottom: "0.5rem" }}>상태</div>
-              <div>{getStatusBadge(processingStatus)}</div>
-            </div>
-            <div>
-              <div style={{ color: "#64748b", fontSize: "0.875rem", marginBottom: "0.5rem" }}>
-                등록일
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                <Calendar size={16} />
-                <span>{inquiry.date ? (inquiry.date.includes('T') ? inquiry.date.split('T')[0] : inquiry.date) : "날짜 없음"}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* 문의 제목 및 내용 */}
-          <div style={{ marginBottom: "2rem" }}>
-            <div style={{ color: "#64748b", fontSize: "0.875rem", marginBottom: "0.5rem" }}>제목</div>
-            <div style={{
-              fontSize: "1.25rem",
-              fontWeight: 700,
-              color: "#1e293b",
-              marginBottom: "1.5rem"
-            }}>
-              {inquiry.title}
-            </div>
-
-            <div style={{ color: "#64748b", fontSize: "0.875rem", marginBottom: "0.5rem" }}>내용</div>
-            <div style={{
-              padding: "1.5rem",
-              borderRadius: "0.75rem",
-              border: "1px solid #e2e8f0",
-              backgroundColor: "#f8fafc",
-              whiteSpace: "pre-wrap",
-              lineHeight: "1.7",
-              color: "#374151",
-              minHeight: "100px"
-            }}>
-              {inquiry.content || "내용이 없습니다."}
-            </div>
-          </div>
-
-
-          {/* 답변 섹션 */}
-          {canProcess ? (
-            <div style={{
-              borderTop: "1px solid #e2e8f0",
-              paddingTop: "1.5rem"
-            }}>
+      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: "2rem" }}>
+        {/* 왼쪽: 문의 내용 및 답변 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+          {/* 문의 내용 */}
+          <div className={styles.tableContainer}>
+            <div style={{ padding: "2rem" }}>
               <div style={{
                 display: "flex",
+                justifyContent: "space-between",
                 alignItems: "center",
-                gap: "0.5rem",
-                marginBottom: "1rem",
-                fontSize: "1.125rem",
-                fontWeight: 600
+                marginBottom: "1.5rem",
+                paddingBottom: "1.5rem",
+                borderBottom: "1px solid #e5e7eb"
               }}>
-                <MessageSquare size={20} color="#3b82f6" />
-                답변 작성
-              </div>
-
-              <textarea
-                value={replyText}
-                onChange={(e) => setReplyText(e.target.value)}
-                placeholder="문의에 대한 답변을 작성해주세요"
-                rows={6}
-                style={{
-                  width: "100%",
-                  padding: "1rem",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "0.5rem",
+                <h2 style={{ margin: 0, fontSize: "1.25rem", fontWeight: 700, color: "#1e293b" }}>
+                  {inquiry.title}
+                </h2>
+                <span style={{
+                  padding: "0.375rem 0.75rem",
+                  borderRadius: "0.375rem",
                   fontSize: "0.875rem",
-                  resize: "vertical",
-                  fontFamily: "inherit",
-                  lineHeight: "1.6"
-                }}
-              />
+                  fontWeight: 600,
+                  backgroundColor: "#f3f4f6",
+                  color: "#374151"
+                }}>
+                  #{inquiry.id}
+                </span>
+              </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.75rem", marginTop: "1rem" }}>
-                <button
-                  onClick={() => router.push("/admin/contact")}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    border: "1px solid #e2e8f0",
-                    borderRadius: "0.5rem",
-                    backgroundColor: "#fff",
-                    color: "#374151",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    transition: "all 0.2s"
-                  }}
-                  onMouseOver={(e) => {
-                    e.target.style.backgroundColor = "#f8fafc";
-                  }}
-                  onMouseOut={(e) => {
-                    e.target.style.backgroundColor = "#fff";
-                  }}
-                >
-                  취소
-                </button>
-                <button
-                  onClick={handleReply}
-                  disabled={isSavingReply}
-                  style={{
-                    padding: "0.75rem 1.5rem",
-                    border: "none",
-                    borderRadius: "0.5rem",
-                    backgroundColor: isSavingReply ? "#9ca3af" : "#10b981",
-                    color: "#fff",
-                    fontWeight: 600,
-                    cursor: isSavingReply ? "not-allowed" : "pointer",
-                    transition: "all 0.2s"
-                  }}
-                  onMouseOver={(e) => {
-                    if (!isSavingReply) {
-                      e.target.style.backgroundColor = "#059669";
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    if (!isSavingReply) {
-                      e.target.style.backgroundColor = "#10b981";
-                    }
-                  }}
-                >
-                  {isSavingReply ? "저장 중..." : "답변 등록"}
-                </button>
+              <div style={{
+                fontSize: "1rem",
+                lineHeight: "1.8",
+                color: "#374151",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                minHeight: "150px",
+                padding: "1rem",
+                background: "#f9fafb",
+                borderRadius: "0.5rem"
+              }}>
+                {inquiry.content}
               </div>
             </div>
-          ) : (
-            <div style={{
-              borderTop: "1px solid #e2e8f0",
-              paddingTop: "1.5rem"
-            }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                marginBottom: "1rem",
-                fontSize: "1.125rem",
-                fontWeight: 600,
-                color: "#059669"
-              }}>
-                <CheckCircle size={20} />
-                답변 완료
-              </div>
-              
-              {inquiry.reply ? (
+          </div>
+
+          {/* 답변 내용 */}
+          {inquiry.reply && (
+            <div className={styles.tableContainer}>
+              <div style={{ padding: "2rem" }}>
+                <h3 style={{
+                  margin: "0 0 1.5rem 0",
+                  fontSize: "1.125rem",
+                  fontWeight: 600,
+                  color: "#1e293b",
+                  borderBottom: "1px solid #e5e7eb",
+                  paddingBottom: "1rem"
+                }}>
+                  관리자 답변
+                </h3>
                 <div style={{
-                  padding: "1.5rem",
-                  borderRadius: "0.75rem",
-                  border: "1px solid #a7f3d0",
-                  backgroundColor: "#ecfdf5",
+                  fontSize: "1rem",
+                  lineHeight: "1.8",
+                  color: "#374151",
                   whiteSpace: "pre-wrap",
-                  lineHeight: "1.7",
-                  color: "#374151"
+                  wordBreak: "break-word",
+                  padding: "1rem",
+                  background: "#f0fdf4",
+                  borderRadius: "0.5rem",
+                  border: "1px solid #bbf7d0"
                 }}>
                   {inquiry.reply}
                 </div>
-              ) : (
-                <div style={{
-                  padding: "1.5rem",
-                  borderRadius: "0.75rem",
-                  backgroundColor: "#ecfdf5",
-                  border: "1px solid #a7f3d0",
-                  color: "#059669"
+              </div>
+            </div>
+          )}
+
+          {/* 답변 작성 */}
+          {inquiry.status === "pending" && (
+            <div className={styles.tableContainer}>
+              <div style={{ padding: "2rem" }}>
+                <h3 style={{
+                  margin: "0 0 1.5rem 0",
+                  fontSize: "1.125rem",
+                  fontWeight: 600,
+                  color: "#1e293b"
                 }}>
-                  답변이 완료된 문의입니다
+                  답변 작성
+                </h3>
+                <form onSubmit={handleSubmitReply}>
+                  <textarea
+                    value={reply}
+                    onChange={(e) => setReply(e.target.value)}
+                    placeholder="답변 내용을 입력하세요..."
+                    rows={8}
+                    style={{
+                      width: "100%",
+                      padding: "1rem",
+                      border: "1px solid #d1d5db",
+                      borderRadius: "0.5rem",
+                      fontSize: "1rem",
+                      background: "white",
+                      resize: "vertical",
+                      marginBottom: "1rem"
+                    }}
+                  />
+                  <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.5rem",
+                        padding: "0.75rem 1.5rem",
+                        background: isSubmitting ? "#9ca3af" : "#3b82f6",
+                        color: "white",
+                        border: "none",
+                        borderRadius: "0.5rem",
+                        fontWeight: "600",
+                        cursor: isSubmitting ? "not-allowed" : "pointer"
+                      }}
+                    >
+                      <Send size={16} />
+                      {isSubmitting ? "등록 중..." : "답변 등록"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 오른쪽: 문의 정보 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+          <div className={styles.tableContainer}>
+            <div style={{ padding: "2rem" }}>
+              <h3 style={{
+                margin: "0 0 1.5rem 0",
+                fontSize: "1.125rem",
+                fontWeight: 600,
+                color: "#1e293b"
+              }}>
+                문의 정보
+              </h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <User size={18} color="#64748b" />
+                  <div>
+                    <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.25rem" }}>작성자</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b" }}>{inquiry.name}</div>
+                  </div>
                 </div>
-              )}
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <Calendar size={18} color="#64748b" />
+                  <div>
+                    <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.25rem" }}>등록일</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b" }}>{inquiry.date}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <Tag size={18} color="#64748b" />
+                  <div>
+                    <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.25rem" }}>카테고리</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b" }}>{inquiry.category}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 상태 변경 */}
+          <div className={styles.tableContainer}>
+            <div style={{ padding: "2rem" }}>
+              <h3 style={{
+                margin: "0 0 1.5rem 0",
+                fontSize: "1.125rem",
+                fontWeight: 600,
+                color: "#1e293b"
+              }}>
+                상태 변경
+              </h3>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                <button
+                  onClick={() => handleStatusChange("pending")}
+                  disabled={inquiry.status === "pending"}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "0.5rem",
+                    background: inquiry.status === "pending" ? "#f3f4f6" : "white",
+                    color: "#374151",
+                    fontWeight: 600,
+                    cursor: inquiry.status === "pending" ? "not-allowed" : "pointer"
+                  }}
+                >
+                  답변 대기
+                </button>
+                <button
+                  onClick={() => handleStatusChange("completed")}
+                  disabled={inquiry.status === "completed"}
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "0.5rem",
+                    background: inquiry.status === "completed" ? "#f3f4f6" : "white",
+                    color: "#374151",
+                    fontWeight: 600,
+                    cursor: inquiry.status === "completed" ? "not-allowed" : "pointer"
+                  }}
+                >
+                  답변 완료
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 다른 문의 목록 */}
+          {otherInquiries.length > 0 && (
+            <div className={styles.tableContainer}>
+              <div style={{ padding: "2rem" }}>
+                <h3 style={{
+                  margin: "0 0 1.5rem 0",
+                  fontSize: "1.125rem",
+                  fontWeight: 600,
+                  color: "#1e293b"
+                }}>
+                  {inquiry.name}님의 다른 문의
+                </h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  {otherInquiries.map(item => (
+                    <Link
+                      key={item.id}
+                      href={`/admin/contact/${item.id}`}
+                      style={{
+                        display: "block",
+                        padding: "1rem",
+                        borderRadius: "0.5rem",
+                        border: "1px solid #e5e7eb",
+                        textDecoration: "none",
+                        color: "inherit",
+                        transition: "background-color 0.2s"
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#f9fafb"}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "white"}
+                    >
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                        <div style={{ fontWeight: 600, color: "#374151", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {item.title}
+                        </div>
+                        {item.status === "completed" ? (
+                          <span style={{ fontSize: "0.75rem", color: "#16a34a" }}>완료</span>
+                        ) : (
+                          <span style={{ fontSize: "0.75rem", color: "#f59e0b" }}>대기</span>
+                        )}
+                      </div>
+                      <div style={{ fontSize: "0.875rem", color: "#64748b" }}>
+                        {item.date}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -490,4 +447,3 @@ export default function ContactDetailPage() {
     </div>
   );
 }
-

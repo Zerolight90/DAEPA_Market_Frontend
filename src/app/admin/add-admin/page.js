@@ -47,7 +47,7 @@ export default function AddAdminPage() {
     setIsSubmitting(true);
 
       try {
-          const res = await fetch("http://localhost:8080/api/admin/add-admin", {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/add-admin`, {
               method: "POST",
               headers: { "Content-Type": "application/json", "Accept": "application/json" },
               body: JSON.stringify({

@@ -1,192 +1,117 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Save, X } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  User as UserIcon,
-  Mail,
-  MapPin,
-  Phone,
-  Calendar,
-  ShieldCheck,
-  Loader2,
-  Save
-} from "lucide-react";
 import styles from "../../../admin.module.css";
-import detailStyles from "../user-detail.module.css";
 
-export default function UserEditPage() {
-  const { id } = useParams();
-  const router = useRouter();
+export default function EditUserPage({ params }) {
+  const { id } = params;
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
-
   const [formData, setFormData] = useState({
+    uid: "",
     uname: "",
-    unickname: "",
     uphone: "",
-    ubirth: "",
-    ugender: "",
+    ulocation: "",
     ustatus: 1,
-    uwarn: 0,
-    loc_address: "",
-    loc_detail: "",
+    uwarn: 0
   });
-  
-  // 주소를 분리하는 함수
-  const parseLocation = (locationStr) => {
-    if (!locationStr) return { address: "", detail: "" };
-    // 공백으로 분리 (첫 번째가 기본 주소, 나머지가 상세 주소)
-    const parts = locationStr.trim().split(/\s+/);
-    if (parts.length === 1) {
-      return { address: parts[0], detail: "" };
-    }
-    // 마지막 부분을 상세 주소로, 나머지를 기본 주소로
-    const detail = parts[parts.length - 1];
-    const address = parts.slice(0, -1).join(" ");
-    return { address, detail };
-  };
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch(`http://localhost:8080/api/admin/users/${id}`);
-        if (res.ok) {
-          const data = await res.json();
-          const userData = data.user || data;
-          setUser(userData);
-          
-          // 주소 분리
-          const location = parseLocation(userData.ulocation || "");
-          
-          setFormData({
-            uname: userData.uname || "",
-            unickname: userData.unickname || "",
-            uphone: userData.uphone || "",
-            ubirth: userData.ubirth || "",
-            ugender: userData.ugender || "",
-            ustatus: userData.ustatus ?? 1,
-            uwarn: userData.uwarn ?? 0,
-            loc_address: location.address,
-            loc_detail: location.detail
-          });
-        } else {
-          // Fallback to list API
-          const listRes = await fetch("http://localhost:8080/api/admin/users");
-          if (listRes.ok) {
-            const list = await listRes.json();
-            const found = list.find((u) => `${u.uIdx}` === `${id}`);
-            if (found) {
-              setUser(found);
-              
-              // 주소 분리
-              const location = parseLocation(found.ulocation || "");
-              
-              setFormData({
-                uname: found.uname || "",
-                unickname: found.unickname || "",
-                uphone: found.uphone || "",
-                ubirth: found.ubirth || "",
-                ugender: found.ugender || "",
-                ustatus: found.ustatus ?? 1,
-                uwarn: found.uwarn ?? 0,
-                loc_address: location.address,
-                loc_detail: location.detail
-              });
-            } else {
-              throw new Error("사용자를 찾을 수 없습니다.");
-            }
-          } else {
-            throw new Error("사용자 정보를 불러오지 못했습니다.");
-          }
-        }
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}`);
+        if (!res.ok) throw new Error("사용자 정보를 불러오지 못했습니다.");
+        const data = await res.json();
+        setUser(data);
+        setFormData({
+          uid: data.uid,
+          uname: data.uname,
+          uphone: data.uphone,
+          ulocation: data.ulocation,
+          ustatus: data.ustatus,
+          uwarn: data.uwarn
+        });
       } catch (err) {
-        console.error(err);
-        setError(err.message || "사용자 정보를 불러오는 중 오류가 발생했습니다.");
+        console.error("사용자 정보 조회 실패:", err);
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
-    if (id) {
-      fetchUser();
-    }
+    fetchUser();
   }, [id]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-
-    try {
-      // 전송할 데이터 준비
-      const submitData = {
-        uname: formData.uname ? formData.uname.trim() : null,
-        unickname: formData.unickname ? formData.unickname.trim() : null,
-        uphone: formData.uphone ? formData.uphone.trim() : null,
-        ubirth: formData.ubirth ? formData.ubirth.trim() : null,
-        ugender: formData.ugender ? formData.ugender.trim() : null,
-        ustatus: formData.ustatus,
-        uwarn: formData.uwarn,
-        loc_address: formData.loc_address ? formData.loc_address.trim() : null,
-        loc_detail: formData.loc_detail ? formData.loc_detail.trim() : null,
-      };
-
-      const res = await fetch(`http://localhost:8080/api/admin/users/${id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(submitData)
-      });
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error("API 응답 오류:", res.status, errorText);
-        throw new Error(`사용자 정보 업데이트에 실패했습니다. (${res.status})`);
-      }
-
-      const result = await res.json();
-      alert("사용자 정보가 성공적으로 수정되었습니다.");
-      router.push(`/admin/users/${id}`);
-    } catch (err) {
-      console.error("저장 오류:", err);
-      alert(err.message || "수정 중 오류가 발생했습니다.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleChange = (e) => {
+  const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === "ustatus" || name === "uwarn" ? parseInt(value) || 0 : value
+      [name]: value
     }));
   };
 
-  if (loading) {
-    return (
-      <div className={styles.pageContainer}>
-        <div className={detailStyles.loadingRow}>
-          <Loader2 size={20} className={detailStyles.spinner} />
-          사용자 정보를 불러오는 중입니다...
-        </div>
-      </div>
-    );
-  }
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
 
-  if (error || !user) {
+    try {
+      // 1. 사용자 목록에서 해당 사용자 찾기
+      const listRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users`);
+      if (!listRes.ok) throw new Error("사용자 목록 조회 실패");
+      const users = await listRes.json();
+      const targetUser = users.find(u => u.uidx === Number(id));
+
+      if (!targetUser) throw new Error("수정할 사용자를 찾을 수 없습니다.");
+
+      // 2. 수정된 정보로 payload 생성
+      const payload = {
+        ...targetUser, // 기존 정보 유지
+        uname: formData.uname,
+        uphone: formData.uphone,
+        ulocation: formData.ulocation,
+        ustatus: Number(formData.ustatus),
+        uwarn: Number(formData.uwarn)
+      };
+
+      // 3. 수정 API 호출
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) throw new Error("사용자 정보 수정에 실패했습니다.");
+
+      alert("사용자 정보가 성공적으로 수정되었습니다.");
+      window.location.href = `/admin/users/${id}`;
+
+    } catch (err) {
+      console.error("수정 실패:", err);
+      alert(err.message || "사용자 정보 수정 중 오류가 발생했습니다.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (confirm("변경사항이 저장되지 않습니다. 정말 취소하시겠습니까?")) {
+      window.location.href = `/admin/users/${id}`;
+    }
+  };
+
+  if (isLoading) {
     return (
-      <div className={styles.pageContainer}>
-        <p className={detailStyles.errorMessage}>{error ?? "사용자 정보를 찾을 수 없습니다."}</p>
-        <Link href="/admin/users" className={detailStyles.errorButton}>
-          <ArrowLeft size={16} /> 목록으로 돌아가기
-        </Link>
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        fontSize: "1.25rem",
+        color: "#64748b"
+      }}>
+        로딩 중...
       </div>
     );
   }
@@ -194,226 +119,255 @@ export default function UserEditPage() {
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
-        <Link href={`/admin/users/${id}`} className={detailStyles.backLink}>
-          <ArrowLeft size={16} /> 상세 페이지로 돌아가기
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
+          <Link 
+            href={`/admin/users/${id}`}
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "0.5rem", 
+              color: "#64748b", 
+              textDecoration: "none",
+              fontSize: "0.875rem"
+            }}
+          >
+            <ArrowLeft size={16} />
+            상세보기로 돌아가기
+          </Link>
+        </div>
         <h1 className={styles.pageTitle}>사용자 정보 수정</h1>
-        <p className={styles.pageSubtitle}>사용자 정보를 수정하고 저장하세요.</p>
+        <p className={styles.pageSubtitle}>
+          사용자 정보를 수정하고 저장하세요
+        </p>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className={detailStyles.pageSections}>
-          <section className={`${detailStyles.card} ${detailStyles.profileCard}`}>
-            <div className={detailStyles.infoGrid}>
-              <div className={detailStyles.infoRow}>
-                <span className={detailStyles.infoLabel}>
-                  <Mail size={16} />
-                  회원 ID
-                </span>
-                <strong className={detailStyles.infoValue} style={{ color: "#64748b" }}>
-                  {user.uid}
-                </strong>
-              </div>
+        <div className={styles.tableContainer}>
+          <div style={{ padding: "2rem" }}>
+            {/* 회원 ID (수정 불가) */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ 
+                display: "block", 
+                marginBottom: "0.5rem", 
+                fontWeight: "600", 
+                color: "#374151",
+                fontSize: "0.875rem"
+              }}>
+                회원 ID
+              </label>
+              <input
+                type="text"
+                name="uid"
+                value={formData.uid}
+                readOnly
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #e5e7eb",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.875rem",
+                  background: "#f3f4f6",
+                  color: "#6b7280",
+                  cursor: "not-allowed"
+                }}
+              />
+            </div>
 
-              <div className={detailStyles.infoRow}>
-                <label className={detailStyles.infoLabel} htmlFor="uname">
-                  이름
-                </label>
-                <input
-                  type="text"
-                  id="uname"
-                  name="uname"
-                  value={formData.uname}
-                  onChange={handleChange}
-                  className={detailStyles.formInput}
-                  required
-                />
-              </div>
+            {/* 이름 */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ 
+                display: "block", 
+                marginBottom: "0.5rem", 
+                fontWeight: "600", 
+                color: "#374151",
+                fontSize: "0.875rem"
+              }}>
+                이름 *
+              </label>
+              <input
+                type="text"
+                name="uname"
+                value={formData.uname}
+                onChange={handleInputChange}
+                required
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.875rem",
+                  background: "white"
+                }}
+              />
+            </div>
 
-              <div className={detailStyles.infoRow}>
-                <label className={detailStyles.infoLabel} htmlFor="unickname">
-                  닉네임
-                </label>
-                <input
-                  type="text"
-                  id="unickname"
-                  name="unickname"
-                  value={formData.unickname}
-                  onChange={handleChange}
-                  className={detailStyles.formInput}
-                />
-              </div>
+            {/* 전화번호 */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ 
+                display: "block", 
+                marginBottom: "0.5rem", 
+                fontWeight: "600", 
+                color: "#374151",
+                fontSize: "0.875rem"
+              }}>
+                전화번호 *
+              </label>
+              <input
+                type="text"
+                name="uphone"
+                value={formData.uphone}
+                onChange={handleInputChange}
+                required
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.875rem",
+                  background: "white"
+                }}
+              />
+            </div>
 
-              <div className={detailStyles.infoRow}>
-                <label className={detailStyles.infoLabel} htmlFor="loc_address">
-                  주소
-                </label>
-                <input
-                  type="text"
-                  id="loc_address"
-                  name="loc_address"
-                  value={formData.loc_address}
-                  onChange={handleChange}
-                  className={detailStyles.formInput}
-                  placeholder="기본 주소 (예: 서울특별시 강남구 역삼동)"
-                />
-              </div>
+            {/* 주소 */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ 
+                display: "block", 
+                marginBottom: "0.5rem", 
+                fontWeight: "600", 
+                color: "#374151",
+                fontSize: "0.875rem"
+              }}>
+                주소
+              </label>
+              <input
+                type="text"
+                name="ulocation"
+                value={formData.ulocation}
+                onChange={handleInputChange}
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.875rem",
+                  background: "white"
+                }}
+              />
+            </div>
 
-              <div className={detailStyles.infoRow}>
-                <label className={detailStyles.infoLabel} htmlFor="loc_detail">
-                  상세 주소
-                </label>
-                <input
-                  type="text"
-                  id="loc_detail"
-                  name="loc_detail"
-                  value={formData.loc_detail}
-                  onChange={handleChange}
-                  className={detailStyles.formInput}
-                  placeholder="상세 주소 (예: 123-45)"
-                />
-              </div>
-
-              <div className={detailStyles.infoRow}>
-                <label className={detailStyles.infoLabel} htmlFor="uphone">
-                  전화번호
-                </label>
-                <input
-                  type="tel"
-                  id="uphone"
-                  name="uphone"
-                  value={formData.uphone}
-                  onChange={handleChange}
-                  className={detailStyles.formInput}
-                  placeholder="010-1234-5678"
-                />
-              </div>
-
-              <div className={detailStyles.infoRow}>
-                <label className={detailStyles.infoLabel} htmlFor="ubirth">
-                  생년월일
-                </label>
-                <input
-                  type="date"
-                  id="ubirth"
-                  name="ubirth"
-                  value={formData.ubirth}
-                  onChange={handleChange}
-                  className={detailStyles.formInput}
-                />
-              </div>
-
-              <div className={detailStyles.infoRow}>
-                <label className={detailStyles.infoLabel} htmlFor="ugender">
-                  성별
+            {/* 상태 및 경고 횟수 */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "2rem" }}>
+              <div>
+                <label style={{ 
+                  display: "block", 
+                  marginBottom: "0.5rem", 
+                  fontWeight: "600", 
+                  color: "#374151",
+                  fontSize: "0.875rem"
+                }}>
+                  상태 *
                 </label>
                 <select
-                  id="ugender"
-                  name="ugender"
-                  value={formData.ugender}
-                  onChange={handleChange}
-                  className={detailStyles.formInput}
-                >
-                  <option value="">선택하세요</option>
-                  <option value="남성">남성</option>
-                  <option value="여성">여성</option>
-                  <option value="기타">기타</option>
-                </select>
-              </div>
-
-              <div className={detailStyles.infoRow}>
-                <label className={detailStyles.infoLabel} htmlFor="ustatus">
-                  상태
-                </label>
-                <select
-                  id="ustatus"
                   name="ustatus"
                   value={formData.ustatus}
-                  onChange={handleChange}
-                  className={detailStyles.formInput}
+                  onChange={handleInputChange}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "0.5rem",
+                    fontSize: "0.875rem",
+                    background: "white",
+                    cursor: "pointer"
+                  }}
                 >
                   <option value={1}>활성</option>
-                  <option value={2}>탈퇴</option>
                   <option value={3}>정지</option>
                   <option value={9}>보류</option>
+                  <option value={2}>탈퇴</option>
                 </select>
               </div>
-
-              <div className={detailStyles.infoRow}>
-                <label className={detailStyles.infoLabel} htmlFor="uwarn">
-                  경고 횟수
+              <div>
+                <label style={{ 
+                  display: "block", 
+                  marginBottom: "0.5rem", 
+                  fontWeight: "600", 
+                  color: "#374151",
+                  fontSize: "0.875rem"
+                }}>
+                  경고 횟수 *
                 </label>
                 <input
                   type="number"
-                  id="uwarn"
                   name="uwarn"
                   value={formData.uwarn}
-                  onChange={handleChange}
-                  className={detailStyles.formInput}
+                  onChange={handleInputChange}
+                  required
                   min="0"
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "0.5rem",
+                    fontSize: "0.875rem",
+                    background: "white"
+                  }}
                 />
-              </div>
-
-              <div className={detailStyles.infoRow}>
-                <span className={detailStyles.infoLabel}>
-                  <Calendar size={16} />
-                  가입일
-                </span>
-                <strong className={detailStyles.infoValue} style={{ color: "#64748b" }}>
-                  {user.udate ? new Date(user.udate).toLocaleDateString("ko-KR") : "-"}
-                </strong>
               </div>
             </div>
 
-            <div style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              gap: "0.75rem",
-              marginTop: "2rem",
-              paddingTop: "1.5rem",
-              borderTop: "1px solid #e2e8f0"
+            {/* 버튼 */}
+            <div style={{ 
+              display: "flex", 
+              justifyContent: "flex-end", 
+              gap: "1rem",
+              paddingTop: "1rem",
+              borderTop: "1px solid #e5e7eb"
             }}>
-              <Link
-                href={`/admin/users/${id}`}
-                style={{
-                  padding: "0.75rem 1.5rem",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: "0.5rem",
-                  backgroundColor: "#fff",
-                  color: "#374151",
-                  fontWeight: 600,
-                  textDecoration: "none",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.backgroundColor = "#f8fafc";
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.backgroundColor = "#fff";
-                }}
-              >
-                취소
-              </Link>
               <button
-                type="submit"
-                disabled={saving}
-                className={detailStyles.primaryButton}
+                type="button"
+                onClick={handleCancel}
                 style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: "0.5rem"
+                  gap: "0.5rem",
+                  padding: "0.75rem 1.5rem",
+                  background: "#f3f4f6",
+                  color: "#374151",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "0.5rem",
+                  fontWeight: "600",
+                  cursor: "pointer"
+                }}
+              >
+                <X size={16} />
+                취소
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.75rem 1.5rem",
+                  background: isSubmitting ? "#9ca3af" : "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "0.5rem",
+                  fontWeight: "600",
+                  cursor: isSubmitting ? "not-allowed" : "pointer"
                 }}
               >
                 <Save size={16} />
-                {saving ? "저장 중..." : "저장"}
+                {isSubmitting ? "저장 중..." : "변경사항 저장"}
               </button>
             </div>
-          </section>
+          </div>
         </div>
       </form>
     </div>
   );
 }
-
-

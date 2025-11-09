@@ -27,7 +27,7 @@ export default function AdminProfilePage() {
           return;
       }
 
-      fetch(`http://localhost:8080/api/admin/me?adIdx=${adIdx}`)
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/me?adIdx=${adIdx}`)
           .then((res) => res.json())
           .then((data) => {
               setFormData((prev) => ({
@@ -62,7 +62,7 @@ export default function AdminProfilePage() {
 
     try {
         const adIdx = sessionStorage.getItem("adminIdx");
-        const res = await fetch("http://localhost:8080/api/admin/me", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/me`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

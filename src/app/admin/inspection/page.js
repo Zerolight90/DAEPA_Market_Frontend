@@ -14,7 +14,7 @@ export default function InspectionPage() {
   useEffect(() => {
     const fetchInspections = async () => {
       try {
-        const res = await fetch("http://3.34.181.73/api/admin/checks");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/checks`);
         if (!res.ok) throw new Error("검수 목록을 불러오지 못했습니다.");
         const data = await res.json();
         setInspections(data.map(item => ({
@@ -184,7 +184,7 @@ export default function InspectionPage() {
       if (newStatus === "passed" || newStatus === "failed") {
         const resultValue = newStatus === "passed" ? 1 : 0;
         
-        const res = await fetch(`http://localhost:8080/api/admin/checks/${selectedInspection.id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/checks/${selectedInspection.id}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json"
@@ -198,7 +198,7 @@ export default function InspectionPage() {
         }
 
         // 목록 다시 불러오기
-        const refreshRes = await fetch("http://localhost:8080/api/admin/checks");
+        const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/checks`);
         if (refreshRes.ok) {
           const refreshData = await refreshRes.json();
           setInspections(refreshData.map(item => ({

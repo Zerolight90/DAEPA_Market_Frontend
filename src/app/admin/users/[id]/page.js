@@ -1,152 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Edit, User, Calendar, MapPin, Phone, Star, ShoppingBag, MessageSquare, Shield } from "lucide-react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import {
-  ArrowLeft,
-  User as UserIcon,
-  ThermometerSun,
-  AlertTriangle,
-  ShoppingBag,
-  MapPin,
-  Phone,
-  Calendar,
-  ShieldCheck,
-  Loader2,
-  Mail,
-  Star,
-  MessageSquare
-} from "lucide-react";
 import styles from "../../admin.module.css";
-import detailStyles from "./user-detail.module.css";
 
-// 상대시간 한국어 표시 함수 추가
-function timeAgoKR(input) {
-  if (!input) return "-";
-  const d = new Date(input);
-  if (isNaN(d.getTime())) return "-";
-
-  const now = new Date();
-  let diffSec = Math.floor((now - d) / 1000);
-
-  if (diffSec < 60) return "방금";
-  const min = Math.floor(diffSec / 60);
-  if (min < 60) return `${min}분 전`;
-  const hour = Math.floor(min / 60);
-  if (hour < 24) return `${hour}시간 전`;
-  const day = Math.floor(hour / 24);
-  if (day === 1) return "어제";
-  if (day < 7) return `${day}일 전`;
-  const week = Math.floor(day / 7);
-  if (week < 5) return `${week}주 전`;
-  const month = Math.floor(day / 30);
-  if (month < 12) return `${month}개월 전`;
-  const year = Math.floor(day / 365);
-  return `${year}년 전`;
-}
-
-export default function UserDetailPage() {
-  const { id } = useParams();
-  const router = useRouter();
-  const [detail, setDetail] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [manner, setManner] = useState(0);
-  const [saving, setSaving] = useState(false);
-  const reportTypeLabel = {
-    1: "비매너",
-    2: "사기 의심",
-    3: "거래 문제",
-    4: "기타"
-  };
-
-  useEffect(() => {
-    const fetchDetail = async () => {
-      try {
-        const res = await fetch(`http://localhost:8080/api/admin/users/${id}`);
-        if (!res.ok) {
-          throw new Error("회원 상세 정보를 불러오지 못했습니다.");
-        }
-        
-        const data = await res.json();
-        
-        // 판매 후기 API 호출
-        try {
-          const reviewRes = await fetch(`http://localhost:8080/api/admin/users/${id}/reviews/sell`);
-          if (reviewRes.ok) {
-            const reviews = await reviewRes.json();
-            data.reviewHistory = reviews.map((r) => ({
-              id: r.reviewId,
-              reviewerName: r.reviewerName,
-              rating: r.rating,
-              content: r.content,
-              date: r.date,
-              productName: r.productName
-            }));
-          } else {
-            data.reviewHistory = [];
-          }
-        } catch (e) {
-          console.warn("판매 후기 API 오류", e);
-          data.reviewHistory = [];
-        }
-
-        // reviewHistory가 없으면 빈 배열로 설정
-        if (!data.reviewHistory) {
-          data.reviewHistory = [];
-        }
-
-        // reportHistory가 없으면 빈 배열로 설정
-        if (!data.reportHistory) {
-          data.reportHistory = [];
-        }
-
-        setDetail(data);
-        setManner(data.umanner ?? data.uManner ?? 0);
-        setError(null);
-      } catch (err) {
-        console.error(err);
-        setError(err.message || "회원 정보를 불러오는 중 오류가 발생했습니다.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (id) {
-      fetchDetail();
-    }
-  }, [id]);
-
-  const handleMannerSave = async () => {
-    if (!detail) return;
-    setSaving(true);
-    try {
-      const res = await fetch(`http://localhost:8080/api/admin/users/${id}/manner`, {
-        method: "PATCH",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({ umanner: manner })
-      });
-
-      if (!res.ok) throw new Error("신선도 업데이트에 실패했습니다.");
-
-      const updated = await res.json();
-      // 업데이트 후 화면에 반영
-      setDetail(prev => ({
-        ...prev,
-        umanner: updated.umanner ?? manner
-      }));
-
-      alert("신선도가 업데이트되었습니다.");
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
+export default function UserDetailPage({ params }) {
+  const { id } = params;
+  const [user, setUser] = useState(null);
+  const [activeTab, setActiveTab] = useState("sell");
+  const [reviews, setReviews] = useState({ sell: [], buy: [] });
+  const [isLoading, setIsLoading] = useState(true);
 
   const getStatusBadge = (statusNum) => {
-    // u_status: 1=활성, 2=탈퇴, 3=정지, 9=보류
     switch (statusNum) {
       case 1:
         return <span className={styles.statusSuccess}>활성</span>;
@@ -161,324 +27,331 @@ export default function UserDetailPage() {
     }
   };
 
-  if (loading) {
+  const renderStars = (rating) => {
+    return Array.from({ length: 5 }, (_, index) => (
+      <Star
+        key={index}
+        size={14}
+        className={index < rating ? styles.starFilled : styles.starEmpty}
+      />
+    ));
+  };
+
+  const handleMannerTempChange = async (change) => {
+    if (!user) return;
+
+    const newTemp = user.umanner + change;
+    if (newTemp < 0 || newTemp > 100) {
+      alert("매너온도는 0도에서 100도 사이여야 합니다.");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}/manner`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ manner: newTemp })
+      });
+
+      if (!res.ok) throw new Error("매너온도 변경 실패");
+
+      setUser(prev => ({ ...prev, umanner: newTemp }));
+      alert("매너온도가 변경되었습니다.");
+    } catch (err) {
+      console.error(err);
+      alert("매너온도 변경 중 오류가 발생했습니다.");
+    }
+  };
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      setIsLoading(true);
+      try {
+        // 사용자 상세 정보
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}`);
+        if (!res.ok) throw new Error("사용자 정보를 불러오지 못했습니다.");
+        const data = await res.json();
+        setUser(data);
+
+        // 판매/구매 후기
+        const reviewRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/users/${id}/reviews/sell`);
+        if (reviewRes.ok) {
+          const reviewData = await reviewRes.json();
+          setReviews({
+            sell: reviewData.sellReviews || [],
+            buy: reviewData.buyReviews || []
+          });
+        }
+      } catch (err) {
+        console.error("데이터 조회 실패:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, [id]);
+
+  if (isLoading) {
     return (
-      <div className={styles.pageContainer}>
-        <div className={detailStyles.loadingRow}>
-          <Loader2 size={20} className={detailStyles.spinner} />
-          데이터를 불러오는 중입니다...
-        </div>
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        fontSize: "1.25rem",
+        color: "#64748b"
+      }}>
+        로딩 중...
       </div>
     );
   }
 
-  if (error || !detail) {
+  if (!user) {
     return (
-      <div className={styles.pageContainer}>
-        <p className={detailStyles.errorMessage}>{error ?? "회원 정보를 찾을 수 없습니다."}</p>
-        <button onClick={() => router.back()} className={detailStyles.errorButton}>
-          <ArrowLeft size={16} /> 뒤로 가기
-        </button>
+      <div style={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "100vh",
+        fontSize: "1.25rem",
+        color: "#64748b"
+      }}>
+        사용자 정보를 찾을 수 없습니다.
       </div>
     );
   }
-
-  const user = detail.user || detail;
-  // const tradeHistory = detail.tradeHistory || [];
-  // BUY / SELL 합치기
-  const buyHistory = detail.tradeHistory ?? [];
-  const sellHistory = detail.tradeHistorySell ?? [];
-
-  // 날짜가 있을 경우 최신순 정렬, 없으면 그대로
-    const tradeHistory = [...buyHistory, ...sellHistory].sort((a, b) => {
-      const dateA = a.date ? new Date(a.date) : 0;
-      const dateB = b.date ? new Date(b.date) : 0;
-      return dateB - dateA;
-    });
-
-  const warningHistory = detail.reportHistory || [];
-  const reviews = detail.reviewHistory || [];
 
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
-        <Link href="/admin/users" className={detailStyles.backLink}>
-          <ArrowLeft size={16} /> 목록으로 돌아가기
-        </Link>
-        <h1 className={styles.pageTitle}>사용자 상세 정보</h1>
-        <p className={styles.pageSubtitle}>회원의 프로필과 활동 내역을 확인하고 관리하세요.</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
+          <Link 
+            href="/admin/users" 
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "0.5rem", 
+              color: "#64748b", 
+              textDecoration: "none",
+              fontSize: "0.875rem"
+            }}
+          >
+            <ArrowLeft size={16} />
+            목록으로 돌아가기
+          </Link>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            <h1 className={styles.pageTitle}>{user.uname}</h1>
+            <p className={styles.pageSubtitle}>
+              사용자 상세 정보 및 활동 내역
+            </p>
+          </div>
+          <Link href={`/admin/users/${id}/edit`} style={{ textDecoration: "none" }}>
+            <button 
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem",
+                padding: "0.75rem 1.5rem",
+                background: "#f0f9ff",
+                color: "#2563eb",
+                border: "1px solid #bfdbfe",
+                borderRadius: "0.5rem",
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+            >
+              <Edit size={16} />
+              정보 수정
+            </button>
+          </Link>
+        </div>
       </div>
 
-      <div className={detailStyles.pageSections}>
-        {/* 기본 정보 카드 */}
-        <section className={`${detailStyles.card} ${detailStyles.profileCard}`}>
-          <div className={detailStyles.profileHeader}>
-            <div className={detailStyles.avatar}>
-              <UserIcon size={36} color="#999" />
-            </div>
-            <h2 className={detailStyles.profileName}>{user.uname}</h2>
-            {getStatusBadge(user.ustatus)}
-          </div>
-          <div className={detailStyles.infoGrid}>
-            <InfoRow icon={<Mail size={16} />} label="회원 ID" value={user.uid} />
-            <InfoRow icon={<UserIcon size={16} />} label="닉네임" value={user.unickname ?? "-"} />
-            <InfoRow icon={<MapPin size={16} />} label="주소" value={user.ulocation ?? "-"} />
-            <InfoRow icon={<Calendar size={16} />} label="생년월일" value={user.ubirth ?? "-"} />
-            <InfoRow icon={<ShieldCheck size={16} />} label="성별" value={user.ugender ?? "-"} />
-            <InfoRow icon={<Phone size={16} />} label="전화번호" value={user.uphone ?? "-"} />
-            <InfoRow icon={<Calendar size={16} />} label="가입일" value={user.udate ? new Date(user.udate).toLocaleDateString("ko-KR") : "-"} />
-            <InfoRow icon={<AlertTriangle size={16} />} label="경고 횟수" value={`${user.uwarn ?? 0}회`} />
-          </div>
-        </section>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "2rem" }}>
+        {/* 왼쪽: 사용자 정보 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
+          <div className={styles.tableContainer}>
+            <div style={{ padding: "2rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "1.5rem", marginBottom: "2rem" }}>
+                <div style={{
+                  width: "80px",
+                  height: "80px",
+                  borderRadius: "50%",
+                  background: "#e2e8f0",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}>
+                  <User size={40} color="#64748b" />
+                </div>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: 700, color: "#1e293b" }}>{user.uname}</h2>
+                  <p style={{ margin: "0.25rem 0 0 0", color: "#64748b" }}>{user.uid}</p>
+                </div>
+              </div>
 
-        {/* 신선도 조절 */}
-        <section className={`${detailStyles.card} ${detailStyles.mannerCard}`}>
-          <div className={detailStyles.sectionHeader}>
-            <ThermometerSun size={24} color="#2e8b57" />
-            신선도 조절
-          </div>
-          <p className={detailStyles.sectionDescription}>
-            신선도를 조절하여 회원의 신뢰도를 반영하세요. 변경 사항은 즉시 저장됩니다.
-          </p>
-          <div className={detailStyles.mannerControls}>
-            <strong className={detailStyles.mannerValue}>{manner.toFixed(1)}°C</strong>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              step="0.1"
-              value={manner}
-              onChange={(e) => setManner(parseFloat(e.target.value))}
-              className={detailStyles.mannerSlider}
-              style={{ "--progress": `${(manner / 100) * 100}%` }}
-            />
-            <div className={detailStyles.stepButtons}>
-              <button
-                type="button"
-                onClick={() => setManner((prev) => Math.max(0, prev - 0.5))}
-                className={detailStyles.stepButton}
-              >
-                -0.5
-              </button>
-              <button
-                type="button"
-                onClick={() => setManner((prev) => Math.min(100, prev + 0.5))}
-                className={detailStyles.stepButton}
-              >
-                +0.5
-              </button>
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <Shield size={18} color="#64748b" />
+                  <div>
+                    <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.25rem" }}>상태</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b" }}>{getStatusBadge(user.ustatus)}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <Calendar size={18} color="#64748b" />
+                  <div>
+                    <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.25rem" }}>가입일</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b" }}>{new Date(user.udate).toLocaleDateString("ko-KR")}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <Phone size={18} color="#64748b" />
+                  <div>
+                    <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.25rem" }}>전화번호</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b" }}>{user.uphone}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <MapPin size={18} color="#64748b" />
+                  <div>
+                    <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.25rem" }}>주소</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b" }}>{user.ulocation || "-"}</div>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
+
+          {/* 매너온도 */}
+          <div className={styles.tableContainer}>
+            <div style={{ padding: "2rem" }}>
+              <h3 style={{
+                margin: "0 0 1.5rem 0",
+                fontSize: "1.125rem",
+                fontWeight: 600,
+                color: "#1e293b"
+              }}>
+                매너온도
+              </h3>
+              <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
+                <div style={{
+                  width: "100%",
+                  height: "12px",
+                  background: "#e2e8f0",
+                  borderRadius: "6px",
+                  overflow: "hidden"
+                }}>
+                  <div style={{
+                    width: `${user.umanner}%`,
+                    height: "100%",
+                    background: `linear-gradient(90deg, #34d399, #22c55e)`,
+                    borderRadius: "6px",
+                    transition: "width 0.5s ease"
+                  }}></div>
+                </div>
+                <span style={{ fontSize: "1.25rem", fontWeight: 700, color: "#16a34a", minWidth: "60px", textAlign: "right" }}>
+                  {user.umanner}°C
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+                <button onClick={() => handleMannerTempChange(-1)} style={{ padding: "0.25rem 0.5rem", border: "1px solid #d1d5db", borderRadius: "0.25rem" }}>-1</button>
+                <button onClick={() => handleMannerTempChange(1)} style={{ padding: "0.25rem 0.5rem", border: "1px solid #d1d5db", borderRadius: "0.25rem" }}>+1</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 오른쪽: 활동 내역 */}
+        <div className={styles.tableContainer}>
+          <div style={{ borderBottom: "1px solid #e5e7eb", display: "flex" }}>
             <button
-              type="button"
-              onClick={handleMannerSave}
-              disabled={saving}
-              className={detailStyles.primaryButton}
+              onClick={() => setActiveTab("sell")}
+              style={{
+                flex: 1,
+                padding: "1rem",
+                background: activeTab === "sell" ? "white" : "#f9fafb",
+                border: "none",
+                borderBottom: activeTab === "sell" ? "2px solid #3b82f6" : "2px solid transparent",
+                color: activeTab === "sell" ? "#3b82f6" : "#64748b",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
             >
-              {saving ? "저장 중..." : "온도 저장"}
+              판매 후기 ({reviews.sell.length})
+            </button>
+            <button
+              onClick={() => setActiveTab("buy")}
+              style={{
+                flex: 1,
+                padding: "1rem",
+                background: activeTab === "buy" ? "white" : "#f9fafb",
+                border: "none",
+                borderBottom: activeTab === "buy" ? "2px solid #3b82f6" : "2px solid transparent",
+                color: activeTab === "buy" ? "#3b82f6" : "#64748b",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "all 0.2s"
+              }}
+            >
+              구매 후기 ({reviews.buy.length})
             </button>
           </div>
-        </section>
 
-        {/* 거래 내역 및 거래 후기 */}
-        <section className={`${detailStyles.card} ${detailStyles.tradeCard}`} style={{ padding: 0 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0 }}>
-            {/* 왼쪽: 거래 내역 */}
-            <div style={{ padding: "1.5rem", borderRight: "1px solid #e2e8f0" }}>
-              <div className={detailStyles.sectionHeader}>
-                <ShoppingBag size={22} color="#2563eb" />
-                거래 내역
+          <div style={{ padding: "2rem", maxHeight: "600px", overflowY: "auto" }}>
+            {reviews[activeTab].length === 0 ? (
+              <div style={{ textAlign: "center", color: "#64748b", padding: "3rem 0" }}>
+                {activeTab === "sell" ? "받은 판매 후기가 없습니다." : "받은 구매 후기가 없습니다."}
               </div>
-              {tradeHistory.length === 0 ? (
-                <div className={detailStyles.listEmpty}>거래 내역이 없습니다.</div>
-              ) : (
-                <div className={detailStyles.tradeListScrollable}>
-                  {tradeHistory.map((trade) => (
-                    <div key={trade.dealId} className={detailStyles.tradeItem}>
-                      {/* 구매/판매 라벨 + 상품명 */}
-                      <div className={detailStyles.tradeTitle}>
-                        {trade.tradeType === "BUY" ? (
-                          <span style={{ color: "#2563eb", fontWeight: "600" }}>🛒 구매</span>
-                        ) : (
-                          <span style={{ color: "#22c55e", fontWeight: "600" }}>💸 판매</span>
-                        )}
-                        <span style={{ marginLeft: "0.5rem" }}>
-                          {trade.productName ?? "-"}
-                        </span>
-                      </div>
-
-                      {/* 날짜 + 가격 */}
-                      <div className={detailStyles.tradeMeta}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                          <span style={{ fontSize: "1rem" }}>📅</span>
-                          <span>{trade.date ? new Date(trade.date).toLocaleDateString("ko-KR") : "진행중"}</span>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                {reviews[activeTab].map((review, index) => (
+                  <div key={index} style={{
+                    paddingBottom: "1.5rem",
+                    borderBottom: index < reviews[activeTab].length - 1 ? "1px solid #f1f5f9" : "none"
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.75rem" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <div style={{
+                          width: "40px",
+                          height: "40px",
+                          borderRadius: "50%",
+                          background: "#f1f5f9",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center"
+                        }}>
+                          <User size={20} color="#94a3b8" />
                         </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                          <span style={{ fontSize: "1rem" }}>💰</span>
-                          <span>{trade.price != null ? `${trade.price.toLocaleString()}원` : "가격 미정"}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 오른쪽: 거래 후기 */}
-            <div style={{ padding: "1.5rem" }}>
-              <div className={detailStyles.sectionHeader}>
-                <MessageSquare size={22} color="#f59e0b" />
-                판매 후기
-              </div>
-              {reviews.length === 0 ? (
-                <div className={detailStyles.listEmpty}>거래 후기가 없습니다.</div>
-              ) : (
-                <div className={detailStyles.reviewListScrollable}>
-                  {reviews.map((review) => {
-
-                    return (
-                      <div key={review.id} className={detailStyles.reviewCard}>
-                        <div className={detailStyles.reviewHeader}>
-                          <div className={detailStyles.reviewUserSection}>
-                            <div className={detailStyles.reviewAvatar}>
-                              <UserIcon size={20} color="#999" />
-                            </div>
-                            <span className={detailStyles.reviewNickname}>
-                              {review.reviewerName || "익명"}
-                            </span>
+                        <div>
+                          <div style={{ fontWeight: 600, color: "#1e293b" }}>
+                            {activeTab === "sell" ? review.buyerName : review.sellerName}
                           </div>
-                          <div className={detailStyles.reviewDate}>
-                            {timeAgoKR(review.date)}
-                          </div>
-                        </div>
-                        
-                        <div className={detailStyles.reviewStars}>
-                          {[...Array(5)].map((_, i) => (
-                            <Star
-                              key={i}
-                              size={16}
-                              fill={i < (review.rating || 0) ? "#fbbf24" : "#e5e7eb"}
-                              color={i < (review.rating || 0) ? "#fbbf24" : "#e5e7eb"}
-                            />
-                          ))}
-                        </div>
-
-                        <div className={detailStyles.reviewContent}>
-                          {review.content}
-                        </div>
-
-                        <div className={detailStyles.reviewInfoBox}>
-                          <div className={detailStyles.reviewInfoRow}>
-                            <span className={detailStyles.reviewInfoLabel}>구매 상품</span>
-                            <span style={{ color: "#d1d5db", margin: "0 0.5rem" }}>|</span>
-                            <span className={detailStyles.reviewInfoValue}>
-                              {review.productName || "기록없음"}
-                            </span>
-                          </div>
-                          <div className={detailStyles.reviewInfoRow}>
-                            <span className={detailStyles.reviewInfoLabel}>등록일</span>
-                            <span style={{ color: "#d1d5db", margin: "0 0.5rem" }}>|</span>
-                            <span className={detailStyles.reviewInfoValue}>
-                              {review.date ? new Date(review.date).toLocaleDateString("ko-KR", {
-                                year: "numeric",
-                                month: "2-digit",
-                                day: "2-digit"
-                              }) : "기록없음"}
-                            </span>
+                          <div style={{ fontSize: "0.875rem", color: "#64748b" }}>
+                            {new Date(review.date).toLocaleDateString("ko-KR")}
                           </div>
                         </div>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
-        {/* 신고 내역 */}
-        <section className={`${detailStyles.card} ${detailStyles.warningCard}`}>
-          <div className={detailStyles.sectionHeader}>
-            <AlertTriangle size={22} color="#ef4444" />
-            신고 내역
-            <span className={detailStyles.reportCount}>총 {warningHistory.length || user.uwarn || 0}회</span>
-          </div>
-
-          {warningHistory.length === 0 ? (
-              <div className={`${detailStyles.listEmpty} ${detailStyles.warningEmpty}`}>
-                신고 기록이 없습니다.
-              </div>
-          ) : (
-              <div className={detailStyles.reportListScrollable}>
-                {warningHistory.map((r) => (
-                  <div key={r.id} className={detailStyles.reportItem}>
-                    <div className={detailStyles.reportTitle}>
-                      <span style={{ color: "#ef4444", fontWeight: "600" }}>⚠️ 신고자</span>
-                      <span style={{ marginLeft: "0.5rem", fontWeight: "600" }}>
-                        {r.reporter || "익명"}
-                      </span>
-                      <span style={{ 
-                        marginLeft: "0.75rem",
-                        padding: "0.25rem 0.5rem",
-                        borderRadius: "0.375rem",
-                        fontSize: "0.75rem",
-                        fontWeight: "600",
-                        background: "#fee2e2",
-                        color: "#b91c1c"
-                      }}>
-                        {reportTypeLabel[r.type] ?? "-"}
-                      </span>
-                    </div>
-                    <div className={detailStyles.reportContent}>
-                      {r.content || "신고 내용이 없습니다."}
-                    </div>
-                    <div className={detailStyles.reportMeta}>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.25rem" }}>
-                        <span style={{ fontSize: "1rem" }}>📅</span>
-                        <span>{r.date ? new Date(r.date).toLocaleDateString("ko-KR") : "-"}</span>
+                      <div style={{ display: "flex", gap: "0.25rem" }}>
+                        {renderStars(review.rating)}
                       </div>
                     </div>
+                    <p style={{ margin: 0, color: "#374151", lineHeight: "1.6" }}>
+                      {review.comment}
+                    </p>
                   </div>
                 ))}
               </div>
-          )}
-        </section>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
-function InfoRow({ icon, label, value }) {
-  return (
-    <div className={detailStyles.infoRow}>
-      <span className={detailStyles.infoLabel}>
-        {icon}
-        {label}
-      </span>
-      <strong className={detailStyles.infoValue}>{value}</strong>
-    </div>
-  );
-}
-
-function StatusPill({ status }) {
-  let label = "진행중";
-  let typeClass = detailStyles.statusPending;
-
-  switch (status) {
-    case "completed":
-      label = "완료";
-      typeClass = detailStyles.statusCompleted;
-      break;
-    case "cancelled":
-      label = "취소";
-      typeClass = detailStyles.statusCancelled;
-      break;
-    case "pending":
-    default:
-      label = "진행중";
-      typeClass = detailStyles.statusPending;
-      break;
-  }
-
-  return <span className={`${detailStyles.statusPill} ${typeClass}`}>{label}</span>;
-}
-
