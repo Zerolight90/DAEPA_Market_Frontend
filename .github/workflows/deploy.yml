@@ -88,31 +88,29 @@ jobs:
 
             cd ~/apps/frontend
 
-            echo "[1/5] Git update"
-            cp -f .env /tmp/.env.backup 2>/dev/null || true
+            echo "[1/6] Git update"
             git fetch --all
             git checkout main
             git reset --hard origin/main
-            [ -f /tmp/.env.backup ] && mv /tmp/.env.backup .env
 
-            echo "[2/5] Stop and prepare"
+            echo "[2/6] Create .env file"
+            echo "${{ secrets.DAEPA_FRONTEND_ENV }}" > .env
+            echo ".env file created."
+
+            echo "[3/6] Stop and prepare"
             docker compose down || true
             
-            # ✅ 오래된 캐시/이미지만 가볍게 청소 (프로젝트 안전)
+            echo "Pruning old images and builder cache..."
             docker image prune -f
-            docker builder prune -f --filter 'until=168h'  # 7일 지난 빌더 캐시만
+            docker builder prune -f --filter 'until=168h'
 
-            # ❌ 시스템 캐시 삭제 금지 (빌드 속도 개선을 위해 유지)
-            # docker system prune -af || true
-            # docker builder prune -af || true
+            echo "[4/6] Build with cache"
+            docker compose build --progress=plain
 
-            echo "[3/5] Build with cache"
-            docker compose build --progress=plain   # --no-cache 제거로 캐시 사용
-
-            echo "[4/5] Start containers"
+            echo "[5/6] Start containers"
             docker compose up -d
 
-            echo "[5/5] Status & logs"
+            echo "[6/6] Status & logs"
             docker compose ps
             docker logs --tail=80 daepa-frontend || true
 
