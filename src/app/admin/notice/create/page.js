@@ -6,15 +6,23 @@ import Link from "next/link";
 import styles from "../../admin.module.css";
 
 export default function CreateNoticePage() {
+  // 폼 입력 데이터(제목, 카테고리, 내용)를 관리하는 상태
   const [formData, setFormData] = useState({
     title: "",
     category: "공지",
     content: "",
     isImportant: false
   });
-
+  
+  // (이미지) 사용자가 선택한 파일 객체를 관리하는 상태
+  const [file, setFile] = useState(null);
+  // (이미지) 선택된 이미지 파일의 미리보기 URL을 관리하는 상태
+  const [imagePreview, setImagePreview] = useState(null);
+  
+  // 폼 제출 진행 상태를 관리하는 상태
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 텍스트 입력 필드(제목, 내용 등)의 변경을 처리하는 핸들러
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -23,51 +31,85 @@ export default function CreateNoticePage() {
     }));
   };
 
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-      try {
-          // 1) 로그인된 관리자 ID (sessionStorage 사용)
-          const adIdx = sessionStorage.getItem("adminIdx");
-          if (!adIdx) {
-              alert("로그인이 필요합니다.");
-              return;
-          }
-
-          // 2) 카테고리 한글 → 숫자 매핑
-          const categoryMap = { "공지": 1, "업데이트": 2, "안내": 3, "이벤트": 4 };
-
-          // 3) 백엔드 DTO 형태로 변환
-          const payload = {
-              adIdx: Number(adIdx),
-              nSubject: formData.title,
-              nContent: formData.content,
-              nCategory: categoryMap[formData.category],
-              nImg: null,
-              nIp: "127.0.0.1"
-          };
-
-          const res = await fetch("http://localhost:8080/api/admin/notices", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload)
-          });
-
-          if (!res.ok) throw new Error("공지 등록 실패");
-
-          alert("공지사항이 등록되었습니다.");
-          window.location.href = "/admin/notice";
-
-      } catch (err) {
-          console.error(err);
-          alert("공지사항 등록 중 오류가 발생했습니다.");
-      } finally {
-          setIsSubmitting(false);
-      }
+  // 파일 입력 필드의 변경을 처리하는 핸들러
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      // 파일 객체 상태 업데이트
+      setFile(selectedFile);
+      // 미리보기 URL 생성 및 상태 업데이트
+      setImagePreview(URL.createObjectURL(selectedFile));
+    } else {
+      // 파일 선택이 취소된 경우 상태 초기화
+      setFile(null);
+      setImagePreview(null);
+    }
   };
 
+  // 폼 제출을 처리하는 핸들러
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.title || !formData.content) {
+        alert("제목과 내용은 필수 입력 항목입니다.");
+        return;
+    }
+    setIsSubmitting(true);
+
+    try {
+        const adIdx = sessionStorage.getItem("adminIdx");
+        if (!adIdx) {
+            alert("로그인이 필요합니다.");
+            setIsSubmitting(false);
+            return;
+        }
+
+        const categoryMap = { "공지": 1, "업데이트": 2, "안내": 3, "이벤트": 4 };
+
+        // 백엔드 API의 DTO 형식에 맞게 전송할 JSON 데이터
+        const noticeData = {
+            adIdx: Number(adIdx),
+            nSubject: formData.title,
+            nContent: formData.content,
+            nCategory: categoryMap[formData.category],
+            nIp: "127.0.0.1"
+        };
+
+        // multipart/form-data 형식으로 데이터를 보내기 위해 FormData 객체 생성
+        const formDataToSend = new FormData();
+        
+        // 1. JSON 데이터를 'req'라는 키의 Blob 객체로 변환하여 FormData에 추가
+        formDataToSend.append('req', new Blob([JSON.stringify(noticeData)], { type: "application/json" }));
+
+        // 2. 이미지 파일이 있는 경우, 'file'이라는 키로 FormData에 추가
+        if (file) {
+            formDataToSend.append('file', file);
+        }
+
+        // 3. fetch API를 사용하여 서버에 POST 요청
+        const res = await fetch("http://localhost:8080/api/admin/notices", {
+            method: "POST",
+            body: formDataToSend, // FormData 객체를 body로 전송
+            // Content-Type 헤더는 브라우저가 FormData를 보낼 때 자동으로 설정하므로 명시하지 않음
+        });
+
+        if (!res.ok) {
+            const errorText = await res.text();
+            console.error("Server response:", errorText);
+            throw new Error("공지 등록 실패. 서버 응답을 확인하세요.");
+        }
+
+        alert("공지사항이 등록되었습니다.");
+        window.location.href = "/admin/notice";
+
+    } catch (err) {
+        console.error(err);
+        alert(err.message || "공지사항 등록 중 오류가 발생했습니다.");
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
+  // 취소 버튼 클릭 시 처리 핸들러
   const handleCancel = () => {
     if (confirm("작성 중인 내용이 삭제됩니다. 정말 취소하시겠습니까?")) {
       window.location.href = "/admin/notice";
@@ -135,8 +177,8 @@ export default function CreateNoticePage() {
               />
             </div>
 
-            {/* 카테고리 및 중요도 */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem", marginBottom: "1.5rem" }}>
+            {/* 카테고리 */}
+            <div style={{ marginBottom: "1.5rem" }}>
               <div>
                 <label style={{ 
                   display: "block", 
@@ -168,13 +210,10 @@ export default function CreateNoticePage() {
                   <option value="이벤트">이벤트</option>
                 </select>
               </div>
-
-
-
             </div>
 
             {/* 내용 */}
-            <div style={{ marginBottom: "2rem" }}>
+            <div style={{ marginBottom: "1.5rem" }}>
               <label style={{ 
                 display: "block", 
                 marginBottom: "0.5rem", 
@@ -208,62 +247,35 @@ export default function CreateNoticePage() {
               />
             </div>
 
+            {/* 이미지 첨부 UI */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", color: "#374151", fontSize: "0.875rem" }}>
+                이미지 첨부 (선택)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.875rem",
+                  background: "white",
+                  cursor: "pointer"
+                }}
+              />
+            </div>
 
-            {/* 미리보기 */}
-            {formData.title && formData.content && (
+            {/* 이미지 미리보기 UI */}
+            {imagePreview && (
               <div style={{ marginBottom: "2rem" }}>
-                <h4 style={{ 
-                  marginBottom: "1rem", 
-                  fontWeight: "600", 
-                  color: "#374151",
-                  fontSize: "0.875rem"
-                }}>
-                  미리보기
+                <h4 style={{ marginBottom: "1rem", fontWeight: "600", color: "#374151", fontSize: "0.875rem" }}>
+                  이미지 미리보기
                 </h4>
-                <div style={{ 
-                  padding: "1rem", 
-                  border: "1px solid #e5e7eb", 
-                  borderRadius: "0.5rem", 
-                  backgroundColor: "#f9fafb"
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", marginBottom: "1rem" }}>
-                    {formData.isImportant && (
-                      <span style={{
-                        background: "#fee2e2",
-                        color: "#dc2626",
-                        padding: "0.25rem 0.5rem",
-                        borderRadius: "0.25rem",
-                        fontSize: "0.75rem",
-                        fontWeight: "600",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em"
-                      }}>
-                        중요
-                      </span>
-                    )}
-                    <span style={{
-                      padding: "0.25rem 0.75rem",
-                      borderRadius: "9999px",
-                      fontSize: "0.75rem",
-                      fontWeight: "600",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      backgroundColor: formData.category === "공지" ? "#fee2e2" : 
-                                      formData.category === "업데이트" ? "#dbeafe" :
-                                      formData.category === "안내" ? "#dcfce7" : "#fef3c7",
-                      color: formData.category === "공지" ? "#dc2626" : 
-                             formData.category === "업데이트" ? "#2563eb" :
-                             formData.category === "안내" ? "#16a34a" : "#d97706"
-                    }}>
-                      {formData.category}
-                    </span>
-                  </div>
-                  <h3 style={{ fontSize: "1.125rem", fontWeight: "600", color: "#1e293b", marginBottom: "0.5rem" }}>
-                    {formData.title}
-                  </h3>
-                  <p style={{ color: "#64748b", lineHeight: "1.6", whiteSpace: "pre-wrap" }}>
-                    {formData.content}
-                  </p>
+                <div style={{ padding: "1rem", border: "1px solid #e5e7eb", borderRadius: "0.5rem", backgroundColor: "#f9fafb" }}>
+                  <img src={imagePreview} alt="미리보기" style={{ maxWidth: "100%", maxHeight: "300px", borderRadius: "0.5rem", border: "1px solid #e5e7eb" }} />
                 </div>
               </div>
             )}
