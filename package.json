@@ -15,7 +15,7 @@
     "@mui/material": "^7.3.4",
     "@stomp/stompjs": "^7.2.1",
     "@tosspayments/payment-sdk": "^1.9.1",
-    "@tosspayments/tosspayments-sdk": "^2.4.0",
+    "@tosspayments/tosspayments-sdk": "^2.4.1",
     "axios": "^1.12.2",
     "emoji-picker-react": "^4.15.0",
     "lucide-react": "^0.544.0",

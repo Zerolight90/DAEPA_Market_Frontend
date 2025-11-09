@@ -81,27 +81,92 @@
 }
 
 /* 반응형 */
-@media (max-width: 480px) {
-    .header { flex-direction: column; align-items: stretch; gap: 6px; padding: 8px 0; }
-    .top { font-size: 14px; text-align: center; }
-    .rmenu { justify-content: center; gap: 12px; }
 
-    .menu { flex-direction: column; align-items: stretch; gap: 10px; padding: 10px 0 12px; }
-    .logo { justify-content: center; }
-    .icon { justify-content: center; gap: 12px; }
+/* 모바일 (767px 이하) */
+@media (max-width: 767px) {
+    .header {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 0;
+    }
+    .top {
+        font-size: 12px; /* 공간 확보를 위해 폰트 크기 미세 조정 */
+        text-align: left;
+        white-space: nowrap;
+        flex-shrink: 0; /* 문구가 줄어들지 않도록 */
+    }
+    .rmenu {
+        justify-content: flex-end;
+        gap: 10px;
+        font-size: 12px; /* 공간 확보를 위해 폰트 크기 미세 조정 */
+    }
+
+    .menu {
+        flex-wrap: wrap; /* 공간 부족 시 줄바꿈 허용 */
+        justify-content: space-between; /* 로고와 아이콘을 양 끝으로 */
+        gap: 12px;
+        padding: 10px 0 12px;
+    }
+
+    .logo {
+        flex-shrink: 0; /* 로고가 줄어들지 않도록 */
+    }
+
+    .search {
+        order: 3; /* 검색창을 맨 아래로 */
+        flex-basis: 100%; /* 검색창은 한 줄 전체 차지 */
+        min-width: 100%;
+        margin: 0;
+    }
+
+    .icon {
+        flex-shrink: 0; /* 아이콘이 줄어들지 않도록 */
+        gap: 12px;
+    }
+    .icon :global(svg) {
+        font-size: 22px;
+    }
 }
 
+
+/* 태블릿 (768px 이상) */
 @media (min-width: 768px) {
     .warp { padding: 0 20px; }
-    .header { gap: 10px; }
-    .rmenu { gap: 18px; }
+    .header {
+        flex-direction: row; /* 원래대로 복원 */
+        align-items: center;
+        gap: 10px;
+    }
+    .rmenu {
+        justify-content: flex-end; /* 원래대로 복원 */
+        font-size: 15px;
+        gap: 18px;
+    }
 
-    .menu { flex-direction: row; align-items: center; gap: 16px; padding: 16px 0 18px; }
-    .search { max-width: 720px; margin: 0 8px; }
-    .icon { gap: 16px; }
-    .icon :global(svg) { font-size: 24px; }
+    .menu {
+        flex-wrap: nowrap; /* 원래대로 복원 */
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 0 18px;
+    }
+    .search {
+        order: 0; /* 원래 순서로 복원 */
+        flex-basis: auto; /* 원래대로 복원 */
+        max-width: 720px;
+        margin: 0 8px;
+    }
+    .icon {
+        gap: 16px;
+    }
+    .icon :global(svg) {
+        font-size: 24px;
+    }
 }
 
+/* 데스크탑 (1280px 이상) */
 @media (min-width: 1280px) {
     .warp { padding: 0 24px; }
     .header { padding: 12px 0; gap: 12px; }
