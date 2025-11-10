@@ -6,6 +6,8 @@ import styles from "../mypage.module.css";
 
 import * as React from 'react';
 import Box from '@mui/material/Box';
+import Modal from '@mui/material/Modal';
+import Typography from '@mui/material/Typography';
 import InputLabel from '@mui/material/InputLabel';
 import MenuItem from '@mui/material/MenuItem';
 import FormControl from '@mui/material/FormControl';
@@ -22,6 +24,20 @@ import Sidebar from "@/components/mypage/sidebar"; // ✅ 공용 사이드바
 
 // ⚠️ 기존 SIDE_SECTIONS, METRICS 등은 그대로 사용 중이면 유지
 //    여기서는 사이드바에만 쓰던 SIDE_SECTIONS를 완전히 제거했어요.
+
+const modalStyle = {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    width: 400,
+    bgcolor: 'background.paper',
+    border: '2px solid #000',
+    boxShadow: 24,
+    p: 4,
+};
+
+const NOTIFICATIONS_PER_PAGE = 5;
 
 // 메트릭/탭/정렬(이 아래는 기존 코드 그대로)
 const METRICS = [
@@ -56,6 +72,14 @@ export default function MyPage() {
     const [userPicks, setUserPicks] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // Modal states
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [selectedPick, setSelectedPick] = useState(null);
+    const [isNotificationLoading, setIsNotificationLoading] = useState(false);
+    const [visibleNotificationsCount, setVisibleNotificationsCount] = useState(NOTIFICATIONS_PER_PAGE);
+
 
     // 내 관심 조건 불러오기
     useEffect(() => {
@@ -190,6 +214,73 @@ export default function MyPage() {
         }
     };
 
+    const handleOpenNotificationModal = async (pick) => {
+        setSelectedPick(pick);
+        setIsModalOpen(true);
+        setIsNotificationLoading(true);
+        setNotifications([]);
+        setVisibleNotificationsCount(NOTIFICATIONS_PER_PAGE); // 더보기 카운트 초기화
+
+        const currentToken = token || localStorage.getItem('accessToken');
+        try {
+            const response = await fetch(`http://localhost:8080/api/userpicks/notifications`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${currentToken}`,
+                },
+                body: JSON.stringify(pick),
+            });
+
+            if (!response.ok) {
+                throw new Error('알림을 불러오는 중 오류가 발생했습니다.');
+            }
+
+            const data = await response.json();
+            setNotifications(data);
+
+        } catch (error) {
+            console.error('Error fetching notifications:', error);
+            alert(error.message);
+            setNotifications([]);
+        } finally {
+            setIsNotificationLoading(false);
+        }
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setSelectedPick(null);
+        setNotifications([]);
+    };
+
+    const handleDeleteNotification = async (productIdToDelete) => {
+        const currentToken = token || localStorage.getItem('accessToken');
+        try {
+            const response = await fetch(`http://localhost:8080/api/alarm/delete/${productIdToDelete}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${currentToken}`,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('알림 삭제에 실패했습니다.');
+            }
+
+            // 백엔드에서 성공적으로 삭제된 후, 프론트엔드 상태 업데이트
+            setNotifications(prev => prev.filter(n => n.productId !== productIdToDelete));
+
+        } catch (error) {
+            console.error('Error deleting notification:', error);
+            alert(error.message);
+        }
+    };
+
+    const handleLoadMore = () => {
+        setVisibleNotificationsCount(prev => prev + NOTIFICATIONS_PER_PAGE);
+    };
+
     // 데모용 유저/지표
     const user = { nickname: "씩씩한하이에나", trust: 162, avatarUrl: "" };
     const trustPercent = Math.min(100, Math.round((user.trust / 1000) * 100));
@@ -319,6 +410,13 @@ export default function MyPage() {
                                         <Stack spacing={2} direction="row">
                                             <Button
                                                 variant="contained"
+                                                size="small"
+                                                onClick={() => handleOpenNotificationModal(pick)}
+                                            >
+                                                알림 확인
+                                            </Button>
+                                            <Button
+                                                variant="contained"
                                                 color="error"
                                                 size="small"
                                                 onClick={() => handleDelete(pick.upIdx)}
@@ -333,6 +431,51 @@ export default function MyPage() {
                     )}
                 </div>
             </section>
+
+            <Modal
+                open={isModalOpen}
+                onClose={handleCloseModal}
+                aria-labelledby="notification-modal-title"
+            >
+                <Box sx={modalStyle}>
+                    <Typography id="notification-modal-title" variant="h6" component="h2">
+                        새로운 알림
+                    </Typography>
+                    {isNotificationLoading ? (
+                        <Typography sx={{ mt: 2 }}>알림을 불러오는 중...</Typography>
+                    ) : notifications.length > 0 ? (
+                        <ul style={{ listStyle: 'none', padding: 0, marginTop: '16px' }}>
+                            {notifications.slice(0, visibleNotificationsCount).map((notification) => (
+                                <li key={notification.productId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <span>
+                                        <Link href={`/product/${notification.productId}`} style={{ textDecoration: 'underline', color: 'blue' }}>
+                                            {notification.productName}
+                                        </Link>
+                                        {' '}상품이 등록되었습니다.
+                                    </span>
+                                    <Button
+                                        size="small"
+                                        onClick={() => handleDeleteNotification(notification.productId)}
+                                        sx={{ minWidth: 'auto', padding: '2px 8px', color: 'grey.700' }}
+                                    >
+                                        X
+                                    </Button>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <Typography sx={{ mt: 2 }}>새로운 알림이 없습니다.</Typography>
+                    )}
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
+                        <div>
+                            {notifications.length > 0 && visibleNotificationsCount < notifications.length && (
+                                <Button onClick={handleLoadMore}>더보기</Button>
+                            )}
+                        </div>
+                        <Button onClick={handleCloseModal}>닫기</Button>
+                    </Box>
+                </Box>
+            </Modal>
         </main>
     );
 }
