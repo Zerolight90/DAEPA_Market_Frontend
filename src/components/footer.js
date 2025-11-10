@@ -39,7 +39,7 @@ export default function Footer() {
                                 운영시간 9시 - 18시 (주말/공휴일 휴무, 점심시간 12시 - 13시)
                             </p>
                             <div className={styles.csLinks}>
-                                <Link href="/notice">공지사항</Link>
+                                <Link href="/bbs/notice">공지사항</Link>
                                 <Link href="/contact">1:1 문의하기</Link>
                                 <Link href="/faq">자주 묻는 질문</Link>
                             </div>

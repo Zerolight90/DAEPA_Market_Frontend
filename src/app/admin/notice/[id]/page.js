@@ -3,15 +3,20 @@
 import { useState, useEffect } from "react";
 import { ArrowLeft, Edit, Trash2, Calendar, User } from "lucide-react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import styles from "../../admin.module.css";
 
-export default function NoticeDetailPage({ params }) {
+export default function NoticeDetailPage() {
+  const params = useParams();
+  const id = params?.id;
   const [notice, setNotice] = useState(null);
 
   useEffect(() => {
+    if (!id) return;
+
     const fetchNotice = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${params.id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${id}`);
         if (!res.ok) throw new Error("공지사항을 불러오지 못했습니다.");
         const data = await res.json();
 
@@ -23,6 +28,7 @@ export default function NoticeDetailPage({ params }) {
           author: data.adminNick,
           category: convertCategory(data.ncategory),
           createdAt: data.ndate,
+          imageUrl: data.nimg, // 이미지 URL 추가
         });
       } catch (err) {
         console.error(err);
@@ -31,7 +37,7 @@ export default function NoticeDetailPage({ params }) {
     };
 
     fetchNotice();
-  }, [params.id]);
+  }, [id]);
 
   const convertCategory = (num) => {
     switch (num) {
@@ -62,7 +68,7 @@ export default function NoticeDetailPage({ params }) {
     if (!confirm("이 공지사항을 삭제하시겠습니까?")) return;
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${params.id}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${id}`, {
         method: "DELETE",
       });
 
@@ -187,12 +193,17 @@ export default function NoticeDetailPage({ params }) {
       </div>
 
       <div className={styles.tableContainer}>
+        {notice.imageUrl && (
+            <div style={{ padding: "3rem 3rem 0 3rem" }}>
+                <img src={notice.imageUrl} alt="공지사항 이미지" style={{ maxWidth: '100%', borderRadius: '0.5rem' }} />
+            </div>
+        )}
         <div style={{ 
           padding: "3rem", 
           fontSize: "1rem", 
           lineHeight: "1.8", 
           color: "#374151",
-          whiteSpace: "pre-wrap",
+          whiteWhite: "pre-wrap",
           wordBreak: "break-word"
         }}>
           {notice.content}
