@@ -1,4 +1,3 @@
-// src/app/category/[name]/page.js
 import ProductsGrid from "@/components/category/ProductsGrid";
 import FilterBar from "@/components/category/FilterBar";
 import { fetchProducts } from "@/lib/server/products";
@@ -22,7 +21,6 @@ export default async function CategoryPage(props) {
 
     const upperName = decodeURIComponent(name ?? "");
 
-    // 기존 것들
     const midRaw = read("mid", null);
     const lowRaw = read("low", null);
     const mid = midRaw != null ? Number(midRaw) : null;
@@ -32,11 +30,14 @@ export default async function CategoryPage(props) {
     const size = Number(read("size", 20));
     const sort = read("sort", "recent");
 
-    // ✅ 가격 쿼리 읽기
     const minRaw = read("min", null);
     const maxRaw = read("max", null);
     const min = minRaw != null ? Number(minRaw) : null;
     const max = maxRaw != null ? Number(maxRaw) : null;
+
+    // ✅ 새로 추가된 것들
+    const dDeal = read("dDeal", null); // "MEET" | "DELIVERY" | null
+    const excludeSold = read("excludeSold", null) === "true";
 
     const upper = await fetchUpperMeta(upperName);
     if (!upper) {
@@ -52,13 +53,14 @@ export default async function CategoryPage(props) {
     const middleList = await fetchMiddles(upper.id);
     const lowList = mid ? await fetchLows(mid) : [];
 
-    // ✅ 상품 목록 가져올 때 min/max 같이 보냄
     const data = await fetchProducts({
         upperId: upper.id,
         middleId: mid ?? undefined,
         lowId: low ?? undefined,
         min: min ?? undefined,
         max: max ?? undefined,
+        dDeal: dDeal ?? undefined,
+        excludeSold,
         sort,
         page,
         size,

@@ -17,23 +17,39 @@ export default function FilterBar({
     const pathname = usePathname();
     const searchParams = useSearchParams();
 
-    // 쿼리에 있는 sort가 우선
+    // 정렬
     const sortInQuery = searchParams.get("sort");
     const activeSort = sortInQuery || currentSort || "recent";
 
-    // ✅ 가격 쿼리 가져오기
+    // 가격
     const minInQuery = searchParams.get("min") || "";
     const maxInQuery = searchParams.get("max") || "";
     const [minPrice, setMinPrice] = useState(minInQuery);
     const [maxPrice, setMaxPrice] = useState(maxInQuery);
 
-    // 쿼리 바뀔 때 input도 반영
+    // 거래방식 (MEET, DELIVERY)
+    const dDealInQuery = searchParams.get("dDeal") || "";
+    const [dealType, setDealType] = useState(dDealInQuery);
+
+    // 판매완료 제외
+    const excludeSoldInQuery = searchParams.get("excludeSold") === "true";
+    const [excludeSold, setExcludeSold] = useState(excludeSoldInQuery);
+
+    // 쿼리 -> state 동기화
     useEffect(() => {
         setMinPrice(minInQuery);
         setMaxPrice(maxInQuery);
     }, [minInQuery, maxInQuery]);
 
-    // 정렬칩 클릭
+    useEffect(() => {
+        setDealType(dDealInQuery);
+    }, [dDealInQuery]);
+
+    useEffect(() => {
+        setExcludeSold(excludeSoldInQuery);
+    }, [excludeSoldInQuery]);
+
+    // 정렬 변경
     const setSort = (value) => {
         const params = new URLSearchParams(searchParams.toString());
         if (value === "recent") params.delete("sort");
@@ -42,7 +58,7 @@ export default function FilterBar({
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
-    // ✅ 가격 적용 버튼 클릭
+    // 가격 적용
     const applyPriceFilter = () => {
         const params = new URLSearchParams(searchParams.toString());
         if (minPrice) params.set("min", minPrice);
@@ -53,7 +69,26 @@ export default function FilterBar({
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     };
 
-    // 중분류 클릭 시 이동할 href
+    // 거래방식 적용
+    const applyDealType = (code) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (!code) params.delete("dDeal");
+        else params.set("dDeal", code);
+        params.delete("page");
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    // 판매완료 제외 토글
+    const toggleExcludeSold = () => {
+        const params = new URLSearchParams(searchParams.toString());
+        const next = !excludeSold;
+        if (next) params.set("excludeSold", "true");
+        else params.delete("excludeSold");
+        params.delete("page");
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    // 링크 빌드
     const buildHrefForMid = (midId) => {
         const params = new URLSearchParams(searchParams.toString());
         if (midId) params.set("mid", String(midId));
@@ -64,7 +99,6 @@ export default function FilterBar({
         return `${pathname}${qs ? `?${qs}` : ""}`;
     };
 
-    // 소분류 클릭 시 이동할 href
     const buildHrefForLow = (lowId) => {
         const params = new URLSearchParams(searchParams.toString());
         if (selected?.mid) params.set("mid", String(selected.mid));
@@ -75,220 +109,198 @@ export default function FilterBar({
         return `${pathname}${qs ? `?${qs}` : ""}`;
     };
 
-    const buildHrefForUpper = (name) => {
-        return `/category/${encodeURIComponent(name)}`;
-    };
+    const buildHrefForUpper = (name) => `/category/${encodeURIComponent(name)}`;
 
     return (
         <div className={styles.wrap}>
             <div className={styles.inner}>
-                {/* 상단 제목/빵부스러기 */}
-                <div className={styles.headerRow}>
-                    <h2 className={styles.title}>검색 결과</h2>
-                    <div className={styles.breadcrumbs}>
-                        <Link href="/">홈</Link>
-                        <span className={styles.sep}>›</span>
-                        <span>{categoryName || "전체"}</span>
+                {/* 상단 */}
+                <div className={styles.topBar}>
+                    <div>
+                        <h2 className={styles.title}>검색 결과</h2>
+                        <div className={styles.breadcrumbs}>
+                            <Link href="/">홈</Link>
+                            <span className={styles.sep}>›</span>
+                            <span>{categoryName || "전체"}</span>
+                        </div>
+                    </div>
+                    <div className={styles.sortChips}>
+                        <button
+                            className={`${styles.chip} ${
+                                activeSort === "recent" ? styles.chipActive : ""
+                            }`}
+                            onClick={() => setSort("recent")}
+                        >
+                            최신순
+                        </button>
+                        <button
+                            className={`${styles.chip} ${
+                                activeSort === "price_asc" ? styles.chipActive : ""
+                            }`}
+                            onClick={() => setSort("price_asc")}
+                        >
+                            가격 낮은 순
+                        </button>
+                        <button
+                            className={`${styles.chip} ${
+                                activeSort === "price_desc" ? styles.chipActive : ""
+                            }`}
+                            onClick={() => setSort("price_desc")}
+                        >
+                            가격 높은 순
+                        </button>
                     </div>
                 </div>
 
-                {/* 표처럼 보이는 영역 */}
+                {/* 표 영역 */}
                 <div className={styles.table}>
+                    {/* 1. 카테고리 줄 */}
                     <div className={styles.row}>
-                        <div className={styles.th}>카테고리</div>
-                        <div className={styles.td}>
+                        <div className={styles.th}>
+                            카테고리
+                        </div>
+                        {/* ✅ 여기만 catTd로 바꿔서 세로 정렬 */}
+                        <div className={styles.catTd}>
                             {/* 대분류 */}
                             {upperList?.length > 0 && (
-                                <div className={styles.block}>
-                                    <div className={styles.upperRow}>
-                                        {upperList.map((u) => {
-                                            const label = u.name ?? u.upperCt;
-                                            const isActive =
-                                                label === categoryName;
-                                            return (
-                                                <Link
-                                                    key={
-                                                        u.id ??
-                                                        u.upperIdx ??
-                                                        label
-                                                    }
-                                                    href={buildHrefForUpper(
-                                                        label
-                                                    )}
-                                                    className={`${styles.pill} ${
-                                                        isActive
-                                                            ? styles.active
-                                                            : ""
-                                                    }`}
-                                                >
-                                                    <span
-                                                        className={
-                                                            styles.pillText
-                                                        }
-                                                    >
-                                                        {label}
-                                                    </span>
-                                                </Link>
-                                            );
-                                        })}
-                                    </div>
+                                <div className={styles.catLine}>
+                                    {upperList.map((u) => {
+                                        const label = u.name ?? u.upperCt;
+                                        const isActive = label === categoryName;
+                                        return (
+                                            <Link
+                                                key={u.id ?? u.upperIdx ?? label}
+                                                href={buildHrefForUpper(label)}
+                                                className={`${styles.catPill} ${
+                                                    isActive ? styles.catPillActive : ""
+                                                }`}
+                                            >
+                                                {label}
+                                            </Link>
+                                        );
+                                    })}
                                 </div>
                             )}
 
                             {/* 중분류 */}
                             {middleList?.length > 0 && (
-                                <div className={styles.block}>
-                                    <div className={styles.middleRow}>
-                                        {middleList.map((m) => {
-                                            const id =
-                                                m.id ?? m.middleId;
-                                            const name =
-                                                m.name ?? m.middleCt;
-                                            const active =
-                                                String(selected?.mid ?? "") ===
-                                                String(id);
-                                            return (
-                                                <Link
-                                                    key={id}
-                                                    href={buildHrefForMid(id)}
-                                                    className={`${styles.pill} ${
-                                                        active
-                                                            ? styles.active
-                                                            : ""
-                                                    }`}
-                                                    prefetch={false}
-                                                >
-                                                    <span
-                                                        className={
-                                                            styles.pillText
-                                                        }
-                                                    >
-                                                        {name}
-                                                    </span>
-                                                    {typeof m.count !==
-                                                        "undefined" && (
-                                                            <span
-                                                                className={
-                                                                    styles.count
-                                                                }
-                                                            >
-                                                            {m.count}
-                                                        </span>
-                                                        )}
-                                                </Link>
-                                            );
-                                        })}
-                                    </div>
+                                <div className={styles.catLine}>
+                                    {middleList.map((m) => {
+                                        const id = m.id ?? m.middleId;
+                                        const name = m.name ?? m.middleCt;
+                                        const active =
+                                            String(selected?.mid ?? "") === String(id);
+                                        return (
+                                            <Link
+                                                key={id}
+                                                href={buildHrefForMid(id)}
+                                                className={`${styles.catPill} ${
+                                                    active ? styles.catPillActive : ""
+                                                }`}
+                                                prefetch={false}
+                                            >
+                                                {name}
+                                            </Link>
+                                        );
+                                    })}
                                 </div>
                             )}
 
-                            {/* 소분류 */}
+                            {/* 소분류: 중분류 선택돼 있을 때만 한 줄 아래로 */}
                             {!!selected?.mid && lowList?.length > 0 && (
-                                <div className={styles.block}>
-                                    <div className={styles.lowRow}>
-                                        {lowList.map((l) => {
-                                            const id = l.id ?? l.lowId;
-                                            const name = l.name ?? l.lowCt;
-                                            const active =
-                                                String(selected?.low ?? "") ===
-                                                String(id);
-                                            return (
-                                                <Link
-                                                    key={id}
-                                                    href={buildHrefForLow(id)}
-                                                    className={`${styles.pill} ${
-                                                        active
-                                                            ? styles.active
-                                                            : ""
-                                                    }`}
-                                                    prefetch={false}
-                                                >
-                                                    <span
-                                                        className={
-                                                            styles.pillText
-                                                        }
-                                                    >
-                                                        {name}
-                                                    </span>
-                                                    {typeof l.count !==
-                                                        "undefined" && (
-                                                            <span
-                                                                className={
-                                                                    styles.count
-                                                                }
-                                                            >
-                                                            {l.count}
-                                                        </span>
-                                                        )}
-                                                </Link>
-                                            );
-                                        })}
-                                    </div>
+                                <div className={styles.catLineSub}>
+                                    {lowList.map((l) => {
+                                        const id = l.id ?? l.lowId;
+                                        const name = l.name ?? l.lowCt;
+                                        const active =
+                                            String(selected?.low ?? "") === String(id);
+                                        return (
+                                            <Link
+                                                key={id}
+                                                href={buildHrefForLow(id)}
+                                                className={`${styles.catPill} ${
+                                                    active ? styles.catPillActive : ""
+                                                }`}
+                                                prefetch={false}
+                                            >
+                                                {name}
+                                            </Link>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
+                    </div>
 
-                        {/* 오른쪽 정렬칩 + 가격 */}
-                        <div className={styles.sortCol}>
-                            <div className={styles.sortChips}>
-                                <button
-                                    className={`${styles.chip} ${
-                                        activeSort === "recent"
-                                            ? styles.active
-                                            : ""
-                                    }`}
-                                    onClick={() => setSort("recent")}
-                                >
-                                    최신순
-                                </button>
-                                <button
-                                    className={`${styles.chip} ${
-                                        activeSort === "price_asc"
-                                            ? styles.active
-                                            : ""
-                                    }`}
-                                    onClick={() => setSort("price_asc")}
-                                >
-                                    가격 낮은 순
-                                </button>
-                                <button
-                                    className={`${styles.chip} ${
-                                        activeSort === "price_desc"
-                                            ? styles.active
-                                            : ""
-                                    }`}
-                                    onClick={() => setSort("price_desc")}
-                                >
-                                    가격 높은 순
-                                </button>
-                            </div>
+                    {/* 2. 가격 줄 */}
+                    <div className={styles.row}>
+                        <div className={styles.th}>가격</div>
+                        <div className={styles.td}>
+                            <input
+                                type="number"
+                                className={styles.priceInput}
+                                placeholder="최소 가격"
+                                value={minPrice}
+                                onChange={(e) => setMinPrice(e.target.value)}
+                            />
+                            <span className={styles.tilde}>~</span>
+                            <input
+                                type="number"
+                                className={styles.priceInput}
+                                placeholder="최대 가격"
+                                value={maxPrice}
+                                onChange={(e) => setMaxPrice(e.target.value)}
+                            />
+                            <button className={styles.applyBtn} onClick={applyPriceFilter}>
+                                적용
+                            </button>
+                        </div>
+                    </div>
 
-                            {/* ✅ 가격 필터 추가 */}
-                            <div className={styles.priceFilter}>
-                                <input
-                                    type="number"
-                                    placeholder="최소 가격"
-                                    value={minPrice}
-                                    onChange={(e) =>
-                                        setMinPrice(e.target.value)
-                                    }
-                                />
-                                <span className={styles.tilde}>~</span>
-                                <input
-                                    type="number"
-                                    placeholder="최대 가격"
-                                    value={maxPrice}
-                                    onChange={(e) =>
-                                        setMaxPrice(e.target.value)
-                                    }
-                                />
-                                <button
-                                    className={styles.applyBtn}
-                                    onClick={applyPriceFilter}
-                                >
-                                    적용
-                                </button>
-                            </div>
+                    {/* 3. 옵션 줄 */}
+                    <div className={styles.row}>
+                        <div className={styles.th}>옵션</div>
+                        <div className={styles.td}>
+                            <button
+                                type="button"
+                                onClick={() => applyDealType("")}
+                                className={`${styles.optionBtn} ${
+                                    dealType === "" ? styles.optionSelected : ""
+                                }`}
+                            >
+                                <span className={styles.optionIcon} />
+                                전체
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => applyDealType("MEET")}
+                                className={`${styles.optionBtn} ${
+                                    dealType === "MEET" ? styles.optionSelected : ""
+                                }`}
+                            >
+                                <span className={styles.optionIcon} />
+                                직거래
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => applyDealType("DELIVERY")}
+                                className={`${styles.optionBtn} ${
+                                    dealType === "DELIVERY" ? styles.optionSelected : ""
+                                }`}
+                            >
+                                <span className={styles.optionIcon} />
+                                택배거래
+                            </button>
+                            <button
+                                type="button"
+                                onClick={toggleExcludeSold}
+                                className={`${styles.optionBtn} ${
+                                    excludeSold ? styles.optionSelected : ""
+                                }`}
+                            >
+                                <span className={styles.optionIcon} />
+                                판매완료 제외
+                            </button>
                         </div>
                     </div>
                 </div>

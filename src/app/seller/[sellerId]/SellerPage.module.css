@@ -1,0 +1,78 @@
+/* src/app/seller/[sellerId]/SellerPage.module.css */
+.page {
+    width: min(1200px, 100%);
+    margin: 0 auto;
+    padding: 24px 16px 40px;
+}
+
+.profilePanelWrap {
+    margin-bottom: 20px;
+}
+
+.tabsRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.tabs {
+    display: flex;
+    gap: 24px;
+}
+
+.tab {
+    position: relative;
+    font-size: 15px;
+    color: #666;
+    text-decoration: none;
+    padding-bottom: 6px;
+}
+
+.tabActive {
+    color: #111;
+    font-weight: 700;
+}
+
+.tabActive::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -10px;
+    width: 100%;
+    height: 3px;
+    background: #111;
+    border-radius: 999px;
+}
+
+.sort {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 14px;
+    color: #888;
+}
+
+.sortItem {
+    color: #888;
+    text-decoration: none;
+}
+
+.sortActive {
+    color: #111;
+    font-weight: 600;
+}
+
+.sortSep {
+    color: #ddd;
+}
+
+.productsSection {
+    margin-top: 16px;
+}
+
+.empty {
+    margin-top: 20px;
+    color: #777;
+}
