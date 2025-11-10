@@ -65,14 +65,23 @@ export default function Header() {
 
         (async () => {
             try {
-                const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+                const headers = accessToken
+                    ? { Authorization: `Bearer ${accessToken}` }
+                    : {};
+
                 const res = await fetch("/api/users/me", {
                     credentials: "include",
                     headers,
                 });
+
                 if (res.ok) {
                     setMe(await res.json());
                 } else {
+                    // ❗ 유효하지 않은 토큰이면 즉시 삭제
+                    clearToken();
+                    if (typeof window !== "undefined") {
+                        localStorage.removeItem("accessToken");
+                    }
                     setMe(null);
                 }
             } catch (e) {
@@ -80,7 +89,7 @@ export default function Header() {
                 setMe(null);
             }
         })();
-    }, [accessToken]);
+    }, [accessToken, clearToken]);
 
     // 로그아웃
     const onLogout = async () => {

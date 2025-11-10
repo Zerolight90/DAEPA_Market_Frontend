@@ -5,20 +5,45 @@ import styles from './buy.module.css';
 import Sidebar from '@/components/mypage/sidebar';
 import tokenStore from '@/app/store/TokenStore';
 
-export default function SellHistoryPage() {
+export default function BuyHistoryPage() {
     const { accessToken } = tokenStore();
     const [list, setList] = useState([]);
     const [keyword, setKeyword] = useState('');
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState('');
+    const [me, setMe] = useState(null); // ✅ 내 정보
 
-    // 목록 가져오기
-    async function fetchSell() {
+    // 1) 내 정보 가져오기
+    useEffect(() => {
+        if (!accessToken) {
+            setMe(null);
+            return;
+        }
+
+        (async () => {
+            try {
+                const res = await fetch('/api/users/me', {
+                    headers: { Authorization: `Bearer ${accessToken}` },
+                    credentials: 'include',
+                });
+                if (res.ok) {
+                    setMe(await res.json());
+                } else {
+                    setMe(null);
+                }
+            } catch (e) {
+                setMe(null);
+            }
+        })();
+    }, [accessToken]);
+
+    // 2) 내 구매 목록 가져오기
+    async function fetchDeals() {
         try {
             setLoading(true);
             setErr('');
 
-            const res = await fetch('/api/deal/mySell', {
+            const res = await fetch('/api/deal/myBuy', {
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
                 cache: 'no-store',
@@ -26,7 +51,7 @@ export default function SellHistoryPage() {
 
             if (!res.ok) {
                 const txt = await res.text();
-                setErr(txt || '판매내역을 불러오지 못했습니다.');
+                setErr(txt || '구매내역을 불러오지 못했습니다.');
                 setList([]);
                 return;
             }
@@ -42,7 +67,8 @@ export default function SellHistoryPage() {
     }
 
     useEffect(() => {
-        fetchSell();
+        if (!accessToken) return;
+        fetchDeals();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [accessToken]);
 
@@ -68,7 +94,31 @@ export default function SellHistoryPage() {
         );
     }
 
-    // 1=판매중, 2=결제완료, 3=판매완료 (계산은 그대로 두고)
+    // d_buy / b_buy 여러 형태 대응
+    function getDBuy(item) {
+        return (
+            item?.dBuy ??
+            item?.bBuy ??
+            item?.d_buy ??
+            item?.b_buy ??
+            item?.DBuy ??
+            item?.B_BUY ??
+            null
+        );
+    }
+
+    // ✅ buyer_idx 여러 형태 대응
+    function getBuyerIdx(item) {
+        return (
+            item?.buyerIdx ??
+            item?.buyer_idx ??
+            item?.buyerId ??
+            item?.buyer_id ??
+            null
+        );
+    }
+
+    // 1=판매중, 2=결제완료, 3=판매완료 (여기서는 구매 쪽 표현으로 씀)
     function calcBaseStep(item) {
         const dStatus = getDStatus(item);
         const dSell = getDSell(item);
@@ -81,36 +131,31 @@ export default function SellHistoryPage() {
     // 배송 단계 계산
     function calcDeliverySteps(item) {
         const steps = {
-            step4: false, // 배송 보냄 확인
-            step5: false, // 배송
-            step6: false, // 대파에서 검수 중
-            step7: false, // 배송
-            step8: false, // 후기 보내기
+            step4: false,
+            step5: false,
+            step6: false,
+            step7: false,
+            step8: false,
         };
 
         const baseStep = calcBaseStep(item);
-        // 판매완료(3) 전이면 뒤 단계 안 보여줌
         if (baseStep < 3) return steps;
 
         const dv = item.dvStatus ?? item.dv_status ?? null;
         const ck = item.ckStatus ?? item.ck_status ?? null;
 
-        // dv = 1 이상 → 배송보냄확인 + 배송
         if (dv != null && dv >= 1) {
             steps.step4 = true;
             steps.step5 = true;
         }
-        // dv = 2 → 검수중
         if (dv != null && dv >= 2) {
             steps.step6 = true;
         } else if (ck != null && ck === 0) {
             steps.step6 = true;
         }
-        // dv = 3 → 다음 배송
         if (dv != null && dv >= 3) {
             steps.step7 = true;
         }
-        // dv = 5 → 후기
         if (dv != null && dv >= 5) {
             steps.step8 = true;
         }
@@ -135,13 +180,50 @@ export default function SellHistoryPage() {
         return `${y}.${m}.${day}`;
     }
 
-    // 검색 필터
+    // ✅ 여기서 "내가 구매자"인 것만 남기고, 거기서 검색어까지 적용
     const filtered = useMemo(() => {
-        const kw = keyword.toLowerCase();
-        return list.filter((item) =>
-            (item.title || '').toLowerCase().includes(kw)
-        );
-    }, [list, keyword]);
+        const kw = keyword.toLowerCase().trim();
+
+        const myIdx =
+            me?.uIdx ??
+            me?.u_idx ??
+            me?.uid ??
+            me?.id ??
+            null;
+
+        return list
+            // 1) 내가 산 거래만
+            .filter((item) => {
+                const buyer = getBuyerIdx(item);
+
+                if (buyer != null && myIdx != null) {
+                    return Number(buyer) === Number(myIdx);
+                }
+
+                // 응답에 buyer가 아예 없으면 일단 보여주기
+                return true;
+            })
+            // 2) 검색어 적용 (title, productTitle, pdTitle, dealId 다 걸기)
+            .filter((item) => {
+                if (!kw) return true;
+
+                const candidates = [
+                    item.title,
+                    item.productTitle,
+                    item.pdTitle,
+                    item.pd_title,
+                ]
+                    .filter(Boolean)
+                    .map((v) => String(v).toLowerCase());
+
+                const dealIdStr = item.dealId ? String(item.dealId) : '';
+
+                return (
+                    candidates.some((t) => t.includes(kw)) ||
+                    dealIdStr.includes(kw)
+                );
+            });
+    }, [list, keyword, me]);
 
     // 거래방식 텍스트
     function getTradeText(item) {
@@ -154,7 +236,20 @@ export default function SellHistoryPage() {
         return raw;
     }
 
-    // 배송 보냄 확인 → dv_status = 1
+    // ✅ 구매확인 버튼 노출 조건
+    // 1) 판매자(d_sell) = 1
+    // 2) 내 d_buy != 1
+    // 3) d_status != 1 (이미 최종 완료면 버튼 안 뜸)
+    function shouldShowBuyConfirm(item) {
+        const dSell = getDSell(item);
+        const dBuy = getDBuy(item);
+        const dStatus = getDStatus(item);
+
+        if (dStatus === 1 || dStatus === 1n) return false;
+        return (dSell === 1 || dSell === 1n) && !(dBuy === 1 || dBuy === 1n);
+    }
+
+    // 배송 보냄 확인
     async function handleSendClick(dealId) {
         try {
             const res = await fetch(`/api/delivery/${dealId}/sent`, {
@@ -166,13 +261,13 @@ export default function SellHistoryPage() {
                 alert('배송 보냄 확인에 실패했습니다.');
                 return;
             }
-            fetchSell();
+            fetchDeals();
         } catch (e) {
             alert('네트워크 오류가 발생했습니다.');
         }
     }
 
-    // dv_status = 3 → dv_status = 5
+    // 배송 완료 확인
     async function handleDoneClick(dealId) {
         try {
             const res = await fetch(`/api/delivery/${dealId}/done`, {
@@ -184,7 +279,26 @@ export default function SellHistoryPage() {
                 alert('처리 중 오류가 발생했습니다.');
                 return;
             }
-            fetchSell();
+            fetchDeals();
+        } catch (e) {
+            alert('네트워크 오류가 발생했습니다.');
+        }
+    }
+
+    // ✅ 구매확정 호출
+    async function handleBuyConfirm(dealId) {
+        try {
+            const res = await fetch(`/api/deal/${dealId}/buy-confirm`, {
+                method: 'PATCH',
+                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                credentials: 'include',
+            });
+            if (!res.ok) {
+                const txt = await res.text();
+                alert(txt || '구매확정에 실패했습니다.');
+                return;
+            }
+            fetchDeals();
         } catch (e) {
             alert('네트워크 오류가 발생했습니다.');
         }
@@ -221,7 +335,7 @@ export default function SellHistoryPage() {
 
             <main className={styles.content}>
                 <header className={styles.topBar}>
-                    <h1 className={styles.pageTitle}>판매내역</h1>
+                    <h1 className={styles.pageTitle}>구매내역</h1>
                 </header>
 
                 <div className={styles.searchRow}>
@@ -233,8 +347,8 @@ export default function SellHistoryPage() {
                             placeholder="상품명을 입력해주세요."
                         />
                         <span className={styles.searchIcon} aria-hidden>
-              🔍
-            </span>
+                            🔍
+                        </span>
                     </div>
                 </div>
 
@@ -262,15 +376,16 @@ export default function SellHistoryPage() {
                                 step8,
                             } = isDelivery ? calcDeliverySteps(item) : {};
 
-                            // 위에서 계산은 1~3하지만 화면에서는 판매완료부터만 보여줄 거라
                             const dStatus = getDStatus(item);
+                            const dBuy = getDBuy(item);
                             const dSell = getDSell(item);
+
                             const statusText =
                                 dStatus === 1 || dStatus === 1n
-                                    ? '판매완료'
+                                    ? '구매완료'
                                     : dSell === 1 || dSell === 1n
                                         ? '결제완료'
-                                        : '판매중';
+                                        : '구매중';
 
                             const showSendBtn = item.showSendBtn === true;
                             const currentDv = item.dvStatus ?? item.dv_status ?? null;
@@ -278,9 +393,10 @@ export default function SellHistoryPage() {
                                 isDelivery && currentDv !== null && currentDv === 3;
                             const showReviewBtn = item.showReviewBtn === true;
 
+                            const showBuyConfirmBtn = shouldShowBuyConfirm(item);
+
                             return (
                                 <article key={item.dealId} className={styles.block}>
-                                    {/* 날짜 + 거래방식 */}
                                     <div className={styles.dateRow}>
                                         <span>{formatDate(item.dealEndDate)}</span>
                                         <span className={styles.dot}>|</span>
@@ -297,7 +413,10 @@ export default function SellHistoryPage() {
 
                                             <div className={styles.prodInfo}>
                                                 <p className={styles.prodTitle}>
-                                                    {item.title || '(제목 없음)'}
+                                                    {item.title ||
+                                                        item.productTitle ||
+                                                        item.pdTitle ||
+                                                        '(제목 없음)'}
                                                 </p>
                                                 <p className={styles.prodPrice}>
                                                     {(
@@ -309,10 +428,25 @@ export default function SellHistoryPage() {
                                             </div>
                                         </div>
 
-                                        {/* 🔴 여기부터만 보이게: 판매 완료 → ... */}
+                                        {/* ✅ 스텝바 */}
                                         <div className={styles.stepBar}>
-                                            {/* 3. 판매 완료 (앞에 1,2는 안 보이게) */}
-                                            <Step active={baseStep >= 3} label="판매 완료" />
+                                            {/* ✅ 여기 새로 추가: 구매확인 네모칸 */}
+                                            <SquareStep
+                                                active={
+                                                    dBuy === 1 ||
+                                                    dBuy === 1n ||
+                                                    dStatus === 1 ||
+                                                    dStatus === 1n
+                                                }
+                                                label="구매확인"
+                                            />
+
+
+
+                                            {/* 기본: 구매 완료 */}
+                                            <Step active={baseStep >= 3} label="구매 완료" />
+
+
 
                                             {isDelivery && (
                                                 <>
@@ -331,8 +465,19 @@ export default function SellHistoryPage() {
                                             )}
                                         </div>
 
-                                        {/* 버튼 영역 */}
+                                        {/* 버튼들 */}
                                         <div className={styles.actions}>
+                                            {/* ✅ 구매확정 버튼: d_status=1 이면 안 나옴 */}
+                                            {showBuyConfirmBtn && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.greenBtn}
+                                                    onClick={() => handleBuyConfirm(item.dealId)}
+                                                >
+                                                    구매확정
+                                                </button>
+                                            )}
+
                                             {showSendBtn && (
                                                 <button
                                                     type="button"
@@ -365,7 +510,7 @@ export default function SellHistoryPage() {
                         })}
 
                         {filtered.length === 0 && (
-                            <div className={styles.empty}>판매내역이 없습니다.</div>
+                            <div className={styles.empty}>구매내역이 없습니다.</div>
                         )}
                     </section>
                 )}
