@@ -12,7 +12,7 @@ export default function SellHistoryPage() {
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState('');
 
-    // 목록 가져오기
+    // 판매 내역 가져오기
     async function fetchSell() {
         try {
             setLoading(true);
@@ -42,6 +42,7 @@ export default function SellHistoryPage() {
     }
 
     useEffect(() => {
+        if (!accessToken) return;
         fetchSell();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [accessToken]);
@@ -68,7 +69,7 @@ export default function SellHistoryPage() {
         );
     }
 
-    // 1=판매중, 2=결제완료, 3=판매완료 (계산은 그대로 두고)
+    // 스텝 계산
     function calcBaseStep(item) {
         const dStatus = getDStatus(item);
         const dSell = getDSell(item);
@@ -78,39 +79,33 @@ export default function SellHistoryPage() {
         return 1;
     }
 
-    // 배송 단계 계산
     function calcDeliverySteps(item) {
         const steps = {
-            step4: false, // 배송 보냄 확인
-            step5: false, // 배송
-            step6: false, // 대파에서 검수 중
-            step7: false, // 배송
-            step8: false, // 후기 보내기
+            step4: false,
+            step5: false,
+            step6: false,
+            step7: false,
+            step8: false,
         };
 
         const baseStep = calcBaseStep(item);
-        // 판매완료(3) 전이면 뒤 단계 안 보여줌
         if (baseStep < 3) return steps;
 
         const dv = item.dvStatus ?? item.dv_status ?? null;
         const ck = item.ckStatus ?? item.ck_status ?? null;
 
-        // dv = 1 이상 → 배송보냄확인 + 배송
         if (dv != null && dv >= 1) {
             steps.step4 = true;
             steps.step5 = true;
         }
-        // dv = 2 → 검수중
         if (dv != null && dv >= 2) {
             steps.step6 = true;
         } else if (ck != null && ck === 0) {
             steps.step6 = true;
         }
-        // dv = 3 → 다음 배송
         if (dv != null && dv >= 3) {
             steps.step7 = true;
         }
-        // dv = 5 → 후기
         if (dv != null && dv >= 5) {
             steps.step8 = true;
         }
@@ -135,15 +130,32 @@ export default function SellHistoryPage() {
         return `${y}.${m}.${day}`;
     }
 
-    // 검색 필터
+    // ✅ 검색 확장: title, productTitle, pdTitle, dealId 까지
     const filtered = useMemo(() => {
-        const kw = keyword.toLowerCase();
-        return list.filter((item) =>
-            (item.title || '').toLowerCase().includes(kw)
-        );
+        const kw = keyword.toLowerCase().trim();
+        if (!kw) return list;
+
+        return list.filter((item) => {
+            const candidates = [
+                item.title,
+                item.productTitle,
+                item.pdTitle,
+                item.pd_title,
+            ]
+                .filter(Boolean)
+                .map((v) => String(v).toLowerCase());
+
+            const dealIdStr = item.dealId ? String(item.dealId) : '';
+
+            // 제목들 중 하나에 포함되거나, 거래번호에 포함되면 통과
+            return (
+                candidates.some((t) => t.includes(kw)) ||
+                dealIdStr.includes(kw)
+            );
+        });
     }, [list, keyword]);
 
-    // 거래방식 텍스트
+    // 거래방식
     function getTradeText(item) {
         const raw =
             (item?.dDeal ?? item?.ddeal ?? item?.d_deal ?? '').toString().trim();
@@ -154,7 +166,7 @@ export default function SellHistoryPage() {
         return raw;
     }
 
-    // 배송 보냄 확인 → dv_status = 1
+    // 배송 보냄 확인
     async function handleSendClick(dealId) {
         try {
             const res = await fetch(`/api/delivery/${dealId}/sent`, {
@@ -172,7 +184,7 @@ export default function SellHistoryPage() {
         }
     }
 
-    // dv_status = 3 → dv_status = 5
+    // 배송 완료 확인
     async function handleDoneClick(dealId) {
         try {
             const res = await fetch(`/api/delivery/${dealId}/done`, {
@@ -190,7 +202,6 @@ export default function SellHistoryPage() {
         }
     }
 
-    // 동그라미 스텝
     function Step({ active, label }) {
         return (
             <div className={`${styles.step} ${active ? styles.stepActive : ''}`}>
@@ -200,7 +211,6 @@ export default function SellHistoryPage() {
         );
     }
 
-    // 네모 스텝
     function SquareStep({ active, label }) {
         return (
             <div
@@ -262,7 +272,6 @@ export default function SellHistoryPage() {
                                 step8,
                             } = isDelivery ? calcDeliverySteps(item) : {};
 
-                            // 위에서 계산은 1~3하지만 화면에서는 판매완료부터만 보여줄 거라
                             const dStatus = getDStatus(item);
                             const dSell = getDSell(item);
                             const statusText =
@@ -280,7 +289,6 @@ export default function SellHistoryPage() {
 
                             return (
                                 <article key={item.dealId} className={styles.block}>
-                                    {/* 날짜 + 거래방식 */}
                                     <div className={styles.dateRow}>
                                         <span>{formatDate(item.dealEndDate)}</span>
                                         <span className={styles.dot}>|</span>
@@ -297,7 +305,10 @@ export default function SellHistoryPage() {
 
                                             <div className={styles.prodInfo}>
                                                 <p className={styles.prodTitle}>
-                                                    {item.title || '(제목 없음)'}
+                                                    {item.title ||
+                                                        item.productTitle ||
+                                                        item.pdTitle ||
+                                                        '(제목 없음)'}
                                                 </p>
                                                 <p className={styles.prodPrice}>
                                                     {(
@@ -309,9 +320,7 @@ export default function SellHistoryPage() {
                                             </div>
                                         </div>
 
-                                        {/* 🔴 여기부터만 보이게: 판매 완료 → ... */}
                                         <div className={styles.stepBar}>
-                                            {/* 3. 판매 완료 (앞에 1,2는 안 보이게) */}
                                             <Step active={baseStep >= 3} label="판매 완료" />
 
                                             {isDelivery && (
@@ -331,7 +340,6 @@ export default function SellHistoryPage() {
                                             )}
                                         </div>
 
-                                        {/* 버튼 영역 */}
                                         <div className={styles.actions}>
                                             {showSendBtn && (
                                                 <button

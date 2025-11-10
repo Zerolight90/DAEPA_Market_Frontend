@@ -66,7 +66,7 @@ export default function ShippingPage() {
                             price: typeof row.agreedPrice === 'number'
                                 ? row.agreedPrice
                                 : 0,
-                            date: null, // 아직 DTO에 날짜 없음
+                            date: row.dvDate ?? row.dv_date ?? null, // 아직 DTO에 날짜 없음
                             deliveryStatus: row.deliveryStatus,
                             checkStatus: row.checkStatus,
                             checkResult: row.checkResult,
