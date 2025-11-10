@@ -16,7 +16,7 @@ export default function ContactPage() {
   const columnTemplate = "140px 180px 160px 1.2fr 2fr 140px 180px 140px";
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/admin/contact")
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact`)
         .then(res => res.json())
         .then(data => setInquiries(data))
         .catch(err => console.error(err));

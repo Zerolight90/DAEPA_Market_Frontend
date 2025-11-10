@@ -13,12 +13,12 @@ export default function CreateNoticePage() {
     content: "",
     isImportant: false
   });
-  
+
   // (이미지) 사용자가 선택한 파일 객체를 관리하는 상태
   const [file, setFile] = useState(null);
   // (이미지) 선택된 이미지 파일의 미리보기 URL을 관리하는 상태
   const [imagePreview, setImagePreview] = useState(null);
-  
+
   // 폼 제출 진행 상태를 관리하는 상태
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -63,7 +63,8 @@ export default function CreateNoticePage() {
             return;
         }
 
-        const categoryMap = { "공지": 1, "업데이트": 2, "안내": 3, "이벤트": 4 };
+          // 2) 카테고리 한글 → 숫자 매핑
+          const categoryMap = { "공지": 1, "업데이트": 2, "안내": 3, "이벤트": 4 };
 
         // 백엔드 API의 DTO 형식에 맞게 전송할 JSON 데이터
         const noticeData = {
@@ -76,7 +77,7 @@ export default function CreateNoticePage() {
 
         // multipart/form-data 형식으로 데이터를 보내기 위해 FormData 객체 생성
         const formDataToSend = new FormData();
-        
+
         // 1. JSON 데이터를 'req'라는 키의 Blob 객체로 변환하여 FormData에 추가
         formDataToSend.append('req', new Blob([JSON.stringify(noticeData)], { type: "application/json" }));
 
@@ -86,11 +87,11 @@ export default function CreateNoticePage() {
         }
 
         // 3. fetch API를 사용하여 서버에 POST 요청
-        const res = await fetch("http://localhost:8080/api/admin/notices", {
-            method: "POST",
-            body: formDataToSend, // FormData 객체를 body로 전송
-            // Content-Type 헤더는 브라우저가 FormData를 보낼 때 자동으로 설정하므로 명시하지 않음
-        });
+         const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+          });
 
         if (!res.ok) {
             const errorText = await res.text();
@@ -210,6 +211,9 @@ export default function CreateNoticePage() {
                   <option value="이벤트">이벤트</option>
                 </select>
               </div>
+
+
+
             </div>
 
             {/* 내용 */}
