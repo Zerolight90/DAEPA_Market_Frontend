@@ -1,45 +1,59 @@
 // src/lib/server/sellers.js
-import { api } from "@/lib/api/client";
+import "server-only";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE
+const API_BASE =
+    process.env.NEXT_PUBLIC_API_BASE ||
+    process.env.API_BASE ||
+    "http://localhost:8080";
 
-function normalizeThumb(url) {
-    if (!url) return "/no-image.png";
-    // /uploads 로 시작하면 백엔드 호스트를 붙여 절대 URL로
-    if (url.startsWith("/uploads")) return `${API_BASE}${url}`;
-    return url; // S3 등 절대 URL은 그대로
-}
+/**
+ * 판매자가 올린 상품 목록
+ * 백엔드에 이미 있는: GET /api/sellers/{sellerId}/products
+ */
+export async function fetchSellerProducts({
+                                              sellerId,
+                                              page = 0,
+                                              size = 20,
+                                              sort = "recent",
+                                              status, // 지금은 안 써도 일단 받아둠
+                                          }) {
+    const qs = new URLSearchParams();
+    qs.set("page", String(page));
+    qs.set("size", String(size));
+    // sort, status 는 네가 백엔드에서 아직 안 받으면 무시돼도 됨
 
-/** 판매자 상품 목록: 배열 그대로 리턴(ProductsGrid에 바로 넣기) */
-export async function fetchSellerProducts({ sellerId, page = 0, size = 20, sort = "recent" }) {
-    const qs = new URLSearchParams({ page: String(page), size: String(size), sort });
-    const res = await api(`/sellers/${sellerId}/products?${qs.toString()}`, {
-        next: { revalidate: 0 },
+    const url = new URL(`/api/sellers/${sellerId}/products`, API_BASE);
+    url.search = qs.toString();
+
+    const res = await fetch(url.toString(), {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
     });
 
-    // 백엔드가 [ {id,title,price,thumbnail,status}, ... ] 형태의 배열을 줌
-    const arr = Array.isArray(res) ? res : (res?.items ?? []);
-    return arr.map((p) => ({
-        id: p.id ?? p.pdIdx,
-        title: p.title ?? p.pdTitle,
-        price: p.price ?? p.pdPrice,
-        // ProductsGrid가 'thumbnail' 또는 'image' 중 무엇을 보는지에 따라 둘 다 채워줌
-        thumbnail: normalizeThumb(p.thumbnail ?? p.pdThumb),
-        image: normalizeThumb(p.thumbnail ?? p.pdThumb),
-        location: p.location ?? p.pdLocation ?? null,
-        createdAt: p.createdAt ?? p.pdCreate ?? null,
-        status: p.status ?? p.pdStatus ?? null,
-    }));
+    if (!res.ok) {
+        return [];
+    }
+
+    const data = await res.json();
+    // 이 API 가 List<ProductCardDTO> 를 바로 주고 있으니까 그대로 반환
+    return Array.isArray(data) ? data : [];
 }
 
-/** (선택) 판매자 프로필은 없어도 됨 — 필요하면 유지 */
-export async function fetchSeller(sellerId) {
-    const res = await api(`/sellers/${sellerId}`).catch(() => null);
-    if (!res) return { id: sellerId };
-    return {
-        id: res.id ?? res.uIdx ?? sellerId,
-        nickname: res.nickname ?? res.uNickname ?? res.uName ?? "판매자",
-        avatarUrl: res.avatarUrl ?? res.uProfile ?? "/images/avatar-default.png",
-        freshness: typeof res.uManner === "number" ? Math.max(0, Math.min(100, res.uManner)) : null,
-    };
+/**
+ * 상품 하나 상세 가져오기
+ * 백엔드에 이미 있는: GET /api/products/{id}
+ */
+export async function fetchProductDetail(productId) {
+    if (!productId) return null;
+
+    const url = new URL(`/api/products/${productId}`, API_BASE);
+
+    const res = await fetch(url.toString(), {
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+    });
+
+    if (!res.ok) return null;
+
+    return res.json();
 }
