@@ -1,3 +1,4 @@
+//src/components/mypage/sidebar.js
 "use client";
 
 import Link from "next/link";
@@ -21,6 +22,7 @@ export const SIDE_SECTIONS = [
             // { href: "/mypage/account", label: "계좌 관리" },
             { href: "/mypage/address", label: "배송지 관리" },
             { href: "/mypage/review", label: "거래 후기" },
+            { href: "/mypage/contact", label: "1대1 문의" },
             { href: "/mypage/leave", label: "탈퇴하기" },
         ],
     },

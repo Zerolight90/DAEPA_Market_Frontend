@@ -1,0 +1,197 @@
+/* 전체 래퍼: 사이드바 + 내용 */
+.mc-shell {
+    display: flex;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 16px 60px;
+    box-sizing: border-box;
+}
+
+/* 오른쪽 페이지 영역 */
+.mc-page {
+    flex: 1 1 auto;
+    background: #f8fafc;
+    min-height: calc(100vh - 120px);
+}
+
+/* 헤더 */
+.mc-header {
+    margin-bottom: 18px;
+}
+
+.mc-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #111;
+    margin: 0;
+}
+
+.mc-desc {
+    margin-top: 6px;
+    color: #64748b;
+    font-size: 14px;
+}
+
+/* 필터 버튼 줄 */
+.mc-filter-row {
+    margin-top: 16px;
+    display: flex;
+    gap: 8px;
+}
+
+.mc-filter-btn {
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    border-radius: 9999px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: #475569;
+    cursor: pointer;
+    transition: background .1s ease;
+}
+
+.mc-filter-btn:hover {
+    background: #f1f5f9;
+}
+
+.mc-filter-btn.active {
+    background: #111;
+    border-color: #111;
+    color: #fff;
+}
+
+/* 상태 문구 */
+.mc-state-text {
+    margin-top: 20px;
+    color: #475569;
+    font-size: 14px;
+}
+
+.mc-error {
+    color: #dc2626;
+}
+
+/* 리스트 */
+.mc-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+/* 카드 */
+.mc-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px 18px 16px;
+    box-shadow: 0 3px 14px rgba(15, 23, 42, 0.03);
+}
+
+/* 카드 상단 */
+.mc-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.mc-badge {
+    background: #f4f4f5;
+    border-radius: 9999px;
+    padding: 3px 11px;
+    font-size: 12px;
+    color: #111;
+}
+
+.mc-badge-wait {
+    background: #fff4e6;
+    border-radius: 9999px;
+    padding: 3px 11px;
+    font-size: 12px;
+    color: #c05621;
+    border: 1px solid rgba(224,164,100,.35);
+}
+
+.mc-badge-replied {
+    background: #ecfdf3;
+    border-radius: 9999px;
+    padding: 3px 11px;
+    font-size: 12px;
+    color: #166534;
+    border: 1px solid rgba(74,222,128,.35);
+}
+
+/* 제목, 메타 */
+.mc-card-title {
+    margin-top: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f172a;
+    margin-bottom: 2px;
+}
+
+.mc-meta {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 12px;
+}
+
+/* 내용 */
+.mc-content {
+    font-size: 14px;
+    color: #475569;
+    line-height: 1.5;
+    white-space: pre-line;
+    margin-bottom: 10px;
+}
+
+/* 사진 */
+.mc-photo-wrap {
+    margin-bottom: 12px;
+}
+
+.mc-photo {
+    width: 132px;
+    height: 132px;
+    object-fit: cover;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+/* 답변 박스 */
+.mc-reply-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 12px 12px;
+}
+
+.mc-reply-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: #0f172a;
+}
+
+.mc-reply-text {
+    font-size: 13px;
+    color: #475569;
+    white-space: pre-line;
+}
+
+/* 사이드바가 위로 올라가야 하는 작은 화면 */
+@media (max-width: 900px) {
+    .mc-shell {
+        flex-direction: column;
+        padding-top: 16px;
+    }
+
+    .mc-page {
+        min-height: auto;
+    }
+}
