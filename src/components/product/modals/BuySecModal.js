@@ -5,11 +5,13 @@ import BaseModal from "@/components/ui/modal/BaseModal";
 
 import { loadTossPayments } from '@tosspayments/payment-sdk';
 import { v4 as uuidv4 } from 'uuid';
+import { useModal } from "@/components/ui/modal/ModalProvider";
 import SecPayWithPointModal from "@/components/product/modals/SecPayWithPointModal";
 
 export default function BuyModal({ id, close, itemId, title, price }) {
     const [qty, setQty] = useState(1);
     const total = (Number(price) || 0) * qty;
+    const modal = useModal();
 
     const pay = async () => {
         // TODO: 결제/주문 API
@@ -42,9 +44,11 @@ export default function BuyModal({ id, close, itemId, title, price }) {
             successUrl: `http://localhost:8080/api/secPay/success`,
             failUrl: `${window.location.origin}/pay/fail`,
         }).catch(error => {
-            // ✅ 결제창 호출 실패 또는 사용자 취소 시 에러 처리
-            console.error("결제 요청 실패:", error);
-            if (error.code !== 'USER_CANCEL') {
+            if (error.code == 'USER_CANCEL'){
+                console.log('사용자가 결제를 취소했습니다')
+            }
+            // 사용자 취소 외 결제창 호출 실패 시 에러 처리
+            else {
                 alert(`결제 요청 중 오류가 발생했습니다: ${error.message}`);
             }
         });
