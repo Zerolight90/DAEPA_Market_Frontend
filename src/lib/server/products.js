@@ -14,6 +14,8 @@ const API_BASE =
  * @param {string|number} [opts.upperId]
  * @param {string|number} [opts.middleId]
  * @param {string|number} [opts.lowId]
+ * @param {number|string} [opts.min]   - 최소 가격
+ * @param {number|string} [opts.max]   - 최대 가격
  * @param {number} [opts.page=1]   - 1-base (Spring은 내부에서 0-base 변환)
  * @param {number} [opts.size=20]
  * @param {"recent"|"price_asc"|"price_desc"} [opts.sort="recent"]
@@ -23,6 +25,8 @@ export async function fetchProducts({
                                         upperId,
                                         middleId,
                                         lowId,
+                                        min,
+                                        max,
                                         page = 1,
                                         size = 20,
                                         sort = "recent",
@@ -38,19 +42,47 @@ export async function fetchProducts({
 
     let url;
 
+    // ✅ ID 기반 필터 사용
     if (lowId || middleId || upperId) {
-        // ✅ ID 기반 필터 사용: /api/products?upperId=&middleId=&lowId=
         if (upperId) qs.set("upperId", String(upperId));
-        if (middleId) qs.set("middleId", String(middleId));
-        if (lowId) qs.set("lowId", String(lowId));
+
+        // 컨트롤러가 middleId로 받을 수도, mid로 받을 수도 있으니 둘 다 싣자
+        if (middleId) {
+            qs.set("middleId", String(middleId));
+            qs.set("mid", String(middleId));
+        }
+
+        if (lowId) {
+            qs.set("lowId", String(lowId));
+            qs.set("low", String(lowId));
+        }
+
+        // ✅ 가격 필터도 붙이기
+        if (min !== undefined && min !== null && String(min) !== "") {
+            qs.set("min", String(min));
+        }
+        if (max !== undefined && max !== null && String(max) !== "") {
+            qs.set("max", String(max));
+        }
 
         url = new URL("/api/products", API_BASE);
         url.search = qs.toString();
     } else {
         // ✅ 이름 기반(fallback): /api/products/by-name?big=카테고리명
-        if (!category) return { items: [], page, size, total: 0 };
+        if (!category) {
+            return { items: [], page, size, total: 0 };
+        }
 
         qs.set("big", category); // 기존 서버 규약 유지
+
+        // 이름 기반일 때도 가격 보내주자
+        if (min !== undefined && min !== null && String(min) !== "") {
+            qs.set("min", String(min));
+        }
+        if (max !== undefined && max !== null && String(max) !== "") {
+            qs.set("max", String(max));
+        }
+
         url = new URL("/api/products/by-name", API_BASE);
         url.search = qs.toString();
     }
@@ -67,8 +99,6 @@ export async function fetchProducts({
 
     const pageJson = await res.json();
 
-    // 응답이 Page 형태({content, totalElements, number, size})거나
-    // 배열만 오는 경우 모두 안전 처리
     const items = Array.isArray(pageJson?.content)
         ? pageJson.content
         : Array.isArray(pageJson)

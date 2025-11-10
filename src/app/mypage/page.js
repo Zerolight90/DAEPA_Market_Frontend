@@ -5,8 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./mypage.module.css";
 import tokenStore from "@/app/store/TokenStore";
-
-// ⬇️ 분리된 사이드바 컴포넌트 사용 (파일명: src/components/mypage/sidebar.js)
 import SideNav from "@/components/mypage/sidebar";
 
 const METRICS = [
@@ -18,8 +16,8 @@ const METRICS = [
 
 const TABS = [
     { key: "all", label: "전체" },
-    { key: "selling", label: "판매중" }, // status=0
-    { key: "sold", label: "판매완료" },  // status=1
+    { key: "selling", label: "판매중" },
+    { key: "sold", label: "판매완료" },
 ];
 
 const SORTS = [
@@ -39,14 +37,24 @@ export default function MyPage() {
         nickname: "로딩 중...",
         trust: 0,
         avatarUrl: "",
+        uIdx: undefined,
     });
 
-    const [items, setItems] = useState([]);
+    // ✅ product 용
+    const [products, setProducts] = useState([]);
+    const [productErr, setProductErr] = useState("");
 
-    // 1) 내 정보
+    // ----------------------------------------------------
+    // 내 정보
+    // ----------------------------------------------------
     useEffect(() => {
         if (!accessToken) {
-            setMyInfo({ nickname: "로그인 필요", trust: 0, avatarUrl: "" });
+            setMyInfo({
+                nickname: "로그인 필요",
+                trust: 0,
+                avatarUrl: "",
+                uIdx: undefined,
+            });
             return;
         }
 
@@ -65,89 +73,238 @@ export default function MyPage() {
                         nickname: data.uName || data.u_nickname || data.uNickname || "사용자",
                         trust: data.uManner ?? 0,
                         avatarUrl: data.avatarUrl || "",
+                        uIdx: data.uIdx ?? data.u_idx ?? data.id ?? undefined,
                     });
                 } else {
-                    setMyInfo({ nickname: "정보 없음", trust: 0, avatarUrl: "" });
+                    setMyInfo({
+                        nickname: "정보 없음",
+                        trust: 0,
+                        avatarUrl: "",
+                        uIdx: undefined,
+                    });
                 }
-            } catch (err) {
-                console.error("❌ /api/sing/me fetch error:", err);
-                setMyInfo({ nickname: "에러 발생", trust: 0, avatarUrl: "" });
+            } catch (error) {
+                console.error("❌ /api/sing/me fetch error:", error);
+                setMyInfo({
+                    nickname: "에러 발생",
+                    trust: 0,
+                    avatarUrl: "",
+                    uIdx: undefined,
+                });
             }
         })();
     }, [accessToken]);
 
-    // 2) 내 상품 목록
+    // ----------------------------------------------------
+    // product 목록 (전체 / 판매중 / 판매완료 전부 여기서 필터)
+    // ----------------------------------------------------
     useEffect(() => {
         if (!accessToken) {
-            setItems([]);
+            setProducts([]);
             return;
         }
 
-        let statusParam = "";
-        if (tab === "selling") statusParam = "0";
-        else if (tab === "sold") statusParam = "1";
-
-        const url =
-            statusParam === "" ? "/api/products/mypage" : `/api/products/mypage?status=${statusParam}`;
-
         (async () => {
             try {
-                const res = await fetch(url, {
+                setProductErr("");
+                const res = await fetch("/api/products/mypage", {
                     method: "GET",
                     headers: { Authorization: `Bearer ${accessToken}` },
                     credentials: "include",
+                    cache: "no-store",
                 });
 
                 if (!res.ok) {
                     const txt = await res.text();
-                    console.warn("❌ mypage not ok:", res.status, txt);
-                    setItems([]);
+                    console.warn("❌ /api/products/mypage not ok:", res.status, txt);
+                    setProductErr(txt || "상품 목록을 불러오지 못했습니다.");
+                    setProducts([]);
                     return;
                 }
 
                 const data = await res.json();
-                const mapped = data.map((p, idx) => ({
-                    id: idx + 1,
-                    title: p.pd_title,
-                    price: p.pd_price,
-                    status: String(p.pd_status) === "0" ? "SELLING" : "SOLD",
-                    createdAt: p.pd_create ? `${p.pd_create}T00:00:00Z` : "2025-01-01T00:00:00Z",
-                    img: "/no-image.png",
-                    ago: p.pd_create || "",
-                }));
-                setItems(mapped);
-            } catch (e) {
-                console.error("❌ mypage fetch error:", e);
-                setItems([]);
+                setProducts(Array.isArray(data) ? data : []);
+            } catch (err) {
+                console.error("❌ /api/products/mypage fetch error:", err);
+                setProductErr("네트워크 오류가 발생했습니다.");
+                setProducts([]);
             }
         })();
-    }, [accessToken, tab]);
+    }, [accessToken]);
 
-    // 3) 정렬
+    // ✅ 상대시간 포맷터
+    function formatDateRelative(dateStr) {
+        if (!dateStr) return "";
+        const date = new Date(String(dateStr).replace(" ", "T"));
+        if (Number.isNaN(date.getTime())) return String(dateStr);
+
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffSec = Math.floor(diffMs / 1000);
+        const diffMin = Math.floor(diffSec / 60);
+        const diffHour = Math.floor(diffMin / 60);
+        const diffDay = Math.floor(diffHour / 24);
+
+        if (diffSec < 60) return "방금 전";
+        if (diffMin < 60) return `${diffMin}분 전`;
+        if (diffHour < 24) return `${diffHour}시간 전`;
+        if (diffDay < 30) return `${diffDay}일 전`;
+
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, "0");
+        const d = String(date.getDate()).padStart(2, "0");
+        return `${y}.${m}.${d}`;
+    }
+
+    // product에서 d_sell 여러 형태 대응
+    function getProductDSell(p) {
+        return (
+            p.d_sell ??
+            p.dSell ??
+            p.dsell ??
+            p.pd_sell ??
+            0
+        );
+    }
+
+    // product에서 d_status 여러 형태 대응 (판매완료용)
+    function getProductDStatus(p) {
+        return (
+            p.d_status ??
+            p.dStatus ??
+            p.dstatus ??
+            p.pd_status ??
+            0
+        );
+    }
+
+    // ----------------------------------------------------
+    // 1) 전체 탭: 내 product 전부 (u_idx == me)
+    // ----------------------------------------------------
+    const myProductsAll = useMemo(() => {
+        const myId = myInfo.uIdx;
+        if (!myId) return [];
+        return products.filter((p) => {
+            const owner =
+                p.uIdx ??
+                p.u_idx ??
+                p.userIdx ??
+                p.user_idx ??
+                null;
+            if (owner == null) return false;
+            return Number(owner) === Number(myId);
+        });
+    }, [products, myInfo.uIdx]);
+
+    // ----------------------------------------------------
+    // 2) 판매중 탭: 내 product 중 d_sell == 0
+    // ----------------------------------------------------
+    const myProductsSelling = useMemo(() => {
+        const myId = myInfo.uIdx;
+        if (!myId) return [];
+        return products.filter((p) => {
+            const owner =
+                p.uIdx ??
+                p.u_idx ??
+                p.userIdx ??
+                p.user_idx ??
+                null;
+            if (owner == null) return false;
+            if (Number(owner) !== Number(myId)) return false;
+
+            const dsell = getProductDSell(p);
+            return Number(dsell) === 0;
+        });
+    }, [products, myInfo.uIdx]);
+
+    // ----------------------------------------------------
+    // 3) 판매완료 탭: 내 product 중 d_status == 1
+    // ----------------------------------------------------
+    const myProductsSold = useMemo(() => {
+        const myId = myInfo.uIdx;
+        if (!myId) return [];
+        return products.filter((p) => {
+            const owner =
+                p.uIdx ??
+                p.u_idx ??
+                p.userIdx ??
+                p.user_idx ??
+                null;
+            if (owner == null) return false;
+            if (Number(owner) !== Number(myId)) return false;
+
+            const dStatus = getProductDStatus(p);
+            return Number(dStatus) === 1;
+        });
+    }, [products, myInfo.uIdx]);
+
+    // ----------------------------------------------------
+    // 탭 + 정렬 적용
+    // ----------------------------------------------------
     const sortedItems = useMemo(() => {
-        const copied = [...items];
-        switch (sort) {
-            case "low":
-                return copied.sort((a, b) => a.price - b.price);
-            case "high":
-                return copied.sort((a, b) => b.price - a.price);
-            case "latest":
-            default:
-                return copied.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        // 전체
+        if (tab === "all") {
+            const copied = [...myProductsAll];
+            if (sort === "low") {
+                return copied.sort((a, b) => (a.pd_price ?? 0) - (b.pd_price ?? 0));
+            }
+            if (sort === "high") {
+                return copied.sort((a, b) => (b.pd_price ?? 0) - (a.pd_price ?? 0));
+            }
+            return copied.sort((a, b) => {
+                const da = a.pd_create ?? a.createdAt ?? "";
+                const db = b.pd_create ?? b.createdAt ?? "";
+                return new Date(db).getTime() - new Date(da).getTime();
+            });
         }
-    }, [items, sort]);
+
+        // 판매중
+        if (tab === "selling") {
+            const copied = [...myProductsSelling];
+            if (sort === "low") {
+                return copied.sort((a, b) => (a.pd_price ?? 0) - (b.pd_price ?? 0));
+            }
+            if (sort === "high") {
+                return copied.sort((a, b) => (b.pd_price ?? 0) - (a.pd_price ?? 0));
+            }
+            return copied.sort((a, b) => {
+                const da = a.pd_create ?? a.createdAt ?? "";
+                const db = b.pd_create ?? b.createdAt ?? "";
+                return new Date(db).getTime() - new Date(da).getTime();
+            });
+        }
+
+        // 판매완료 → myProductsSold (d_status == 1)
+        const copied = [...myProductsSold];
+        if (sort === "low") {
+            return copied.sort((a, b) => (a.pd_price ?? 0) - (b.pd_price ?? 0));
+        }
+        if (sort === "high") {
+            return copied.sort((a, b) => (b.pd_price ?? 0) - (a.pd_price ?? 0));
+        }
+        return copied.sort((a, b) => {
+            const da = a.pd_create ?? a.createdAt ?? "";
+            const db = b.pd_create ?? b.createdAt ?? "";
+            return new Date(db).getTime() - new Date(da).getTime();
+        });
+    }, [
+        tab,
+        sort,
+        myProductsAll,
+        myProductsSelling,
+        myProductsSold,
+    ]);
 
     const trustPercent = Math.min(100, Math.round((myInfo.trust / 100) * 100));
-    const trustColor = myInfo.trust < 20 ? "#8B4513" : myInfo.trust < 50 ? "#A3E635" : "#10B981";
+    const trustColor =
+        myInfo.trust < 20 ? "#8B4513" : myInfo.trust < 50 ? "#A3E635" : "#10B981";
 
     return (
         <main className={styles.wrap}>
-            {/* ⬇️ 분리된 사이드바 사용 */}
             <SideNav currentPath={pathname} />
 
-            {/* 오른쪽 본문 */}
             <section className={styles.content}>
-                {/* 프로필 */}
+                {/* 프로필 영역 */}
                 <header className={styles.header}>
                     <div className={styles.profile}>
                         <div className={styles.avatar} aria-hidden>
@@ -163,7 +320,7 @@ export default function MyPage() {
                             <div className={styles.nicknameRow}>
                                 <strong className={styles.nickname}>{myInfo.nickname}</strong>
                                 <Link
-                                    href="/store/intro"
+                                    href="/mypage/info"
                                     className={styles.openStore}
                                     aria-label="가게 소개 작성하기"
                                     title="가게 소개 작성"
@@ -192,15 +349,22 @@ export default function MyPage() {
                                 <span className={styles.trustMax}>100</span>
                             </div>
 
-                            <p className={styles.trustDesc}>앱에서 가게 소개 작성하고 신뢰도를 높여 보세요.</p>
+                            <p className={styles.trustDesc}>
+                                앱에서 가게 소개 작성하고 신뢰도를 높여 보세요.
+                            </p>
                         </div>
                     </div>
 
                     <div className={styles.headerRight}>
-                        <Link href="/payCharge" className={styles.bannerCard}>
+                        <Link href="/mypage/connect-cafe" className={styles.bannerCard}>
                             <div className={styles.bannerIcon} aria-hidden />
-                            <div className={styles.bannerText}><strong>대파 페이 충전하기</strong></div>
-                            <span className={styles.bannerArrow} aria-hidden>›</span>
+                            <div className={styles.bannerText}>
+                                <strong>내 상품 2배로 노출시키기</strong>
+                                <span>카페에 상품 자동 등록하기</span>
+                            </div>
+                            <span className={styles.bannerArrow} aria-hidden>
+                ›
+              </span>
                         </Link>
 
                         <ul className={styles.metricRow}>
@@ -214,11 +378,11 @@ export default function MyPage() {
                     </div>
                 </header>
 
-                {/* 내 상품 */}
+                {/* 패널 */}
                 <div className={styles.panel}>
                     <div className={styles.panelHead}>
                         <h3 className={styles.panelTitle}>내 상품</h3>
-                        <nav className={styles.tabs} aria-label="내 상품 필터">
+                        <nav className={styles.tabs} aria-label="내 판매 필터">
                             {TABS.map((t) => (
                                 <button
                                     key={t.key}
@@ -248,23 +412,41 @@ export default function MyPage() {
                         </div>
                     </div>
 
+                    {/* 에러 표시 */}
+                    {productErr && (
+                        <div className={styles.empty}>{productErr}</div>
+                    )}
+
                     {sortedItems.length === 0 ? (
-                        <div className={styles.empty}>선택된 조건에 해당하는 상품이 없습니다.</div>
+                        <div className={styles.empty}>선택된 조건에 해당하는 항목이 없습니다.</div>
                     ) : (
                         <ul className={styles.grid}>
-                            {sortedItems.map((it) => (
-                                <li key={it.id} className={styles.card}>
-                                    <Link href={`/store/${it.id}`} className={styles.cardLink}>
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={it.img} alt={it.title} className={styles.cardImg} />
-                                        <div className={styles.cardBody}>
-                                            <strong className={styles.cardTitle}>{it.title}</strong>
-                                            <span className={styles.cardPrice}>{it.price.toLocaleString()}원</span>
-                                            <span className={styles.cardMeta}>{it.ago}</span>
+                            {sortedItems.map((it, idx) => {
+                                // 전체 / 판매중 / 판매완료 전부 product 기반으로 보여줌
+                                const title = it.pd_title || "(제목 없음)";
+                                const price = it.pd_price ?? 0;
+                                const when = formatDateRelative(it.pd_create);
+
+                                return (
+                                    <li key={it.pd_idx ?? it.id ?? idx} className={styles.card}>
+                                        <div className={styles.cardLink}>
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img
+                                                src={"/no-image.png"}
+                                                alt={title}
+                                                className={styles.cardImg}
+                                            />
+                                            <div className={styles.cardBody}>
+                                                <strong className={styles.cardTitle}>{title}</strong>
+                                                <span className={styles.cardPrice}>
+                          {price.toLocaleString()}원
+                        </span>
+                                                <span className={styles.cardMeta}>{when}</span>
+                                            </div>
                                         </div>
-                                    </Link>
-                                </li>
-                            ))}
+                                    </li>
+                                );
+                            })}
                         </ul>
                     )}
                 </div>

@@ -2,17 +2,9 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import styles from "./FilterBar.module.css";
 
-/**
- * props
- * - categoryName   : 현재 대분류 이름 (브레드크럼용)
- * - upperList      : 대분류 목록 [{ id, name }, ...]
- * - middleList     : 중분류 목록
- * - lowList        : 소분류 목록
- * - selected       : { mid, low }
- * - currentSort    : "recent" | "price_asc" | "price_desc"
- */
 export default function FilterBar({
                                       categoryName,
                                       upperList = [],
@@ -29,12 +21,34 @@ export default function FilterBar({
     const sortInQuery = searchParams.get("sort");
     const activeSort = sortInQuery || currentSort || "recent";
 
+    // ✅ 가격 쿼리 가져오기
+    const minInQuery = searchParams.get("min") || "";
+    const maxInQuery = searchParams.get("max") || "";
+    const [minPrice, setMinPrice] = useState(minInQuery);
+    const [maxPrice, setMaxPrice] = useState(maxInQuery);
+
+    // 쿼리 바뀔 때 input도 반영
+    useEffect(() => {
+        setMinPrice(minInQuery);
+        setMaxPrice(maxInQuery);
+    }, [minInQuery, maxInQuery]);
+
     // 정렬칩 클릭
     const setSort = (value) => {
         const params = new URLSearchParams(searchParams.toString());
         if (value === "recent") params.delete("sort");
         else params.set("sort", value);
-        // 정렬 바꾸면 페이지는 0으로
+        params.delete("page");
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    };
+
+    // ✅ 가격 적용 버튼 클릭
+    const applyPriceFilter = () => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (minPrice) params.set("min", minPrice);
+        else params.delete("min");
+        if (maxPrice) params.set("max", maxPrice);
+        else params.delete("max");
         params.delete("page");
         router.replace(`${pathname}?${params.toString()}`, { scroll: false });
     };
@@ -44,7 +58,6 @@ export default function FilterBar({
         const params = new URLSearchParams(searchParams.toString());
         if (midId) params.set("mid", String(midId));
         else params.delete("mid");
-        // mid 바뀌면 low 초기화
         params.delete("low");
         params.delete("page");
         const qs = params.toString();
@@ -62,7 +75,6 @@ export default function FilterBar({
         return `${pathname}${qs ? `?${qs}` : ""}`;
     };
 
-    // 대분류는 그냥 /category/[name]
     const buildHrefForUpper = (name) => {
         return `/category/${encodeURIComponent(name)}`;
     };
@@ -70,125 +82,216 @@ export default function FilterBar({
     return (
         <div className={styles.wrap}>
             <div className={styles.inner}>
-
-                {/* 빵부스러기 */}
-                <div className={styles.breadcrumbs}>
-                    <Link href="/">홈</Link>
-                </div>
-                {/* 위쪽: 대분류 + 정렬 */}
-                <div className={styles.topRow}>
-                    <div className={styles.upperRow}>
-                        {upperList?.length > 0 &&
-                            upperList.map((u) => {
-                                const isActive =
-                                    u.name === categoryName ||
-                                    u.upperCt === categoryName;
-                                return (
-                                    <Link
-                                        key={u.id ?? u.upperIdx ?? u.name}
-                                        href={buildHrefForUpper(
-                                            u.name ?? u.upperCt
-                                        )}
-                                        className={`${styles.pill} ${
-                                            isActive ? styles.active : ""
-                                        }`}
-                                    >
-                                        <span className={styles.pillText}>
-                                            {u.name ?? u.upperCt}
-                                        </span>
-                                    </Link>
-                                );
-                            })}
-                    </div>
-
-                    {/* 오른쪽 정렬칩 */}
-                    <div className={styles.actions}>
-                        <button
-                            className={`${styles.chip} ${
-                                activeSort === "recent" ? styles.active : ""
-                            }`}
-                            onClick={() => setSort("recent")}
-                        >
-                            최신순
-                        </button>
-                        <button
-                            className={`${styles.chip} ${
-                                activeSort === "price_asc" ? styles.active : ""
-                            }`}
-                            onClick={() => setSort("price_asc")}
-                        >
-                            가격 낮은 순
-                        </button>
-                        <button
-                            className={`${styles.chip} ${
-                                activeSort === "price_desc" ? styles.active : ""
-                            }`}
-                            onClick={() => setSort("price_desc")}
-                        >
-                            가격 높은 순
-                        </button>
+                {/* 상단 제목/빵부스러기 */}
+                <div className={styles.headerRow}>
+                    <h2 className={styles.title}>검색 결과</h2>
+                    <div className={styles.breadcrumbs}>
+                        <Link href="/">홈</Link>
+                        <span className={styles.sep}>›</span>
+                        <span>{categoryName || "전체"}</span>
                     </div>
                 </div>
 
-                {/* 가운데 줄: 중분류 */}
-                {middleList?.length > 0 && (
-                    <div className={styles.middleRow}>
-                        {middleList.map((m) => {
-                            const active =
-                                String(selected?.mid ?? "") ===
-                                String(m.id ?? m.middleId);
-                            return (
-                                <Link
-                                    key={m.id ?? m.middleId}
-                                    href={buildHrefForMid(m.id ?? m.middleId)}
-                                    className={`${styles.pill} ${
-                                        active ? styles.active : ""
-                                    }`}
-                                    prefetch={false}
-                                >
-                                    <span className={styles.pillText}>
-                                        {m.name ?? m.middleCt}
-                                    </span>
-                                    {typeof m.count !== "undefined" && (
-                                        <span className={styles.count}>
-                                            {m.count}
-                                        </span>
-                                    )}
-                                </Link>
-                            );
-                        })}
-                    </div>
-                )}
+                {/* 표처럼 보이는 영역 */}
+                <div className={styles.table}>
+                    <div className={styles.row}>
+                        <div className={styles.th}>카테고리</div>
+                        <div className={styles.td}>
+                            {/* 대분류 */}
+                            {upperList?.length > 0 && (
+                                <div className={styles.block}>
+                                    <div className={styles.upperRow}>
+                                        {upperList.map((u) => {
+                                            const label = u.name ?? u.upperCt;
+                                            const isActive =
+                                                label === categoryName;
+                                            return (
+                                                <Link
+                                                    key={
+                                                        u.id ??
+                                                        u.upperIdx ??
+                                                        label
+                                                    }
+                                                    href={buildHrefForUpper(
+                                                        label
+                                                    )}
+                                                    className={`${styles.pill} ${
+                                                        isActive
+                                                            ? styles.active
+                                                            : ""
+                                                    }`}
+                                                >
+                                                    <span
+                                                        className={
+                                                            styles.pillText
+                                                        }
+                                                    >
+                                                        {label}
+                                                    </span>
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
 
-                {/* 아래 줄: 소분류 (중분류 선택돼 있을 때만) */}
-                {!!selected?.mid && lowList?.length > 0 && (
-                    <div className={styles.lowRow}>
-                        {lowList.map((l) => {
-                            const active =
-                                String(selected?.low ?? "") ===
-                                String(l.id ?? l.lowId);
-                            return (
-                                <Link
-                                    key={l.id ?? l.lowId}
-                                    href={buildHrefForLow(l.id ?? l.lowId)}
-                                    className={`${styles.pill} ${
-                                        active ? styles.active : ""
+                            {/* 중분류 */}
+                            {middleList?.length > 0 && (
+                                <div className={styles.block}>
+                                    <div className={styles.middleRow}>
+                                        {middleList.map((m) => {
+                                            const id =
+                                                m.id ?? m.middleId;
+                                            const name =
+                                                m.name ?? m.middleCt;
+                                            const active =
+                                                String(selected?.mid ?? "") ===
+                                                String(id);
+                                            return (
+                                                <Link
+                                                    key={id}
+                                                    href={buildHrefForMid(id)}
+                                                    className={`${styles.pill} ${
+                                                        active
+                                                            ? styles.active
+                                                            : ""
+                                                    }`}
+                                                    prefetch={false}
+                                                >
+                                                    <span
+                                                        className={
+                                                            styles.pillText
+                                                        }
+                                                    >
+                                                        {name}
+                                                    </span>
+                                                    {typeof m.count !==
+                                                        "undefined" && (
+                                                            <span
+                                                                className={
+                                                                    styles.count
+                                                                }
+                                                            >
+                                                            {m.count}
+                                                        </span>
+                                                        )}
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 소분류 */}
+                            {!!selected?.mid && lowList?.length > 0 && (
+                                <div className={styles.block}>
+                                    <div className={styles.lowRow}>
+                                        {lowList.map((l) => {
+                                            const id = l.id ?? l.lowId;
+                                            const name = l.name ?? l.lowCt;
+                                            const active =
+                                                String(selected?.low ?? "") ===
+                                                String(id);
+                                            return (
+                                                <Link
+                                                    key={id}
+                                                    href={buildHrefForLow(id)}
+                                                    className={`${styles.pill} ${
+                                                        active
+                                                            ? styles.active
+                                                            : ""
+                                                    }`}
+                                                    prefetch={false}
+                                                >
+                                                    <span
+                                                        className={
+                                                            styles.pillText
+                                                        }
+                                                    >
+                                                        {name}
+                                                    </span>
+                                                    {typeof l.count !==
+                                                        "undefined" && (
+                                                            <span
+                                                                className={
+                                                                    styles.count
+                                                                }
+                                                            >
+                                                            {l.count}
+                                                        </span>
+                                                        )}
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* 오른쪽 정렬칩 + 가격 */}
+                        <div className={styles.sortCol}>
+                            <div className={styles.sortChips}>
+                                <button
+                                    className={`${styles.chip} ${
+                                        activeSort === "recent"
+                                            ? styles.active
+                                            : ""
                                     }`}
-                                    prefetch={false}
+                                    onClick={() => setSort("recent")}
                                 >
-                                    <span className={styles.pillText}>
-                                        {l.name ?? l.lowCt}
-                                    </span>
-                                    {typeof l.count !== "undefined" && (
-                                        <span className={styles.count}>
-                                            {l.count}
-                                        </span>
-                                    )}
-                                </Link>
-                            );
-                        })}
+                                    최신순
+                                </button>
+                                <button
+                                    className={`${styles.chip} ${
+                                        activeSort === "price_asc"
+                                            ? styles.active
+                                            : ""
+                                    }`}
+                                    onClick={() => setSort("price_asc")}
+                                >
+                                    가격 낮은 순
+                                </button>
+                                <button
+                                    className={`${styles.chip} ${
+                                        activeSort === "price_desc"
+                                            ? styles.active
+                                            : ""
+                                    }`}
+                                    onClick={() => setSort("price_desc")}
+                                >
+                                    가격 높은 순
+                                </button>
+                            </div>
+
+                            {/* ✅ 가격 필터 추가 */}
+                            <div className={styles.priceFilter}>
+                                <input
+                                    type="number"
+                                    placeholder="최소 가격"
+                                    value={minPrice}
+                                    onChange={(e) =>
+                                        setMinPrice(e.target.value)
+                                    }
+                                />
+                                <span className={styles.tilde}>~</span>
+                                <input
+                                    type="number"
+                                    placeholder="최대 가격"
+                                    value={maxPrice}
+                                    onChange={(e) =>
+                                        setMaxPrice(e.target.value)
+                                    }
+                                />
+                                <button
+                                    className={styles.applyBtn}
+                                    onClick={applyPriceFilter}
+                                >
+                                    적용
+                                </button>
+                            </div>
+                        </div>
                     </div>
-                )}
+                </div>
             </div>
         </div>
     );

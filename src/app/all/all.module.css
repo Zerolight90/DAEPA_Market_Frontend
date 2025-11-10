@@ -239,6 +239,31 @@
         position: static;
     }
 }
+
+/* 더 작은 모바일 화면 대응 */
+@media (max-width: 767px) {
+    .container {
+        padding: 20px 12px 40px; /* 모바일용 여백 조정 */
+        gap: 20px;
+    }
+    .grid {
+        grid-template-columns: repeat(2, 1fr); /* 모바일에서 2열 고정 */
+        gap: 12px;
+    }
+    .listHead {
+        flex-wrap: wrap; /* 정렬 탭이 아래로 내려올 수 있도록 */
+        margin-bottom: 12px;
+    }
+    .title {
+        font-size: 1rem;
+    }
+    .prodTitle {
+        font-size: 0.85rem;
+    }
+    .price {
+        font-size: 0.9rem;
+    }
+}
 /* ... 네가 위에 적어둔 all.module.css 그대로 두고, 맨 아래에 추가해 */
 
 .heartBtn {
