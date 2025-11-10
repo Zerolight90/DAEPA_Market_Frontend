@@ -435,3 +435,115 @@
     margin-bottom: 4px;
     font-size: 0.9rem;
 }
+
+/* 모달 오버레이 */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1200;
+}
+
+/* 모달 박스 */
+.modal {
+    width: 480px;
+    max-height: 90vh;
+    background: #fff;
+    border-radius: 18px;
+    overflow-y: auto;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+}
+
+/* 모달 헤더 */
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #eee;
+}
+
+.modalTitle {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.modalClose {
+    background: none;
+    border: none;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.modalBody {
+    padding: 16px 20px 24px;
+}
+
+.modalDealNo {
+    font-size: 12px;
+    color: #666;
+}
+
+.modalDate {
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 16px;
+}
+
+.modalSection {
+    border: 1px solid #e5e5e5;
+    border-radius: 12px;
+    padding: 14px 14px 10px;
+    margin-bottom: 12px;
+}
+
+.modalSectionTitle {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.modalProduct {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.modalThumb {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: #e7ecf0;
+}
+
+.modalProdTitle {
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.modalProdPrice {
+    font-weight: 600;
+}
+
+.modalActionBtn {
+    width: 100%;
+    background: #00b894;
+    border: none;
+    border-radius: 9999px;
+    color: #fff;
+    font-weight: 600;
+    height: 36px;
+    cursor: pointer;
+}
+
+.modalInfoRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 13px;
+}
