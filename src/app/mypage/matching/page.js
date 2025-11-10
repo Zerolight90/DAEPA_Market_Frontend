@@ -448,7 +448,7 @@ export default function MyPage() {
                             {notifications.slice(0, visibleNotificationsCount).map((notification) => (
                                 <li key={notification.productId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                                     <span>
-                                        <Link href={`/product/${notification.productId}`} style={{ textDecoration: 'underline', color: 'blue' }}>
+                                        <Link href={`/store/${notification.productId}`} style={{ textDecoration: 'underline', color: 'blue' }}>
                                             {notification.productName}
                                         </Link>
                                         {' '}상품이 등록되었습니다.
