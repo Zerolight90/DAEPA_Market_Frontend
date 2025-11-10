@@ -24,9 +24,10 @@
     justify-content: space-between;
 }
 .pageTitle {
-    font-size: 28px;
+    font-size: 30px;
     font-weight: 800;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
+    margin-top: 15px;
 }
 
 /* 보낸/받은 토글 */
@@ -90,6 +91,7 @@
 .cardList {
     display: grid;
     gap: 10px;
+    margin-bottom: 5px;
 }
 
 .card {
