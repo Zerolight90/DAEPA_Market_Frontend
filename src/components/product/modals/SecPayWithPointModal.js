@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"; // ✅ useEffect 추가
 import BaseModal from "@/components/ui/modal/BaseModal";
 import tokenStore from "@/app/store/TokenStore"; // ✅ 토큰 스토어 임포트
 
-export default function PayWithPointModal({ id, close, itemId, title, qty, total }) {
+export default function SecPayWithPointModal({ id, close, itemId, title, qty, total }) {
     const [currentBalance, setCurrentBalance] = useState(null); // ✅ 현재 잔액 상태
     const [isLoading, setIsLoading] = useState(true); // ✅ 로딩 상태
     const [error, setError] = useState(null); // ✅ 에러 상태
