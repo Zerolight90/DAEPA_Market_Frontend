@@ -12,6 +12,9 @@ export default function SellHistoryPage() {
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState('');
 
+    // ✅ 클릭해서 띄울 모달용
+    const [selectedDeal, setSelectedDeal] = useState(null);
+
     // 판매 내역 가져오기
     async function fetchSell() {
         try {
@@ -130,12 +133,17 @@ export default function SellHistoryPage() {
         return `${y}.${m}.${day}`;
     }
 
-    // ✅ 검색 확장: title, productTitle, pdTitle, dealId 까지
+    // ✅ d_sell=1 인 애들만 + 검색
     const filtered = useMemo(() => {
-        const kw = keyword.toLowerCase().trim();
-        if (!kw) return list;
+        const paidOnly = list.filter((item) => {
+            const dSell = getDSell(item);
+            return dSell === 1 || dSell === 1n;
+        });
 
-        return list.filter((item) => {
+        const kw = keyword.toLowerCase().trim();
+        if (!kw) return paidOnly;
+
+        return paidOnly.filter((item) => {
             const candidates = [
                 item.title,
                 item.productTitle,
@@ -147,7 +155,6 @@ export default function SellHistoryPage() {
 
             const dealIdStr = item.dealId ? String(item.dealId) : '';
 
-            // 제목들 중 하나에 포함되거나, 거래번호에 포함되면 통과
             return (
                 candidates.some((t) => t.includes(kw)) ||
                 dealIdStr.includes(kw)
@@ -167,7 +174,9 @@ export default function SellHistoryPage() {
     }
 
     // 배송 보냄 확인
-    async function handleSendClick(dealId) {
+    async function handleSendClick(dealId, e) {
+        // 카드 클릭으로 모달 뜨는 거 막기
+        e.stopPropagation();
         try {
             const res = await fetch(`/api/delivery/${dealId}/sent`, {
                 method: 'PATCH',
@@ -179,13 +188,14 @@ export default function SellHistoryPage() {
                 return;
             }
             fetchSell();
-        } catch (e) {
+        } catch (e2) {
             alert('네트워크 오류가 발생했습니다.');
         }
     }
 
     // 배송 완료 확인
-    async function handleDoneClick(dealId) {
+    async function handleDoneClick(dealId, e) {
+        e.stopPropagation();
         try {
             const res = await fetch(`/api/delivery/${dealId}/done`, {
                 method: 'PATCH',
@@ -197,7 +207,7 @@ export default function SellHistoryPage() {
                 return;
             }
             fetchSell();
-        } catch (e) {
+        } catch (e2) {
             alert('네트워크 오류가 발생했습니다.');
         }
     }
@@ -288,14 +298,24 @@ export default function SellHistoryPage() {
                             const showReviewBtn = item.showReviewBtn === true;
 
                             return (
-                                <article key={item.dealId} className={styles.block}>
+                                <article
+                                    key={item.dealId}
+                                    className={styles.block}
+                                >
                                     <div className={styles.dateRow}>
-                                        <span>{formatDate(item.dealEndDate)}</span>
-                                        <span className={styles.dot}>|</span>
                                         <span>{tradeText || '거래방식 미정'}</span>
                                     </div>
 
-                                    <div className={styles.card}>
+                                    {/* ✅ 이 박스 한 덩어리를 클릭하면 모달 뜨게 */}
+                                    <div
+                                        className={styles.card}
+                                        onClick={() => setSelectedDeal(item)}
+                                        role="button"
+                                        tabIndex={0}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter') setSelectedDeal(item);
+                                        }}
+                                    >
                                         <p className={styles.status}>{statusText}</p>
 
                                         <div className={styles.productRow}>
@@ -345,7 +365,7 @@ export default function SellHistoryPage() {
                                                 <button
                                                     type="button"
                                                     className={styles.grayBtn}
-                                                    onClick={() => handleSendClick(item.dealId)}
+                                                    onClick={(e) => handleSendClick(item.dealId, e)}
                                                 >
                                                     배송 보냄 확인
                                                 </button>
@@ -355,14 +375,18 @@ export default function SellHistoryPage() {
                                                 <button
                                                     type="button"
                                                     className={styles.grayBtn}
-                                                    onClick={() => handleDoneClick(item.dealId)}
+                                                    onClick={(e) => handleDoneClick(item.dealId, e)}
                                                 >
                                                     배송 완료 확인
                                                 </button>
                                             )}
 
                                             {showReviewBtn && (
-                                                <button type="button" className={styles.greenBtn}>
+                                                <button
+                                                    type="button"
+                                                    className={styles.greenBtn}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
                                                     후기 보내기
                                                 </button>
                                             )}
@@ -373,11 +397,109 @@ export default function SellHistoryPage() {
                         })}
 
                         {filtered.length === 0 && (
-                            <div className={styles.empty}>판매내역이 없습니다.</div>
+                            <div className={styles.empty}>결제된 판매내역이 없습니다.</div>
                         )}
                     </section>
                 )}
             </main>
+
+            {/* ✅ 상세 모달 */}
+            {selectedDeal && (
+                <div
+                    className={styles.modalOverlay}
+                    onClick={() => setSelectedDeal(null)}
+                >
+                    <div
+                        className={styles.modal}
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <header className={styles.modalHeader}>
+                            <h2 className={styles.modalTitle}>판매내역 상세</h2>
+                            <button
+                                type="button"
+                                className={styles.modalClose}
+                                onClick={() => setSelectedDeal(null)}
+                            >
+                                ×
+                            </button>
+                        </header>
+
+                        <div className={styles.modalBody}>
+                            <p className={styles.modalDealNo}>
+                                거래번호{' '}
+                                <strong>
+                                    {selectedDeal.dealNumber ??
+                                        selectedDeal.dealNo ??
+                                        selectedDeal.dealId ??
+                                        '-'}
+                                </strong>
+                            </p>
+                            <p className={styles.modalDate}>
+                                {formatDate(selectedDeal.dealEndDate)}
+                            </p>
+
+                            <div className={styles.modalSection}>
+                                <h3 className={styles.modalSectionTitle}>판매완료</h3>
+                                <div className={styles.modalProduct}>
+                                    <div className={styles.modalThumb} />
+                                    <div>
+                                        <p className={styles.modalProdTitle}>
+                                            {selectedDeal.title ??
+                                                selectedDeal.productTitle ??
+                                                selectedDeal.pdTitle ??
+                                                '(제목 없음)'}
+                                        </p>
+                                        <p className={styles.modalProdPrice}>
+                                            {(
+                                                (selectedDeal.agreedPrice ?? selectedDeal.pdPrice) ||
+                                                0
+                                            ).toLocaleString()}
+                                            원
+                                        </p>
+                                    </div>
+                                </div>
+                                <button type="button" className={styles.modalActionBtn}>
+                                    후기 보내기
+                                </button>
+                            </div>
+
+                            <div className={styles.modalSection}>
+                                <h3 className={styles.modalSectionTitle}>거래정보</h3>
+                                <div className={styles.modalInfoRow}>
+                                    <span>거래방법</span>
+                                    <span>{getTradeText(selectedDeal) || '-'}</span>
+                                </div>
+                                <div className={styles.modalInfoRow}>
+                                    <span>결제일시</span>
+                                    <span>{formatDate(selectedDeal.dealEndDate)}</span>
+                                </div>
+                            </div>
+
+                            <div className={styles.modalSection}>
+                                <h3 className={styles.modalSectionTitle}>정산정보</h3>
+                                <div className={styles.modalInfoRow}>
+                                    <span>상품금액</span>
+                                    <span>
+                    {(
+                        (selectedDeal.agreedPrice ?? selectedDeal.pdPrice) ||
+                        0
+                    ).toLocaleString()}
+                                        원
+                  </span>
+                                </div>
+                                <div className={styles.modalInfoRow}>
+                                    <span>정산상태</span>
+                                    <span>완료</span>
+                                </div>
+                                <div className={styles.modalInfoRow}>
+                                    <span>판매 대금 지급 완료일</span>
+                                    <span>{formatDate(selectedDeal.dealEndDate)}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

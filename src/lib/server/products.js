@@ -1,7 +1,5 @@
-// src/lib/server/products.js
 import "server-only";
 
-// ✅ 서버에서 반드시 절대 URL로 호출되도록 기본값을 강제
 const API_BASE =
     process.env.NEXT_PUBLIC_API_BASE ||
     process.env.API_BASE ||
@@ -9,80 +7,58 @@ const API_BASE =
 
 /**
  * 상품 목록 조회
- * @param {Object} opts
- * @param {string} opts.category   - upper 카테고리명 (아이디가 없을 때 fallback)
- * @param {string|number} [opts.upperId]
- * @param {string|number} [opts.middleId]
- * @param {string|number} [opts.lowId]
- * @param {number|string} [opts.min]   - 최소 가격
- * @param {number|string} [opts.max]   - 최대 가격
- * @param {number} [opts.page=1]   - 1-base (Spring은 내부에서 0-base 변환)
- * @param {number} [opts.size=20]
- * @param {"recent"|"price_asc"|"price_desc"} [opts.sort="recent"]
  */
 export async function fetchProducts({
                                         category,
                                         upperId,
                                         middleId,
                                         lowId,
-                                        min,
-                                        max,
                                         page = 1,
                                         size = 20,
                                         sort = "recent",
+                                        min,
+                                        max,
+                                        dDeal,
+                                        excludeSold = false,
                                     }) {
-    // 공통 쿼리스트링
     const qs = new URLSearchParams({
-        page: String(Math.max(1, page) - 1), // Spring은 0-based
+        page: String(Math.max(1, page) - 1),
         size: String(size),
     });
 
-    // 정렬(백엔드가 recent/price_asc/price_desc를 이해한다고 가정)
     if (sort && sort !== "recent") qs.set("sort", sort);
+
+    // 가격
+    if (typeof min !== "undefined" && min !== null) {
+        qs.set("min", String(min));
+    }
+    if (typeof max !== "undefined" && max !== null) {
+        qs.set("max", String(max));
+    }
+
+    // 거래방식
+    if (dDeal) {
+        qs.set("dDeal", dDeal); // "MEET" 또는 "DELIVERY"
+    }
+
+    // 판매완료 제외
+    if (excludeSold) {
+        qs.set("excludeSold", "true");
+    }
 
     let url;
 
-    // ✅ ID 기반 필터 사용
     if (lowId || middleId || upperId) {
         if (upperId) qs.set("upperId", String(upperId));
-
-        // 컨트롤러가 middleId로 받을 수도, mid로 받을 수도 있으니 둘 다 싣자
-        if (middleId) {
-            qs.set("middleId", String(middleId));
-            qs.set("mid", String(middleId));
-        }
-
-        if (lowId) {
-            qs.set("lowId", String(lowId));
-            qs.set("low", String(lowId));
-        }
-
-        // ✅ 가격 필터도 붙이기
-        if (min !== undefined && min !== null && String(min) !== "") {
-            qs.set("min", String(min));
-        }
-        if (max !== undefined && max !== null && String(max) !== "") {
-            qs.set("max", String(max));
-        }
+        if (middleId) qs.set("mid", String(middleId)); // 컨트롤러에서 name="mid" 로 받으니까 그대로
+        if (lowId) qs.set("low", String(lowId));
 
         url = new URL("/api/products", API_BASE);
         url.search = qs.toString();
     } else {
-        // ✅ 이름 기반(fallback): /api/products/by-name?big=카테고리명
-        if (!category) {
-            return { items: [], page, size, total: 0 };
-        }
+        if (!category) return { items: [], page, size, total: 0 };
 
-        qs.set("big", category); // 기존 서버 규약 유지
-
-        // 이름 기반일 때도 가격 보내주자
-        if (min !== undefined && min !== null && String(min) !== "") {
-            qs.set("min", String(min));
-        }
-        if (max !== undefined && max !== null && String(max) !== "") {
-            qs.set("max", String(max));
-        }
-
+        qs.set("big", category);
         url = new URL("/api/products/by-name", API_BASE);
         url.search = qs.toString();
     }
