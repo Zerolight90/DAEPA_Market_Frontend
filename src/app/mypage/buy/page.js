@@ -288,8 +288,8 @@ export default function BuyHistoryPage() {
     // ✅ 구매확정 호출
     async function handleBuyConfirm(dealId) {
         try {
-            const res = await fetch(`/api/deal/${dealId}/buy-confirm`, {
-                method: 'PATCH',
+            const res = await fetch(`/api/deal/${dealId}/confirm`, {
+                method: 'POST',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
             });
