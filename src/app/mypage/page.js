@@ -119,7 +119,7 @@ export default function MyPage() {
     const METRICS = [
         { key: "safe", label: "안심결제", value: 0 },
         { key: "review", label: "거래후기", value: 0 },
-        { key: "eco", label: "대파 갯수", value: myDaepa + " 개" },
+        { key: "eco", label: "대파 갯수", value: myDaepa.toLocaleString() + " 개" },
     ];
 
     // 내 정보
@@ -375,7 +375,7 @@ export default function MyPage() {
 
                     <div className={styles.headerRight}>
                         <Link href="/payCharge" className={styles.bannerCard}>
-                            <div className={styles.bannerIcon} aria-hidden />
+                            <div className={styles.bannerIcon} aria-hidden>💰</div>
                             <div className={styles.bannerText}><strong>대파 페이 충전하기</strong></div>
                             <span className={styles.bannerArrow} aria-hidden>›</span>
                         </Link>
