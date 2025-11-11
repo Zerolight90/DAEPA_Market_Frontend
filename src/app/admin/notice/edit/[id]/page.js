@@ -11,6 +11,7 @@ export default function EditNoticePage() {
     title: "",
     category: "공지",
     content: "",
+    nFix: false,
   });
   
   // (이미지) 새로 선택한 파일 객체를 관리하는 상태
@@ -43,6 +44,7 @@ export default function EditNoticePage() {
           title: data.nsubject,
           category: convertCategory(data.ncategory),
           content: data.ncontent,
+          nFix: data.nFix === 1,
         };
 
         setFormData(mappedNotice);
@@ -73,8 +75,11 @@ export default function EditNoticePage() {
 
   // 텍스트 입력 필드 변경 핸들러
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
   };
 
   // 새 이미지 파일 선택 핸들러
@@ -110,6 +115,7 @@ export default function EditNoticePage() {
             nSubject: formData.title,
             nContent: formData.content,
             nCategory: categoryMap[formData.category] || 0,
+            nFix: formData.nFix ? 1 : 0,
             nImg: existingImageUrl // 기본적으로 기존 이미지 URL을 유지하도록 설정
         };
 
@@ -223,6 +229,20 @@ export default function EditNoticePage() {
                   <option value="안내">안내</option>
                   <option value="이벤트">이벤트</option>
                 </select>
+              </div>
+
+              {/* 상단 고정 체크박스 */}
+              <div style={{ marginBottom: "1.5rem" }}>
+                <label style={{ display: "flex", alignItems: "center", cursor: "pointer", fontSize: "0.875rem" }}>
+                  <input
+                    type="checkbox"
+                    name="nFix"
+                    checked={formData.nFix}
+                    onChange={handleInputChange}
+                    style={{ marginRight: "0.5rem" }}
+                  />
+                  <span>이 공지사항을 상단에 고정합니다.</span>
+                </label>
               </div>
 
               {/* 내용 */}
