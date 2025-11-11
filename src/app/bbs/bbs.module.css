@@ -35,7 +35,6 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
   border: 1px solid #e5e7eb;
   overflow: hidden;
-  /* max-height: calc(100vh - 300px); /* Removed max-height for public pages */
   overflow-y: auto;
 }
 
@@ -46,31 +45,30 @@
   top: 0;
   z-index: 10;
   padding: 0.625rem 1.5rem;
-  display: grid; /* Added display grid for table header */
+  display: grid;
   align-items: center;
 }
 
-.tableHeader > div { /* Target direct children for header cells */
+.tableHeader > div {
   font-weight: 600;
   color: #1e293b;
   font-size: 0.875rem;
-  text-align: center; /* Center align header text */
+  text-align: center;
 }
 
 .tableBody {
-  /* No specific styles needed here, children will be tableRow */
+  /* No specific styles needed here */
 }
 
 .tableRow {
   display: grid;
-  /* grid-template-columns will be set inline for list page */
   gap: 1rem;
   padding: 1rem 1.5rem;
   align-items: center;
   border-bottom: 1px solid #f1f5f9;
   transition: background-color 0.2s ease;
-  color: #1e293b; /* Default text color */
-  text-decoration: none; /* For Link components */
+  color: #1e293b;
+  text-decoration: none;
 }
 
 .tableRow:hover {
@@ -81,22 +79,45 @@
   border-bottom: none;
 }
 
-.tableRow > div { /* Target direct children for table cells */
+.tableRow > div {
   font-size: 0.875rem;
   color: #1e293b;
   font-weight: 400;
-  text-align: center; /* Center align cell text */
+  text-align: center;
 }
 
 .textAlignLeft {
-  /*text-align: left !important;*/
-  padding-left: 1.5rem; /* Add left padding for better alignment */
+  text-align: left !important;
+  padding-left: 1.5rem;
+  display: flex; /* Added for badge alignment */
+  align-items: center; /* Added for badge alignment */
 }
+
+/* Pinned Badge Style */
+.pinnedBadge {
+  background-color: #eef2ff; /* Light indigo */
+  color: #4338ca; /* Dark indigo */
+  padding: 0.25rem 0.6rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-right: 0.75rem;
+  white-space: nowrap; /* Prevent wrapping */
+}
+
+/* Pinned Notice Background */
+.pinnedNoticeBg {
+  background-color: #f5f5f5; /* Light gray background */
+}
+
+.pinnedNoticeBg:hover {
+  background-color: #ebebeb; /* Slightly darker gray on hover */
+}
+
+
 
 /* Status/Category Badges */
-.statusSuccess {
-  background-color: #dcfce7;
-  color: #166534;
+.statusSuccess, .statusWarning, .statusError, .statusGray {
   padding: 0.25rem 0.75rem;
   border-radius: 0.375rem;
   font-size: 0.75rem;
@@ -104,35 +125,10 @@
   display: inline-block;
 }
 
-.statusWarning {
-  background-color: #fef3c7;
-  color: #92400e;
-  padding: 0.25rem 0.75rem;
-  border-radius: 0.375rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  display: inline-block;
-}
-
-.statusError {
-  background-color: #fee2e2;
-  color: #dc2626;
-  padding: 0.25rem 0.75rem;
-  border-radius: 0.375rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  display: inline-block;
-}
-
-.statusGray {
-  background-color: #e5e7eb;
-  color: #374151;
-  padding: 0.25rem 0.75rem;
-  border-radius: 0.375rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  display: inline-block;
-}
+.statusSuccess { background-color: #dcfce7; color: #166534; }
+.statusWarning { background-color: #fef3c7; color: #92400e; }
+.statusError { background-color: #fee2e2; color: #dc2626; }
+.statusGray { background-color: #e5e7eb; color: #374151; }
 
 /* Filter Bar Styles */
 .filterBar {
@@ -140,7 +136,7 @@
   gap: 1rem;
   margin-bottom: 1.5rem;
   align-items: center;
-  padding: 1rem 1.5rem; /* Added padding */
+  padding: 1rem 1.5rem;
   background: white;
   border-radius: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
@@ -148,7 +144,8 @@
 }
 
 .filterSelect {
-  padding: 0.75rem;
+  height: calc(1rem * 2 + 2px); /* Increased height */
+  padding: 1rem; /* Adjusted padding */
   border: 1px solid #e5e7eb;
   border-radius: 0.75rem;
   font-size: 0.875rem;
@@ -163,6 +160,57 @@
   outline: none;
   border-color: #16a34a;
   box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+}
+
+/* Search Bar Styles */
+.searchInputContainer {
+  position: relative;
+  width: 500px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  z-index: 1;
+}
+
+.searchInput {
+  width: 100%;
+  height: calc(1rem * 2 + 2px); /* Increased height */
+  padding: 0 0.75rem 0 2.5rem; /* Adjusted padding */
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  background: white;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+  z-index: 1;
+}
+
+.searchButton {
+  height: calc(1rem * 2 + 2px); /* Increased height */
+  padding: 0 1.5rem; /* Adjusted padding */
+  border: 1px solid #16a34a;
+  background-color: #16a34a;
+  color: white;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.searchButton:hover {
+  background-color: #14532d;
 }
 
 /* Content styles for detail page */
