@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
@@ -10,8 +10,7 @@ import SideNav from "@/components/mypage/sidebar";
 const METRICS = [
     { key: "safe", label: "안심결제", value: 0 },
     { key: "review", label: "거래후기", value: 0 },
-    { key: "close", label: "단골", value: 0 },
-    { key: "eco", label: "에코마일", value: "0 M" },
+    { key: "eco", label: "대파 갯수", value: " 개" },
 ];
 
 const TABS = [
@@ -30,7 +29,7 @@ const SORTS = [
 const FALLBACK_IMG =
     "https://daepa-s3.s3.ap-northeast-2.amazonaws.com/products/KakaoTalk_20251104_145039505.jpg";
 
-// 정렬용 파서
+// 날짜 파서
 function parseDateSafe(raw) {
     if (!raw) return 0;
     let s = String(raw).trim();
@@ -39,7 +38,6 @@ function parseDateSafe(raw) {
     return Number.isNaN(t) ? 0 : t;
 }
 
-// 상대시간
 function formatDateRelative(raw) {
     if (!raw) return "";
     let s = String(raw).trim();
@@ -105,10 +103,30 @@ export default function MyPage() {
 
                 if (res.ok) {
                     const data = await res.json();
+
+                    // ✅ 프로필
+                    const profileUrl =
+                        data.uProfile ||
+                        data.u_profile ||
+                        data.avatarUrl ||
+                        "";
+
+                    // ✅ 신선도(u_manner) 여러 이름 대응
+                    const mannerScore =
+                        data.uManner ??
+                        data.u_manner ??
+                        data.manner ??
+                        data.trust ??
+                        0;
+
                     setMyInfo({
-                        nickname: data.uName || data.u_nickname || data.uNickname || "사용자",
-                        trust: data.uManner ?? 0,
-                        avatarUrl: data.avatarUrl || "",
+                        nickname:
+                            data.uName ||
+                            data.u_nickname ||
+                            data.uNickname ||
+                            "사용자",
+                        trust: Number(mannerScore) || 0,
+                        avatarUrl: profileUrl,
                         uIdx: data.uIdx ?? data.u_idx ?? data.id ?? undefined,
                     });
                 } else {
@@ -182,7 +200,7 @@ export default function MyPage() {
         });
     }, [products, myInfo.uIdx]);
 
-    // 판매중: d_status === 0
+    // 판매중
     const myProductsSelling = useMemo(() => {
         const myId = myInfo.uIdx;
         if (!myId) return [];
@@ -196,12 +214,12 @@ export default function MyPage() {
             if (owner == null) return false;
             if (Number(owner) !== Number(myId)) return false;
 
-            const dStatus = p.d_status ?? p.dStatus ?? 0; // 백엔드에서 d_status 내려주기로 했음
+            const dStatus = p.d_status ?? p.dStatus ?? 0;
             return Number(dStatus) === 0;
         });
     }, [products, myInfo.uIdx]);
 
-    // 판매완료: d_status === 1
+    // 판매완료
     const myProductsSold = useMemo(() => {
         const myId = myInfo.uIdx;
         if (!myId) return [];
@@ -241,9 +259,15 @@ export default function MyPage() {
         });
     }, [tab, sort, myProductsAll, myProductsSelling, myProductsSold]);
 
-    const trustPercent = Math.min(100, Math.round((myInfo.trust / 100) * 100));
+    // ✅ 신선도 바 계산
+    const trustVal = Number(myInfo.trust) || 0;
+    const trustPercent = Math.max(0, Math.min(100, trustVal));
     const trustColor =
-        myInfo.trust < 20 ? "#8B4513" : myInfo.trust < 50 ? "#A3E635" : "#10B981";
+        trustPercent < 30
+            ? "#8B4513"   // 30 미만: 갈색 (SaddleBrown)
+            : trustPercent < 60
+                ? "#A3E635"   // 30~59: 연두색
+                : "#10B981";  // 60 이상: 초록색
 
     return (
         <main className={styles.wrap}>
@@ -255,9 +279,12 @@ export default function MyPage() {
                     <div className={styles.profile}>
                         <div className={styles.avatar} aria-hidden>
                             {myInfo.avatarUrl ? (
-                                <img src={myInfo.avatarUrl} alt="" />
+                                <img
+                                    src={myInfo.avatarUrl || FALLBACK_IMG}
+                                    alt="프로필 이미지"
+                                />
                             ) : (
-                                <span className={styles.avatarFallback} />
+                                <img src={FALLBACK_IMG} alt="기본 프로필" />
                             )}
                         </div>
 
@@ -281,14 +308,18 @@ export default function MyPage() {
                                 </Link>
                             </div>
 
+                            {/* ✅ 신선도 바 */}
                             <div className={styles.trustRow}>
                 <span className={styles.trustLabel}>
-                  신선도 <b>{myInfo.trust}</b>
+                  신선도 <b>{trustVal}</b>
                 </span>
                                 <div className={styles.trustBar}>
                   <span
                       className={styles.trustGauge}
-                      style={{ width: `${trustPercent}%`, background: trustColor }}
+                      style={{
+                          width: `${trustPercent}%`,
+                          backgroundColor: trustColor,
+                      }}
                   />
                                 </div>
                                 <span className={styles.trustMax}>100</span>
@@ -327,7 +358,9 @@ export default function MyPage() {
                                 <button
                                     key={t.key}
                                     type="button"
-                                    className={`${styles.tab} ${tab === t.key ? styles.tabActive : ""}`}
+                                    className={`${styles.tab} ${
+                                        tab === t.key ? styles.tabActive : ""
+                                    }`}
                                     onClick={() => setTab(t.key)}
                                 >
                                     {t.label}
@@ -343,7 +376,9 @@ export default function MyPage() {
                                 <button
                                     key={s.key}
                                     type="button"
-                                    className={`${styles.sort} ${sort === s.key ? styles.sortActive : ""}`}
+                                    className={`${styles.sort} ${
+                                        sort === s.key ? styles.sortActive : ""
+                                    }`}
                                     onClick={() => setSort(s.key)}
                                 >
                                     {s.label}
@@ -355,7 +390,9 @@ export default function MyPage() {
                     {productErr && <div className={styles.empty}>{productErr}</div>}
 
                     {sortedItems.length === 0 ? (
-                        <div className={styles.empty}>선택된 조건에 해당하는 항목이 없습니다.</div>
+                        <div className={styles.empty}>
+                            선택된 조건에 해당하는 항목이 없습니다.
+                        </div>
                     ) : (
                         <ul className={styles.grid}>
                             {sortedItems.map((it, idx) => {
@@ -363,18 +400,13 @@ export default function MyPage() {
                                 const price = it.pd_price ?? 0;
                                 const when = formatDateRelative(it.pd_create ?? it.createdAt);
                                 const thumb =
-                                    it.pd_thumb ||
-                                    it.thumbnail ||
-                                    FALLBACK_IMG;
+                                    it.pd_thumb || it.thumbnail || FALLBACK_IMG;
 
                                 const id = it.pd_idx ?? it.pdIdx ?? it.id ?? null;
                                 const href = id ? `/store/${id}` : "#";
 
                                 return (
-                                    <li
-                                        key={id ?? idx}
-                                        className={styles.card}
-                                    >
+                                    <li key={id ?? idx} className={styles.card}>
                                         <Link href={href} className={styles.cardLink}>
                                             <img src={thumb} alt={title} className={styles.cardImg} />
                                             <div className={styles.cardBody}>

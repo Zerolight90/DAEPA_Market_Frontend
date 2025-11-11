@@ -107,15 +107,14 @@
     overflow: hidden;
 }
 .trustGauge {
-    height: 100%;
-    border-radius: 999px;
-    transition: width 0.35s ease, background 0.25s ease;
+    display: block;       /* 꼭 있어야 함 */
+    height: 100%;         /* 부모 높이만큼 */
+    border-radius: inherit;
+    transition: width 0.3s ease;
 }
 .trustMax {
     font-size: 12px;
-    color: #9ca3af;
-    min-width: 28px;
-    text-align: right;
+    color: #999;
 }
 .trustDesc {
     color: var(--muted);
