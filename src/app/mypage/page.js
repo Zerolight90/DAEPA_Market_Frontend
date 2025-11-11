@@ -15,8 +15,8 @@ const METRICS = [
 
 const TABS = [
     { key: "all", label: "전체" },
-    { key: "selling", label: "판매중" },
-    { key: "sold", label: "판매완료" },
+    { key: "selling", label: "거래중" },
+    { key: "sold", label: "거래완료" },
 ];
 
 const SORTS = [
@@ -25,42 +25,70 @@ const SORTS = [
     { key: "high", label: "높은가격순" },
 ];
 
-// S3 기본 이미지
 const FALLBACK_IMG =
     "https://daepa-s3.s3.ap-northeast-2.amazonaws.com/products/KakaoTalk_20251104_145039505.jpg";
 
-// 날짜 파서
+/** pd_del 여러 타입(숫자/문자/boolean) 다 잡아내기 */
+function isDeleted(raw) {
+    const val =
+        raw?.pdDel ??
+        raw?.pd_del ??
+        raw?.pd_del === 0
+            ? raw?.pd_del
+            : raw?.pdDel;
+
+    const s = String(val).trim().toLowerCase();
+    return (
+        s === "1" ||
+        s === "true" ||
+        s === "y" ||
+        s === "yes"
+    );
+}
+
+/** ProductCard.js 와 같은 판매상태 파싱 */
+function getDealState(raw) {
+    const rawSell =
+        raw?.dSell ??
+        raw?.d_sell ??
+        raw?.dsell ??
+        raw?.dStatus ??
+        raw?.d_status ??
+        raw?.dstatus ??
+        raw?.dealStatus ??
+        0;
+    return Number(rawSell) || 0; // 0: 없음, 1: 판매완료, 2: 판매중
+}
+
 function parseDateSafe(raw) {
     if (!raw) return 0;
-    let s = String(raw).trim();
-    s = s.replace(" ", "T");
+    let s = String(raw).trim().replace(" ", "T");
     const t = new Date(s).getTime();
     return Number.isNaN(t) ? 0 : t;
 }
 
 function formatDateRelative(raw) {
     if (!raw) return "";
-    let s = String(raw).trim();
-    s = s.replace(" ", "T");
+    let s = String(raw).trim().replace(" ", "T");
     const date = new Date(s);
     if (Number.isNaN(date.getTime())) return raw;
 
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
-    const diffSec = Math.floor(diffMs / 1000);
-    const diffMin = Math.floor(diffSec / 60);
-    const diffHour = Math.floor(diffMin / 60);
-    const diffDay = Math.floor(diffHour / 24);
+    const d = diffMs / 1000;
+    const min = Math.floor(d / 60);
+    const hour = Math.floor(min / 60);
+    const day = Math.floor(hour / 24);
 
-    if (diffSec < 60) return "방금 전";
-    if (diffMin < 60) return `${diffMin}분 전`;
-    if (diffHour < 24) return `${diffHour}시간 전`;
-    if (diffDay < 30) return `${diffDay}일 전`;
+    if (d < 60) return "방금 전";
+    if (min < 60) return `${min}분 전`;
+    if (hour < 24) return `${hour}시간 전`;
+    if (day < 30) return `${day}일 전`;
 
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}.${m}.${d}`;
+    const dd = String(date.getDate()).padStart(2, "0");
+    return `${y}.${m}.${dd}`;
 }
 
 export default function MyPage() {
@@ -103,15 +131,11 @@ export default function MyPage() {
 
                 if (res.ok) {
                     const data = await res.json();
-
-                    // ✅ 프로필
                     const profileUrl =
                         data.uProfile ||
                         data.u_profile ||
                         data.avatarUrl ||
                         "";
-
-                    // ✅ 신선도(u_manner) 여러 이름 대응
                     const mannerScore =
                         data.uManner ??
                         data.u_manner ??
@@ -137,8 +161,8 @@ export default function MyPage() {
                         uIdx: undefined,
                     });
                 }
-            } catch (error) {
-                console.error("❌ /api/sing/me fetch error:", error);
+            } catch (e) {
+                console.error(e);
                 setMyInfo({
                     nickname: "에러 발생",
                     trust: 0,
@@ -149,7 +173,7 @@ export default function MyPage() {
         })();
     }, [accessToken]);
 
-    // 내 상품 목록
+    // 내 상품
     useEffect(() => {
         if (!accessToken) {
             setProducts([]);
@@ -168,7 +192,6 @@ export default function MyPage() {
 
                 if (!res.ok) {
                     const txt = await res.text();
-                    console.warn("❌ /api/products/mypage not ok:", res.status, txt);
                     setProductErr(txt || "상품 목록을 불러오지 못했습니다.");
                     setProducts([]);
                     return;
@@ -176,18 +199,19 @@ export default function MyPage() {
 
                 const data = await res.json();
                 setProducts(Array.isArray(data) ? data : []);
-            } catch (err) {
-                console.error("❌ /api/products/mypage fetch error:", err);
+            } catch (e) {
+                console.error(e);
                 setProductErr("네트워크 오류가 발생했습니다.");
                 setProducts([]);
             }
         })();
     }, [accessToken]);
 
-    // 내 상품만
+    // 내 것만 + 삭제 안 된 것만
     const myProductsAll = useMemo(() => {
         const myId = myInfo.uIdx;
         if (!myId) return [];
+
         return products.filter((p) => {
             const owner =
                 p.uIdx ??
@@ -196,49 +220,28 @@ export default function MyPage() {
                 p.user_idx ??
                 null;
             if (owner == null) return false;
-            return Number(owner) === Number(myId);
+            if (Number(owner) !== Number(myId)) return false;
+
+            if (isDeleted(p)) return false;
+
+            return true;
         });
     }, [products, myInfo.uIdx]);
 
-    // 판매중
+    // 판매중(= dealState 2 또는 0) : 우리의 카드 로직은 2를 “판매 중”으로 보여주니까 우선 2, 그다음 0
     const myProductsSelling = useMemo(() => {
-        const myId = myInfo.uIdx;
-        if (!myId) return [];
-        return products.filter((p) => {
-            const owner =
-                p.uIdx ??
-                p.u_idx ??
-                p.userIdx ??
-                p.user_idx ??
-                null;
-            if (owner == null) return false;
-            if (Number(owner) !== Number(myId)) return false;
-
-            const dStatus = p.d_status ?? p.dStatus ?? 0;
-            return Number(dStatus) === 0;
+        return myProductsAll.filter((p) => {
+            const state = getDealState(p);
+            return state === 0 || state === 2;
         });
-    }, [products, myInfo.uIdx]);
+    }, [myProductsAll]);
 
-    // 판매완료
+    // 판매완료 (=1)
     const myProductsSold = useMemo(() => {
-        const myId = myInfo.uIdx;
-        if (!myId) return [];
-        return products.filter((p) => {
-            const owner =
-                p.uIdx ??
-                p.u_idx ??
-                p.userIdx ??
-                p.user_idx ??
-                null;
-            if (owner == null) return false;
-            if (Number(owner) !== Number(myId)) return false;
+        return myProductsAll.filter((p) => getDealState(p) === 1);
+    }, [myProductsAll]);
 
-            const dStatus = p.d_status ?? p.dStatus ?? 0;
-            return Number(dStatus) === 1;
-        });
-    }, [products, myInfo.uIdx]);
-
-    // 탭 + 정렬
+    // 정렬
     const sortedItems = useMemo(() => {
         let base = [];
         if (tab === "all") base = [...myProductsAll];
@@ -259,22 +262,20 @@ export default function MyPage() {
         });
     }, [tab, sort, myProductsAll, myProductsSelling, myProductsSold]);
 
-    // ✅ 신선도 바 계산
     const trustVal = Number(myInfo.trust) || 0;
     const trustPercent = Math.max(0, Math.min(100, trustVal));
     const trustColor =
         trustPercent < 30
-            ? "#8B4513"   // 30 미만: 갈색 (SaddleBrown)
+            ? "#8B4513"
             : trustPercent < 60
-                ? "#A3E635"   // 30~59: 연두색
-                : "#10B981";  // 60 이상: 초록색
+                ? "#A3E635"
+                : "#10B981";
 
     return (
         <main className={styles.wrap}>
             <SideNav currentPath={pathname} />
 
             <section className={styles.content}>
-                {/* 프로필 영역 */}
                 <header className={styles.header}>
                     <div className={styles.profile}>
                         <div className={styles.avatar} aria-hidden>
@@ -308,7 +309,6 @@ export default function MyPage() {
                                 </Link>
                             </div>
 
-                            {/* ✅ 신선도 바 */}
                             <div className={styles.trustRow}>
                 <span className={styles.trustLabel}>
                   신선도 <b>{trustVal}</b>
@@ -334,8 +334,12 @@ export default function MyPage() {
                     <div className={styles.headerRight}>
                         <Link href="/payCharge" className={styles.bannerCard}>
                             <div className={styles.bannerIcon} aria-hidden />
-                            <div className={styles.bannerText}><strong>대파 페이 충전하기</strong></div>
-                            <span className={styles.bannerArrow} aria-hidden>›</span>
+                            <div className={styles.bannerText}>
+                                <strong>대파 페이 충전하기</strong>
+                            </div>
+                            <span className={styles.bannerArrow} aria-hidden>
+                ›
+              </span>
                         </Link>
 
                         <ul className={styles.metricRow}>
@@ -349,7 +353,6 @@ export default function MyPage() {
                     </div>
                 </header>
 
-                {/* 패널 */}
                 <div className={styles.panel}>
                     <div className={styles.panelHead}>
                         <h3 className={styles.panelTitle}>내 상품</h3>
@@ -396,8 +399,14 @@ export default function MyPage() {
                     ) : (
                         <ul className={styles.grid}>
                             {sortedItems.map((it, idx) => {
-                                const title = it.pd_title || "(제목 없음)";
-                                const price = it.pd_price ?? 0;
+                                if (isDeleted(it)) return null;
+
+                                const dealState = getDealState(it);
+                                const isSold = dealState === 1;
+                                const isTrading = dealState === 2;
+
+                                const title = it.pd_title || it.title || "(제목 없음)";
+                                const price = it.pd_price ?? it.price ?? 0;
                                 const when = formatDateRelative(it.pd_create ?? it.createdAt);
                                 const thumb =
                                     it.pd_thumb || it.thumbnail || FALLBACK_IMG;
@@ -408,11 +417,29 @@ export default function MyPage() {
                                 return (
                                     <li key={id ?? idx} className={styles.card}>
                                         <Link href={href} className={styles.cardLink}>
-                                            <img src={thumb} alt={title} className={styles.cardImg} />
+                                            <div className={styles.cardImgWrap}>
+                                                <img
+                                                    src={thumb}
+                                                    alt={title}
+                                                    className={styles.cardImg}
+                                                    style={{
+                                                        filter:
+                                                            isSold || isTrading ? "brightness(0.45)" : "none",
+                                                    }}
+                                                />
+                                                {(isSold || isTrading) && (
+                                                    <div className={styles.cardOverlay}>
+                                                        <div className={styles.cardOverlayCircle}>✓</div>
+                                                        <div>
+                                                            {isSold ? "판매완료" : "판매 중"}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
                                             <div className={styles.cardBody}>
                                                 <strong className={styles.cardTitle}>{title}</strong>
                                                 <span className={styles.cardPrice}>
-                          {price.toLocaleString()}원
+                          {Number(price).toLocaleString()}원
                         </span>
                                                 <span className={styles.cardMeta}>{when}</span>
                                             </div>

@@ -35,16 +35,9 @@ export default async function ProductPage(props) {
                 related = (await fetchRelated(id, 10)) || [];
             } catch (e) {
                 console.warn("[fetchRelated failed] → fallback to mock", e);
-                // related = getRelatedItems(id, 10);
                 related = [];
             }
         }
-    }
-
-    // 폴백 (필요하면 너네 mock 불러오던 거 다시 넣어)
-    if (!item) {
-        // item = getItemById(id);
-        // related = getRelatedItems(id, 10);
     }
 
     if (!item) {
@@ -55,17 +48,28 @@ export default async function ProductPage(props) {
         );
     }
 
-    // ✅ 여기서 판매완료 여부 하나로 만든다
-    // 백엔드 JSON 예시:
-    // "dstatus": 1, "dsell": 1, "ddeal": "DELIVERY"
+    // 1) 백엔드가 주는 거래 상태를 하나의 숫자로 통일
+    const rawDeal =
+        item.dsell ??
+        item.dSell ??
+        item.d_status ??
+        item.dStatus ??
+        item.dealStatus ??
+        null;
+    const dealState =
+        rawDeal === null || rawDeal === undefined ? null : Number(rawDeal);
+
+    // 2) "판매완료"로 볼 조건 (기존 로직 + dsell==1)
     const soldOut =
         item.dStatus === 1 ||
         item.d_status === 1 ||
         item.dealStatus === 1 ||
-        item.dstatus === 1 || // 소문자 키
+        item.dstatus === 1 ||
         item.dsell === 1 ||
-        item.d_sell === 1;
+        item.d_sell === 1 ||
+        dealState === 1;
 
+    // 이미지
     const images =
         Array.isArray(item.images) && item.images.length > 0
             ? item.images
@@ -83,6 +87,10 @@ export default async function ProductPage(props) {
             avatar: item.sellerAvatar ?? "/no-image.png",
             manner: item.sellerManner ?? 0,
         };
+
+    // 제목 옆에 띄울 라벨 텍스트
+    const titleBadge =
+        dealState === 2 ? "판매 중" : soldOut ? "판매완료" : null;
 
     return (
         <div className={styles.page}>
@@ -125,10 +133,14 @@ export default async function ProductPage(props) {
 
             <ModalProvider>
                 <div className={styles.container}>
-                    {/* 좌측 */}
+                    {/* 왼쪽 */}
                     <section className={styles.leftCol}>
-                        {/* 👇 판매완료 여부 내려줌 */}
-                        <ProductGallery images={images} soldOut={soldOut} />
+                        {/* 👇 판매 상태(1:완료, 2:판매중) 둘 다 내려줌 */}
+                        <ProductGallery
+                            images={images}
+                            soldOut={soldOut}
+                            dealState={dealState}
+                        />
 
                         <DetailsPanel item={item} />
 
@@ -140,24 +152,25 @@ export default async function ProductPage(props) {
                         )}
                     </section>
 
-                    {/* 우측 */}
+                    {/* 오른쪽 */}
                     <aside className={styles.rightCol}>
                         <div className={styles.infoCard}>
                             <h1 className={styles.title}>
                                 {item.title ?? item.pdTitle}
-                                {soldOut && (
+                                {titleBadge && (
                                     <span
                                         style={{
                                             marginLeft: 8,
                                             fontSize: 12,
-                                            background: "#111827",
+                                            background:
+                                                titleBadge === "판매 중" ? "#0f172a" : "#111827",
                                             color: "#fff",
                                             padding: "2px 8px",
                                             borderRadius: 9999,
                                             verticalAlign: "middle",
                                         }}
                                     >
-                    판매완료
+                    {titleBadge}
                   </span>
                                 )}
                             </h1>
@@ -180,6 +193,7 @@ export default async function ProductPage(props) {
                                 description={item.description || item.pdContent || ""}
                                 seller={seller}
                                 soldOut={soldOut}
+                                dealState={dealState}
                             />
                         </div>
 
