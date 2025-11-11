@@ -21,6 +21,7 @@ function EditProfileContent() {
         u_location: "",
         u_location_detail: "",
         u_nickname: "",
+        u_profile: "", // ✅ 프로필 주소
         new_password: "",
         new_password2: "",
     });
@@ -28,6 +29,10 @@ function EditProfileContent() {
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState("");
     const [nickMsg, setNickMsg] = useState({ text: "", color: "" });
+
+    // 프로필용 (파일, 미리보기)
+    const [profileFile, setProfileFile] = useState(null);
+    const [profilePreview, setProfilePreview] = useState("");
 
     // ✅ 내 정보 불러오기
     useEffect(() => {
@@ -61,10 +66,12 @@ function EditProfileContent() {
                     u_location: firstLocation ? firstLocation.locAddress || "" : "",
                     u_location_detail: firstLocation ? firstLocation.locDetail || "" : "",
                     u_nickname: data.uNickname || data.u_nickname || "",
+                    u_profile: data.uProfile || data.u_profile || "",
                     new_password: "",
                     new_password2: "",
                 };
 
+                // 부족하면 /api/users/me 에서 한 번 더 채움
                 if (!next.u_birth || !next.u_gender) {
                     try {
                         const res2 = await axios.get("/api/users/me", {
@@ -72,12 +79,14 @@ function EditProfileContent() {
                             withCredentials: true,
                         });
                         const data2 = res2.data;
-
-                        next.u_birth = data2.u_birth || data2.uBirth || next.u_birth || "";
-                        next.u_gender = data2.u_gender || data2.uGender || next.u_gender || "";
+                        next.u_birth =
+                            data2.u_birth || data2.uBirth || next.u_birth || "";
+                        next.u_gender =
+                            data2.u_gender || data2.uGender || next.u_gender || "";
                     } catch {}
                 }
 
+                // 20001212 → 2000-12-12
                 if (next.u_birth && /^[0-9]{8}$/.test(next.u_birth)) {
                     next.u_birth =
                         next.u_birth.slice(0, 4) +
@@ -89,6 +98,7 @@ function EditProfileContent() {
 
                 setVO(next);
                 setOriginal(next);
+                setProfilePreview(next.u_profile || ""); // ✅ 미리보기 세팅
                 setLoading(false);
             } catch (e) {
                 console.error(e);
@@ -137,6 +147,15 @@ function EditProfileContent() {
         if (name === "u_nickname") setNickMsg({ text: "", color: "" });
     };
 
+    // ✅ 프로필 파일 선택
+    const onChangeProfile = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setProfileFile(file);
+        const tempUrl = URL.createObjectURL(file);
+        setProfilePreview(tempUrl);
+    };
+
     const onBlurNickname = async () => {
         if (!vo.u_nickname) return;
         try {
@@ -179,6 +198,25 @@ function EditProfileContent() {
         }
 
         try {
+            // 1) 프로필 파일이 새로 선택되었다면 먼저 업로드해서 URL을 받는다.
+            let profileUrl = vo.u_profile || "";
+            if (profileFile) {
+                const fd = new FormData();
+                fd.append("file", profileFile);
+
+                // 🔥 여기서 Content-Type 안 넣는다. axios가 알아서 넣음
+                const uploadRes = await axios.post("/api/sing/upload-profile", fd, {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                    },
+                    withCredentials: true,
+                });
+
+                // 백엔드가 record UploadRes(String url) 로 주니까 이거 그대로 씀
+                profileUrl = uploadRes.data?.url || "";
+            }
+
+            // 2) 실제 회원 정보 수정 호출
             await axios.post(
                 "/api/sing/update",
                 {
@@ -190,6 +228,7 @@ function EditProfileContent() {
                     zip: vo.u_address || "",
                     address: vo.u_location || "",
                     addressDetail: vo.u_location_detail || "",
+                    profile: profileUrl || "", // ✅ 여기가 u_profile 에 들어갈 값
                 },
                 {
                     headers: { Authorization: `Bearer ${accessToken}` },
@@ -198,7 +237,7 @@ function EditProfileContent() {
             );
 
             alert("회원정보가 수정되었습니다.");
-            router.push("/mypage"); // ✅ 수정 후 마이페이지로 이동
+            router.push("/mypage");
         } catch (error) {
             console.error(error);
             alert(error?.response?.data || "회원정보 수정 중 오류가 발생했습니다.");
@@ -206,7 +245,11 @@ function EditProfileContent() {
     };
 
     const onCancel = () => {
-        if (original) setVO(original);
+        if (original) {
+            setVO(original);
+            setProfilePreview(original.u_profile || "");
+            setProfileFile(null);
+        }
         setNickMsg({ text: "", color: "" });
         router.push("/mypage");
     };
@@ -217,6 +260,30 @@ function EditProfileContent() {
     return (
         <main className={styles.container}>
             <h2 className={styles.title}>회원정보 수정</h2>
+
+            {/* ✅ 프로필 영역 */}
+            <div className={styles.profileBox}>
+                <div className={styles.avatarWrap}>
+                    {profilePreview ? (
+                        <img src={profilePreview} alt="프로필" className={styles.avatarImg} />
+                    ) : (
+                        <div className={styles.avatarPlaceholder}>No Image</div>
+                    )}
+                </div>
+                <div className={styles.avatarRight}>
+                    <p className={styles.avatarTitle}>프로필 사진</p>
+                    <p className={styles.avatarDesc}>정사각형 이미지를 권장해요. (JPG, PNG)</p>
+                    <label className={styles.avatarBtn}>
+                        이미지 선택
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={onChangeProfile}
+                            style={{ display: "none" }}
+                        />
+                    </label>
+                </div>
+            </div>
 
             <form className={styles.form} onSubmit={onSave}>
                 {/* 이메일 */}
@@ -363,11 +430,7 @@ function EditProfileContent() {
                     <button type="submit" className={styles.submit}>
                         수정하기
                     </button>
-                    <button
-                        type="button"
-                        onClick={onCancel}
-                        className={styles.cancelBtn}
-                    >
+                    <button type="button" onClick={onCancel} className={styles.cancelBtn}>
                         취소
                     </button>
                 </div>
