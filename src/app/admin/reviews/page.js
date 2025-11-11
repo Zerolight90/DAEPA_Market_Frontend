@@ -13,7 +13,7 @@ export default function ReviewsPage() {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        const res = await fetch("http://localhost:8080/api/admin/reviews");
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/reviews`);
         if (!res.ok) throw new Error("리뷰 목록 로딩 실패");
 
         const data = await res.json();
@@ -66,7 +66,7 @@ export default function ReviewsPage() {
       const realId = review.realId ?? Number(String(review.id).replace(/[^\d]/g, ""));
       const typePrefix = review.type?.toLowerCase() === "sell" ? "S" : "B";
 
-      const res = await fetch(`http://localhost:8080/api/admin/reviews/${typePrefix}-${realId}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/reviews/${typePrefix}-${realId}`, {
         method: "DELETE",
       });
 
@@ -473,4 +473,3 @@ export default function ReviewsPage() {
     </div>
   );
 }
-

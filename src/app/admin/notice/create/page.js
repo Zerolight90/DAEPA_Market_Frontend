@@ -86,7 +86,7 @@ export default function CreateNoticePage() {
         }
 
         // 3. fetch API를 사용하여 서버에 POST 요청
-        const res = await fetch("http://localhost:8080/api/admin/notices", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices`, {
             method: "POST",
             body: formDataToSend, // FormData 객체를 body로 전송
             // Content-Type 헤더는 브라우저가 FormData를 보낼 때 자동으로 설정하므로 명시하지 않음

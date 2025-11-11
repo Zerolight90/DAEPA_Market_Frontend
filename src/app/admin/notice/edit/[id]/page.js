@@ -33,7 +33,7 @@ export default function EditNoticePage() {
   useEffect(() => {
     const fetchNotice = async () => {
       try {
-        const res = await fetch(`http://localhost:8080/api/admin/notices/${params.id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${params.id}`);
         if (!res.ok) throw new Error("공지사항 불러오기 실패");
 
         const data = await res.json();
@@ -131,7 +131,7 @@ export default function EditNoticePage() {
         }
 
         // 4. 서버에 PUT 요청
-        const res = await fetch(`http://localhost:8080/api/admin/notices/${params.id}`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${params.id}`, {
             method: "PUT",
             body: formDataToSend,
         });
@@ -310,4 +310,3 @@ export default function EditNoticePage() {
     </>
   );
 }
-

@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowLeft, Edit, Trash2, Calendar, User } from "lucide-react";
+import { ArrowLeft, Calendar, User } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import styles from "../../admin.module.css";
+import styles from "../../bbs.module.css"; // Reusing admin styles for now
 
 export default function NoticeDetailPage() {
   const params = useParams();
@@ -20,7 +20,6 @@ export default function NoticeDetailPage() {
         if (!res.ok) throw new Error("공지사항을 불러오지 못했습니다.");
         const data = await res.json();
 
-        // 백엔드 DTO -> UI 구조로 변환
         setNotice({
           id: data.nidx,
           title: data.nsubject,
@@ -28,11 +27,11 @@ export default function NoticeDetailPage() {
           author: data.adminNick,
           category: convertCategory(data.ncategory),
           createdAt: data.ndate,
-          imageUrl: data.nimg, // 이미지 URL 추가
+          imageUrl: data.nimg,
         });
       } catch (err) {
-        console.error(err);
-        alert("공지사항을 가져오는 중 오류가 발생했습니다.");
+        console.error("공지사항 조회 실패:", err);
+        alert("공지사항을 불러오는 중 오류가 발생했습니다.");
       }
     };
 
@@ -64,24 +63,6 @@ export default function NoticeDetailPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm("이 공지사항을 삭제하시겠습니까?")) return;
-
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) throw new Error("삭제 실패");
-
-      alert("삭제가 완료되었습니다.");
-      window.location.href = "/admin/notice";
-    } catch (err) {
-      console.error(err);
-      alert("삭제 중 오류가 발생했습니다.");
-    }
-  };
-
   if (!notice) {
     return (
       <div style={{
@@ -104,7 +85,7 @@ export default function NoticeDetailPage() {
       <div className={styles.pageHeader}>
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
           <Link 
-            href="/admin/notice" 
+            href="/bbs/notice" 
             style={{ 
               display: "flex", 
               alignItems: "center", 
@@ -146,49 +127,6 @@ export default function NoticeDetailPage() {
               </div>
             </div>
           </div>
-          <div style={{ display: "flex", gap: "0.75rem" }}>
-            <Link href={`/admin/notice/edit/${notice.id}`} style={{ textDecoration: "none" }}>
-              <button 
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.625rem 1.25rem",
-                  background: "#f0f9ff",
-                  color: "#2563eb",
-                  border: "1px solid #bfdbfe",
-                  borderRadius: "0.5rem",
-                  fontSize: "0.875rem",
-                  fontWeight: "600",
-                  cursor: "pointer",
-                  transition: "all 0.2s"
-                }}
-              >
-                <Edit size={16} />
-                수정
-              </button>
-            </Link>
-            <button 
-              onClick={handleDelete}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem",
-                padding: "0.625rem 1.25rem",
-                background: "#fef2f2",
-                color: "#dc2626",
-                border: "1px solid #fecaca",
-                borderRadius: "0.5rem",
-                fontSize: "0.875rem",
-                fontWeight: "600",
-                cursor: "pointer",
-                transition: "all 0.2s"
-              }}
-            >
-              <Trash2 size={16} />
-              삭제
-            </button>
-          </div>
         </div>
       </div>
 
@@ -203,7 +141,7 @@ export default function NoticeDetailPage() {
           fontSize: "1rem", 
           lineHeight: "1.8", 
           color: "#374151",
-          whiteWhite: "pre-wrap",
+          whiteSpace: "pre-wrap",
           wordBreak: "break-word"
         }}>
           {notice.content}

@@ -246,13 +246,25 @@ export function normalizeRoomDto(raw, meId) {
         }
     }
 
-    const productStatus =
+    const rawStatus =
         raw.statusBadge ??
         raw.productStatus ??
         raw.status ??
         raw.product_status ??
         raw.product?.status ??
         null;
+
+    let productStatus;
+    switch (rawStatus) {
+        case "판매중":
+            productStatus = "거래중";
+            break;
+        case "판매완료":
+            productStatus = "거래완료";
+            break;
+        default:
+            productStatus = rawStatus;
+    }
 
     const sellerId =
         raw.sellerId ?? raw.seller_id ?? raw.product?.sellerId ?? raw.seller?.id ?? null;
