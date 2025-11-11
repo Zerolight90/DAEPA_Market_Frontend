@@ -31,9 +31,11 @@ export default function BuyModal({ id, close, itemId, title, price }) {
             successUrl: `http://localhost:8080/api/pay/success`,
             failUrl: `${window.location.origin}/pay/fail`,
         }).catch(error => {
-            // 결제창 호출 실패 또는 사용자 취소 시 에러 처리
-            console.error("결제 요청 실패:", error);
-            if (error.code !== 'USER_CANCEL') {
+            if (error.code == 'USER_CANCEL'){
+                console.log('사용자가 결제를 취소했습니다')
+            }
+            // 사용자 취소 외 결제창 호출 실패 시 에러 처리
+            else {
                 alert(`결제 요청 중 오류가 발생했습니다: ${error.message}`);
             }
         });

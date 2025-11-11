@@ -111,7 +111,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { loadTossPayments } from "@tosspayments/payment-sdk";
 import { v4 as uuidv4 } from "uuid";
 import styles from "./payCharge.module.css";
@@ -125,9 +125,51 @@ const PACKAGES = [
 
 export default function DaepaChargePage() {
     // 실제로는 백엔드에서 가져오면 됨
-    const [myDaepa] = useState(0);
+    const [myDaepa, setMyDaepa] = useState(0);
+    const [isLoading, setIsLoading] = useState(true); // ✅ 잔액 로딩 상태
+    const [error, setError] = useState(null); // ✅ 에러 상태
+
     const [activeTab, setActiveTab] = useState("charge");
     const [amount, setAmount] = useState("");
+
+    // ✅ 페이지가 로드될 때 잔액을 가져오는 로직
+    useEffect(() => {
+        const fetchBalance = async () => {
+            // ❗️ 실제 프로젝트에서는 토큰을 저장소(예: 쿠키, 로컬 스토리지)에서 가져와야 합니다.
+            // 아래는 예시이며, 프로젝트의 인증 방식에 맞게 수정이 필요합니다.
+            const token = localStorage.getItem('accessToken');
+
+            if (!token) {
+                setError("로그인이 필요합니다.");
+                setIsLoading(false);
+                return;
+                }
+
+            try {
+                const response = await fetch('http://localhost:8080/api/pay/balance', {
+                    headers: {
+                    'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || '잔액을 불러오는 데 실패했습니다.');
+                    }
+
+                const data = await response.json();
+                setMyDaepa(data.balance);
+
+                } catch (err) {
+                     console.error("잔액 조회 실패:", err);
+                     setError(err.message);
+                     } finally {
+                        setIsLoading(false);
+                     }
+                 };
+
+                 fetchBalance();
+             }, []); // 빈 배열을 전달하여 컴포넌트가 처음 마운트될 때 한 번만 실행
 
     // 공통 결제 함수
     const requestTossPay = async (chargeAmount) => {

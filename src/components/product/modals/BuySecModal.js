@@ -5,10 +5,13 @@ import BaseModal from "@/components/ui/modal/BaseModal";
 
 import { loadTossPayments } from '@tosspayments/payment-sdk';
 import { v4 as uuidv4 } from 'uuid';
+import { useModal } from "@/components/ui/modal/ModalProvider";
+import SecPayWithPointModal from "@/components/product/modals/SecPayWithPointModal";
 
 export default function BuyModal({ id, close, itemId, title, price }) {
     const [qty, setQty] = useState(1);
     const total = (Number(price) || 0) * qty;
+    const modal = useModal();
 
     const pay = async () => {
         // TODO: 결제/주문 API
@@ -37,17 +40,37 @@ export default function BuyModal({ id, close, itemId, title, price }) {
             // ✅ 주문명 동적으로 생성
             orderName: title || '상품 구매',
             customerName: "id", // 실제 유저 이름으로 변경 필요
+
             successUrl: `http://localhost:8080/api/secPay/success`,
             failUrl: `${window.location.origin}/pay/fail`,
         }).catch(error => {
-            // ✅ 결제창 호출 실패 또는 사용자 취소 시 에러 처리
-            console.error("결제 요청 실패:", error);
-            if (error.code !== 'USER_CANCEL') {
+            if (error.code == 'USER_CANCEL'){
+                console.log('사용자가 결제를 취소했습니다')
+            }
+            // 사용자 취소 외 결제창 호출 실패 시 에러 처리
+            else {
                 alert(`결제 요청 중 오류가 발생했습니다: ${error.message}`);
             }
         });
 
     }
+
+    // 대파 페이 결제 모달 열기
+    const openPayWithPointModal = () => {
+        // 현재 모달을 닫고 새 모달 열기 (선택 사항)
+        // close();
+
+        modal.open(({ id: newModalId, close: newModalClose }) => (
+            <SecPayWithPointModal
+                id={newModalId}
+                close={newModalClose}
+                itemId={itemId}
+                title={title}
+                qty={qty} // 수량 전달
+                total={total} // 총액 전달
+            />
+        ));
+    };
 
     return (
         <BaseModal id={id} close={close} title="안전결제">
@@ -67,6 +90,7 @@ export default function BuyModal({ id, close, itemId, title, price }) {
             </div>
             <div>
                 <button onClick={pay} style={primaryBtn}>결제하기</button>
+                <button onClick={openPayWithPointModal} style={primaryBtn}>페이로 결제하기</button>
                 <button onClick={close} style={ghostBtn}>취소</button>
             </div>
         </BaseModal>
