@@ -181,6 +181,7 @@ export default function NoticeListPage() {
           )}
         </div>
       </div>
+
       {totalPages > 1 && (
         <div style={{ display: "flex", justifyContent: "center", marginTop: "2rem" }}>
           <Pagination

@@ -9,6 +9,7 @@ import { useMe, useChatRooms } from "@/lib/chat/useChatRooms";
 import { useChatMessages } from "@/lib/chat/useChatMessages";
 import { useCallback, useEffect, useState } from "react";
 import { leaveRoomRest } from "@/lib/chat/api";
+import ExitToApp from '@mui/icons-material/ExitToApp';
 
 // 빈 문자열을 null 로 바꿔 <img>에 비지 않도록
 const safeSrc = (v) => {
@@ -133,7 +134,7 @@ export default function MarketChat() {
                                     className={s.leaveBtn}
                                     aria-label="방 나가기"
                                 >
-                                    나가기
+                                    <ExitToApp />
                                 </button>
                             </div>
 
