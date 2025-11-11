@@ -7,12 +7,6 @@ import styles from "./mypage.module.css";
 import tokenStore from "@/app/store/TokenStore";
 import SideNav from "@/components/mypage/sidebar";
 
-const METRICS = [
-    { key: "safe", label: "안심결제", value: 0 },
-    { key: "review", label: "거래후기", value: 0 },
-    { key: "eco", label: "대파 갯수", value: " 개" },
-];
-
 const TABS = [
     { key: "all", label: "전체" },
     { key: "selling", label: "판매중" },
@@ -79,6 +73,54 @@ export default function MyPage() {
 
     const [products, setProducts] = useState([]);
     const [productErr, setProductErr] = useState("");
+
+    const [myDaepa, setMyDaepa] = useState(0);
+    const [isLoading, setIsLoading] = useState(true); // ✅ 잔액 로딩 상태
+    const [error, setError] = useState(null); // ✅ 에러 상태
+
+    // ✅ 페이지가 로드될 때 잔액을 가져오는 로직
+    useEffect(() => {
+        const fetchBalance = async () => {
+            // ❗️ 실제 프로젝트에서는 토큰을 저장소(예: 쿠키, 로컬 스토리지)에서 가져와야 합니다.
+            // 아래는 예시이며, 프로젝트의 인증 방식에 맞게 수정이 필요합니다.
+            const token = localStorage.getItem('accessToken');
+
+            if (!token) {
+                setError("로그인이 필요합니다.");
+                setIsLoading(false);
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:8080/api/pay/balance', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || '잔액을 불러오는 데 실패했습니다.');
+                }
+
+                const data = await response.json();
+                setMyDaepa(data.balance);
+
+            } catch (err) {
+                console.error("잔액 조회 실패:", err);
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchBalance();
+    }, []); // 빈 배열을 전달하여 컴포넌트가 처음 마운트될 때 한 번만 실행
+    const METRICS = [
+        { key: "safe", label: "안심결제", value: 0 },
+        { key: "review", label: "거래후기", value: 0 },
+        { key: "eco", label: "대파 갯수", value: myDaepa.toLocaleString() + " 개" },
+    ];
 
     // 내 정보
     useEffect(() => {
@@ -333,7 +375,7 @@ export default function MyPage() {
 
                     <div className={styles.headerRight}>
                         <Link href="/payCharge" className={styles.bannerCard}>
-                            <div className={styles.bannerIcon} aria-hidden />
+                            <div className={styles.bannerIcon} aria-hidden>💰</div>
                             <div className={styles.bannerText}><strong>대파 페이 충전하기</strong></div>
                             <span className={styles.bannerArrow} aria-hidden>›</span>
                         </Link>

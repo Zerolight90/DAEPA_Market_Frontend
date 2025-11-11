@@ -1,0 +1,237 @@
+/* Base Layout */
+.wrapper {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 16px 16px;
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 24px;
+}
+.sidebar {
+    min-height: 100%;
+}
+.content {
+    min-height: 100vh;
+}
+.topBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.pageTitle {
+    font-size: 30px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    margin-top: 15px;
+}
+.listArea {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+.block {
+    background: #fff;
+}
+.empty {
+    border: 1px dashed #e2e8f0;
+    border-radius: 12px;
+    padding: 28px 10px;
+    text-align: center;
+    color: #94a3b8;
+}
+
+/* Buttons */
+.grayBtn {
+    display: block;
+    width: 100%;
+    border: 1px solid #d1d5db;
+    background: #ff4141;
+    color: #ffffff;
+    border-radius: 10px;
+    padding: 10px 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.2s ease;
+}
+.grayBtn:hover {
+    background: #d32525;
+    transform: translateY(-1px);
+}
+.greenBtn {
+    display: block;
+    width: 100%;
+    border: none;
+    background: #22c55e;
+    color: #ffffff;
+    border-radius: 10px;
+    padding: 10px 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.2s ease, transform 0.1s ease;
+}
+.greenBtn:hover {
+    background: #16a34a;
+    transform: translateY(-1px);
+}
+.greenBtn:active {
+    transform: translateY(0);
+}
+
+/* Modal Base */
+.modalOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1200;
+}
+.modal {
+    width: 480px;
+    max-height: 90vh;
+    background: #fff;
+    border-radius: 18px;
+    overflow-y: auto;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.12);
+}
+.modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #eee;
+}
+.modalTitle {
+    font-size: 16px;
+    font-weight: 600;
+}
+.modalClose {
+    background: none;
+    border: none;
+    font-size: 20px;
+    line-height: 1;
+    cursor: pointer;
+}
+.modalBody {
+    padding: 16px 20px 24px;
+}
+
+/* === Matching Page Specific Styles === */
+.searchRow {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1px solid #f1f5f9;
+}
+.filterGroup {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.filterSelect, .priceInput {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 14px;
+    background: #fff;
+}
+.filterSelect {
+    flex: 1;
+}
+.priceInput {
+    width: 120px;
+}
+.priceSeparator {
+    color: #94a3b8;
+}
+.card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+}
+.pickCategory {
+    font-size: 14px;
+    color: #64748b;
+    width: 320px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.pickPrice {
+    font-weight: 600;
+    font-size: 15px;
+    flex: 1;
+    min-width: 180px;
+    margin: 0;
+}
+.actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.actions .greenBtn, .actions .grayBtn {
+    width: auto;
+    padding: 8px 16px;
+    font-size: 13px;
+}
+
+/* Notification Modal */
+.notificationList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 300px;
+    overflow-y: auto;
+}
+.notificationItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 4px;
+    border-bottom: 1px solid #f1f5f9;
+    font-size: 14px;
+}
+.notificationItem:last-child {
+    border-bottom: none;
+}
+.notificationLink {
+    color: #16a34a;
+    text-decoration: none;
+    font-weight: 500;
+}
+.notificationLink:hover {
+    text-decoration: underline;
+}
+.notificationDeleteBtn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 16px;
+}
+.modalActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #f1f5f9;
+}
+.modalActions .greenBtn, .modalActions .grayBtn {
+    width: auto;
+    padding: 8px 20px;
+}
