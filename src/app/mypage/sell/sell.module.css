@@ -557,3 +557,10 @@
     padding: 4px 0;
     font-size: 13px;
 }
+
+.cardDanger {
+    background: #fff1f2;
+    border: 1px solid #fecdd3;
+}
+
+
