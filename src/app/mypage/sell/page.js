@@ -85,6 +85,26 @@ export default function SellHistoryPage() {
         );
     }
 
+    // 검수 상태 숫자로
+    function getCkStatus(item) {
+        const raw = item?.ckStatus ?? item?.ck_status ?? item?.CK_STATUS ?? null;
+        if (raw === null || raw === undefined) return null;
+        return Number(raw);
+    }
+
+    function getCkResult(item) {
+        const raw = item?.ckResult ?? item?.ck_result ?? item?.CK_RESULT ?? null;
+        if (raw === null || raw === undefined) return null;
+        return Number(raw);
+    }
+
+    // 검수 완료 + 불합격
+    function isInspectionFailed(item) {
+        const ckStatus = getCkStatus(item);
+        const ckResult = getCkResult(item);
+        return ckStatus === 1 && ckResult === 1;
+    }
+
     function calcBaseStep(item) {
         const dStatus = getDStatus(item);
         const dSell = getDSell(item);
@@ -116,8 +136,10 @@ export default function SellHistoryPage() {
         if (dv != null && dv >= 2) {
             steps.step6 = true;
         } else if (ck != null && ck === 0) {
+            // 검수 중일 때
             steps.step6 = true;
         }
+
         if (dv != null && dv >= 3) {
             steps.step7 = true;
         }
@@ -193,7 +215,6 @@ export default function SellHistoryPage() {
         e.stopPropagation();
         const url = `${BACKEND_BASE}/api/delivery/${dealId}/sent`;
         try {
-            console.log('📡 배송 보냄 확인 PATCH =>', url);
             const res = await fetch(url, {
                 method: 'PATCH',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
@@ -201,14 +222,11 @@ export default function SellHistoryPage() {
             });
             if (!res.ok) {
                 const txt = await res.text();
-                console.warn('❌ 배송 보냄 확인 실패:', res.status, txt);
                 alert('배송 보냄 확인에 실패했습니다.\n' + txt);
                 return;
             }
-            console.log('✅ 배송 보냄 확인 성공');
             fetchSell();
         } catch (e2) {
-            console.error('❌ 배송 보냄 확인 중 오류:', e2);
             alert('네트워크 오류가 발생했습니다.');
         }
     }
@@ -218,7 +236,6 @@ export default function SellHistoryPage() {
         e.stopPropagation();
         const url = `${BACKEND_BASE}/api/delivery/${dealId}/done`;
         try {
-            console.log('📡 배송 완료 확인 PATCH =>', url);
             const res = await fetch(url, {
                 method: 'PATCH',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
@@ -226,23 +243,59 @@ export default function SellHistoryPage() {
             });
             if (!res.ok) {
                 const txt = await res.text();
-                console.warn('❌ 배송 완료 확인 실패:', res.status, txt);
                 alert('처리 중 오류가 발생했습니다.\n' + txt);
                 return;
             }
-            console.log('✅ 배송 완료 확인 성공');
             fetchSell();
         } catch (e2) {
-            console.error('❌ 배송 완료 확인 중 오류:', e2);
             alert('네트워크 오류가 발생했습니다.');
         }
     }
 
-    function Step({ active, label }) {
+    // 검수 불합격 시 환불 처리
+    async function handleRefundClick(dealId, e) {
+        e.stopPropagation();
+        const url = `${BACKEND_BASE}/api/deal/${dealId}/refund`;
+        try {
+            const res = await fetch(url, {
+                method: 'PATCH',
+                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                credentials: 'include',
+            });
+            if (!res.ok) {
+                const txt = await res.text();
+                alert('환불 처리 중 오류가 발생했습니다.\n' + txt);
+                return;
+            }
+            alert('환불 처리가 완료되었습니다.');
+            fetchSell();
+        } catch (e2) {
+            alert('네트워크 오류가 발생했습니다.');
+        }
+    }
+
+    // 스텝 컴포넌트
+    function Step({ active, label, danger = false }) {
         return (
             <div className={`${styles.step} ${active ? styles.stepActive : ''}`}>
-                <span className={styles.stepDot} />
-                <span className={styles.stepLabel}>{label}</span>
+      <span
+          className={styles.stepDot}
+          style={
+              danger
+                  ? {
+                      background: '#ef4444',   // 빨간 점
+                      border: 'none',          // 초록 테두리 제거
+                      boxShadow: 'none',       // 혹시 그림자로 테두리 준 경우 제거
+                  }
+                  : undefined
+          }
+      />
+                <span
+                    className={styles.stepLabel}
+                    style={danger ? { color: '#ef4444', fontWeight: 600 } : undefined}
+                >
+        {label}
+      </span>
             </div>
         );
     }
@@ -344,46 +397,27 @@ export default function SellHistoryPage() {
                                 isDelivery && currentDv !== null && currentDv === 3;
                             const showReviewBtn = item.showReviewBtn === true;
 
-                            // ✅ 여기서 썸네일 후보를 하나로 모아놓자
+                            const inspectionFailed = isInspectionFailed(item);
+
                             const thumbSrc =
                                 item.productThumb ||
                                 item.pdThumb ||
                                 item.thumbnail ||
                                 FALLBACK_IMG;
 
+                            const dealId = item.dealId ?? item.dIdx;
+
                             return (
-                                <article key={item.dealId} className={styles.block}>
+                                <article key={dealId} className={styles.block}>
                                     <div className={styles.dateRow}>
                                         <span>{tradeText || '거래방식 미정'}</span>
                                     </div>
 
                                     <div
-                                        className={styles.card}
+                                        className={`${styles.card} ${
+                                            inspectionFailed ? styles.cardDanger : ''
+                                        }`}
                                         onClick={() => {
-                                            console.log('🟣 선택한 거래 =====');
-                                            console.log('dealId:', item.dealId);
-                                            console.log('orderId:', item.orderId);
-                                            console.log(
-                                                '구매자 닉네임:',
-                                                item.buyerNickname,
-                                                item.buyer_nickname
-                                            );
-                                            console.log(
-                                                '구매자 연락처:',
-                                                item.buyerPhone,
-                                                item.buyer_phone
-                                            );
-                                            console.log(
-                                                '결제일시(dealEndDate):',
-                                                item.dealEndDate,
-                                                item.deal_end_date
-                                            );
-                                            console.log(
-                                                '상품금액:',
-                                                item.agreedPrice ?? item.pdPrice ?? 0
-                                            );
-                                            console.log('상품 썸네일:', thumbSrc);
-                                            console.log('===========================');
                                             setSelectedDeal(item);
                                         }}
                                         role="button"
@@ -396,7 +430,6 @@ export default function SellHistoryPage() {
 
                                         <div className={styles.productRow}>
                                             <div className={styles.thumbBox}>
-                                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                                 <img
                                                     src={thumbSrc}
                                                     alt={item.title || item.pdTitle || '상품 이미지'}
@@ -422,12 +455,16 @@ export default function SellHistoryPage() {
                                             <Step active={baseStep >= 3} label="판매 완료" />
                                             {isDelivery && (
                                                 <>
-                                                    <SquareStep
-                                                        active={step4}
-                                                        label="배송 보냄 확인"
-                                                    />
+                                                    <SquareStep active={step4} label="배송 보냄 확인" />
                                                     <Step active={step5} label="배송" />
-                                                    <Step active={step6} label="대파에서 검수 중" />
+                                                    {/* 검수 불합격일 때 빨간색 */}
+                                                    <Step
+                                                        active={step6 || inspectionFailed}
+                                                        label={
+                                                            inspectionFailed ? '검수 불합격' : '대파에서 검수 중'
+                                                        }
+                                                        danger={inspectionFailed}
+                                                    />
                                                     <Step active={step7} label="배송" />
                                                     <SquareStep active={step8} label="후기 보내기" />
                                                 </>
@@ -439,7 +476,7 @@ export default function SellHistoryPage() {
                                                 <button
                                                     type="button"
                                                     className={styles.grayBtn}
-                                                    onClick={(e) => handleSendClick(item.dealId, e)}
+                                                    onClick={(e) => handleSendClick(dealId, e)}
                                                 >
                                                     배송 보냄 확인
                                                 </button>
@@ -449,7 +486,7 @@ export default function SellHistoryPage() {
                                                 <button
                                                     type="button"
                                                     className={styles.grayBtn}
-                                                    onClick={(e) => handleDoneClick(item.dealId, e)}
+                                                    onClick={(e) => handleDoneClick(dealId, e)}
                                                 >
                                                     배송 완료 확인
                                                 </button>
@@ -462,6 +499,17 @@ export default function SellHistoryPage() {
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
                                                     후기 보내기
+                                                </button>
+                                            )}
+
+                                            {/* 검수 불합격이면 환불처리 버튼 노출 (기존 버튼 CSS 그대로) */}
+                                            {inspectionFailed && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.grayBtn}
+                                                    onClick={(e) => handleRefundClick(dealId, e)}
+                                                >
+                                                    환불처리
                                                 </button>
                                             )}
                                         </div>
@@ -514,10 +562,10 @@ export default function SellHistoryPage() {
                             </p>
 
                             <div className={styles.modalSection}>
-                                <h3 className={styles.modalSectionTitle}>판매완료</h3>
+                                <h3 className={styles.modalSectionTitle}>
+                                    {isInspectionFailed(selectedDeal) ? '검수 불합격' : '판매완료'}
+                                </h3>
                                 <div className={styles.modalProduct}>
-                                    {/* 모달에서도 썸네일 보여주기 */}
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
                                         src={
                                             selectedDeal.productThumb ||
@@ -549,9 +597,25 @@ export default function SellHistoryPage() {
                                         </p>
                                     </div>
                                 </div>
-                                <button type="button" className={styles.modalActionBtn}>
-                                    후기 보내기
-                                </button>
+                                {!isInspectionFailed(selectedDeal) && (
+                                    <button type="button" className={styles.modalActionBtn}>
+                                        후기 보내기
+                                    </button>
+                                )}
+                                {isInspectionFailed(selectedDeal) && (
+                                    <button
+                                        type="button"
+                                        className={styles.grayBtn}
+                                        onClick={(e) =>
+                                            handleRefundClick(
+                                                selectedDeal.dealId ?? selectedDeal.dIdx,
+                                                e
+                                            )
+                                        }
+                                    >
+                                        환불처리
+                                    </button>
+                                )}
                             </div>
 
                             <div className={styles.modalSection}>
@@ -598,7 +662,9 @@ export default function SellHistoryPage() {
                                 </div>
                                 <div className={styles.modalInfoRow}>
                                     <span>정산상태</span>
-                                    <span>완료</span>
+                                    <span>
+                    {isInspectionFailed(selectedDeal) ? '환불 필요' : '완료'}
+                  </span>
                                 </div>
                             </div>
                         </div>
