@@ -11,7 +11,8 @@ export default function CreateNoticePage() {
     title: "",
     category: "공지",
     content: "",
-    isImportant: false
+    isImportant: false,
+    nFix: false
   });
   
   // (이미지) 사용자가 선택한 파일 객체를 관리하는 상태
@@ -71,6 +72,7 @@ export default function CreateNoticePage() {
             nSubject: formData.title,
             nContent: formData.content,
             nCategory: categoryMap[formData.category],
+            nFix: formData.nFix ? 1 : 0,
             nIp: "127.0.0.1"
         };
 
@@ -210,6 +212,20 @@ export default function CreateNoticePage() {
                   <option value="이벤트">이벤트</option>
                 </select>
               </div>
+            </div>
+
+            {/* 상단 고정 체크박스 */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ display: "flex", alignItems: "center", cursor: "pointer", fontSize: "0.875rem" }}>
+                <input
+                  type="checkbox"
+                  name="nFix"
+                  checked={formData.nFix}
+                  onChange={handleInputChange}
+                  style={{ marginRight: "0.5rem" }}
+                />
+                <span>이 공지사항을 상단에 고정합니다.</span>
+              </label>
             </div>
 
             {/* 내용 */}

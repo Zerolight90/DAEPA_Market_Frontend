@@ -142,6 +142,9 @@
     border-radius: 10px;
     background: linear-gradient(135deg, var(--brand-soft), rgba(46, 204, 113, .06));
     border: 1px solid rgba(46, 204, 113, .25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .bannerText { display: grid; }
 .bannerText strong { font-weight: 700; }
