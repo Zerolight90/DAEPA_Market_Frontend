@@ -5,11 +5,17 @@ import { useRouter } from "next/navigation";
 import ProductsGrid from "@/components/category/ProductsGrid";
 import useTokenStore from "@/app/store/TokenStore";
 
-const API_BASE = "http://localhost:8080";
+// ✅ 배포/로컬 둘 다 안전하게
+const API_BASE =
+    typeof process !== "undefined" &&
+    process.env &&
+    process.env.NEXT_PUBLIC_API_BASE
+        ? process.env.NEXT_PUBLIC_API_BASE
+        : (typeof window !== "undefined" ? window.location.origin : "http://localhost:8080");
 
 export default function MyLikePage() {
     const router = useRouter();
-    const accessToken = useTokenStore((s) => s.accessToken); // ✅ 이제 새로고침해도 살아있음
+    const accessToken = useTokenStore((s) => s.accessToken);
 
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -27,9 +33,9 @@ export default function MyLikePage() {
                     headers,
                 });
 
+                // 백엔드가 비로그인일 때 [] 주도록 이미 바꿔놨으니
+                // 여기서 401 뜨면 그냥 로그인으로 보내고 끝
                 if (res.status === 401) {
-                    alert("로그인이 필요합니다.");
-                    // ✅ 실제 있는 경로로 고치기
                     router.push(`/login?next=${encodeURIComponent("/like")}`);
                     return;
                 }
@@ -41,18 +47,35 @@ export default function MyLikePage() {
                 }
 
                 const data = await res.json();
+
+                // ✅ 여기서 S3 주소는 그대로 쓰고, 상대경로만 /uploads 붙임
                 const mapped = (Array.isArray(data) ? data : []).map((p) => {
                     const id = p.id ?? p.pdIdx;
-                    const image = p.imageUrl || p.thumbnail || null;
+                    const rawImg = p.imageUrl || p.thumbnail || p.pdThumb || null;
+
+                    let thumbnail;
+                    if (!rawImg) {
+                        // 기본 이미지
+                        thumbnail = "https://daepa-s3.s3.ap-northeast-2.amazonaws.com/products/KakaoTalk_20251104_145039505.jpg";
+                    } else if (
+                        rawImg.startsWith("http://") ||
+                        rawImg.startsWith("https://")
+                    ) {
+                        // ✅ S3 같은 절대경로는 그대로
+                        thumbnail = rawImg;
+                    } else if (rawImg.startsWith("/uploads/")) {
+                        // 이미 업로드 경로면 그대로
+                        thumbnail = rawImg;
+                    } else {
+                        // 예전처럼 파일명만 온 경우
+                        thumbnail = `/uploads/${rawImg}`;
+                    }
+
                     return {
                         id,
                         title: p.title ?? p.pdTitle ?? "",
                         price: Number(p.price ?? p.pdPrice ?? 0),
-                        thumbnail: image
-                            ? image.startsWith("/uploads/")
-                                ? image
-                                : `/uploads/${image}`
-                            : "/no-image.png",
+                        thumbnail,
                         location: p.location ?? "",
                         createdAt: p.createdAt ?? "",
                     };
@@ -75,8 +98,8 @@ export default function MyLikePage() {
             >
                 <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>찜한 상품</h1>
                 <span style={{ color: "#666" }}>
-          {loading ? "불러오는 중…" : `총 ${items.length}개`}
-        </span>
+                    {loading ? "불러오는 중…" : `총 ${items.length}개`}
+                </span>
             </header>
 
             {loading ? (
