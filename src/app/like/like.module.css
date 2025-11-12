@@ -1,0 +1,51 @@
+.container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 24px 16px;
+}
+
+.header {
+    margin-bottom: 16px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.title {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.countText {
+    color: #666;
+}
+
+.message {
+    padding: 40px 0;
+    text-align: center;
+    color: #666;
+}
+
+.empty {
+    padding: 60px 0;
+    text-align: center;
+    color: #666;
+}
+
+.emptyAction {
+    margin-top: 12px;
+}
+
+.browseBtn {
+    padding: 10px 16px;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    background: #fff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.browseBtn:hover {
+    background: #f7f7f7;
+}

@@ -64,7 +64,7 @@ export default function SettlementPage() {
             {/* 오른쪽 컨텐츠 */}
             <main className={styles.content}>
                 <header className={styles.header}>
-                    <h1 className={styles.pageTitle}>안심결제 정산내역</h1>
+                    <h1 className={styles.pageTitle}>정산내역</h1>
                     <p className={styles.subText}>
                         최근 1년 이내의 정산 내역만 노출됩니다.
                     </p>
