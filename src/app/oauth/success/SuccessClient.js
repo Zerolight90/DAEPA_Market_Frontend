@@ -1,4 +1,4 @@
-// app/oauth/success/SuccessClient.jsx
+// app/oauth/success/SuccessClient.js
 "use client";
 
 import { useEffect } from "react";
@@ -23,6 +23,7 @@ export default function SuccessClient() {
             localStorage.setItem("refreshToken", refreshToken);
         }
 
+        // 소셜에서 넘어온 뒤 실제 입력 페이지로
         router.replace(`/oauth?provider=${provider}`);
     }, [accessToken, refreshToken, provider, router, setToken]);
 
