@@ -1,4 +1,3 @@
-// src/app/mypage/sell/page.js
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -7,6 +6,7 @@ import styles from './sell.module.css';
 import Sidebar from '@/components/mypage/sidebar';
 import tokenStore from '@/app/store/TokenStore';
 
+// 백엔드 기본 주소
 const BACKEND_BASE =
     typeof process !== 'undefined' &&
     process.env &&
@@ -14,6 +14,7 @@ const BACKEND_BASE =
         ? process.env.NEXT_PUBLIC_API_BASE
         : 'http://localhost:8080';
 
+// 이미지 없을 때 쓸 기본이미지
 const FALLBACK_IMG =
     'https://daepa-s3.s3.ap-northeast-2.amazonaws.com/products/KakaoTalk_20251104_145039505.jpg';
 
@@ -26,6 +27,7 @@ export default function SellHistoryPage() {
     const [err, setErr] = useState('');
     const [selectedDeal, setSelectedDeal] = useState(null);
 
+    // 판매 내역 가져오기
     async function fetchSell() {
         try {
             setLoading(true);
@@ -63,14 +65,17 @@ export default function SellHistoryPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [accessToken]);
 
+    // d_sell 여러 형태 대응
     function getDSell(item) {
         return item?.dSell ?? item?.d_sell ?? item?.dsell ?? item?.D_SELL ?? null;
     }
 
+    // d_status 여러 형태 대응
     function getDStatus(item) {
         return item?.dStatus ?? item?.d_status ?? item?.dstatus ?? item?.D_STATUS ?? null;
     }
 
+    // 검수 상태 숫자로
     function getCkStatus(item) {
         const raw = item?.ckStatus ?? item?.ck_status ?? item?.CK_STATUS ?? null;
         if (raw === null || raw === undefined) return null;
@@ -83,6 +88,7 @@ export default function SellHistoryPage() {
         return Number(raw);
     }
 
+    // 검수 완료 + 불합격
     function isInspectionFailed(item) {
         const ckStatus = getCkStatus(item);
         const ckResult = getCkResult(item);
@@ -120,6 +126,7 @@ export default function SellHistoryPage() {
         if (dv != null && dv >= 2) {
             steps.step6 = true;
         } else if (ck != null && ck === 0) {
+            // 검수 중일 때
             steps.step6 = true;
         }
 
@@ -133,6 +140,7 @@ export default function SellHistoryPage() {
         return steps;
     }
 
+    // 날짜 포맷
     function formatDate(dateStr) {
         if (!dateStr) return '';
         const normalized = String(dateStr).replace(' ', 'T').split('.')[0];
@@ -151,6 +159,7 @@ export default function SellHistoryPage() {
         return `${y}.${m}.${day} ${hh}:${mm}`;
     }
 
+    // d_sell=1 만 + 검색
     const filtered = useMemo(() => {
         const paidOnly = list.filter((item) => {
             const dSell = getDSell(item);
@@ -184,6 +193,7 @@ export default function SellHistoryPage() {
         return raw;
     }
 
+    // 배송 보냄 확인
     async function handleSendClick(dealId, e) {
         e.stopPropagation();
         const url = `${BACKEND_BASE}/api/delivery/${dealId}/sent`;
@@ -204,6 +214,7 @@ export default function SellHistoryPage() {
         }
     }
 
+    // 배송 완료 확인
     async function handleDoneClick(dealId, e) {
         e.stopPropagation();
         const url = `${BACKEND_BASE}/api/delivery/${dealId}/done`;
@@ -224,14 +235,18 @@ export default function SellHistoryPage() {
         }
     }
 
+    // 검수 불합격 시 환불 처리
     async function handleRefundClick(dealId, e) {
         e.stopPropagation();
-        const url = `${BACKEND_BASE}/api/deal/${dealId}/refund`;
+        const url = `${BACKEND_BASE}/api/${dIdx}/payCancel`;
         try {
             const res = await fetch(url, {
-                method: 'PATCH',
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-                credentials: 'include',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({ cancelReason: "고객 변심" }) // 취소 사유 전달
             });
             if (!res.ok) {
                 const txt = await res.text();
@@ -286,24 +301,24 @@ export default function SellHistoryPage() {
     function Step({ active, label, danger = false }) {
         return (
             <div className={`${styles.step} ${active ? styles.stepActive : ''}`}>
-        <span
-            className={styles.stepDot}
-            style={
-                danger
-                    ? {
-                        background: '#ef4444',
-                        border: 'none',
-                        boxShadow: 'none',
-                    }
-                    : undefined
-            }
-        />
+      <span
+          className={styles.stepDot}
+          style={
+              danger
+                  ? {
+                      background: '#ef4444',   // 빨간 점
+                      border: 'none',          // 초록 테두리 제거
+                      boxShadow: 'none',       // 혹시 그림자로 테두리 준 경우 제거
+                  }
+                  : undefined
+          }
+      />
                 <span
                     className={styles.stepLabel}
                     style={danger ? { color: '#ef4444', fontWeight: 600 } : undefined}
                 >
-          {label}
-        </span>
+        {label}
+      </span>
             </div>
         );
     }
@@ -451,6 +466,7 @@ export default function SellHistoryPage() {
                                                 <>
                                                     <SquareStep active={step4} label="배송 보냄 확인" />
                                                     <Step active={step5} label="배송" />
+                                                    {/* 검수 불합격일 때 빨간색 */}
                                                     <Step
                                                         active={step6 || inspectionFailed}
                                                         label={inspectionFailed ? '검수 불합격' : '대파에서 검수 중'}
@@ -496,6 +512,7 @@ export default function SellHistoryPage() {
                                                 </button>
                                             )}
 
+                                            {/* 검수 불합격이면 환불처리 버튼 노출 (기존 버튼 CSS 그대로) */}
                                             {inspectionFailed && (
                                                 <button
                                                     type="button"
@@ -518,6 +535,7 @@ export default function SellHistoryPage() {
                 )}
             </main>
 
+            {/* 상세 모달 */}
             {selectedDeal && (
                 <div
                     className={styles.modalOverlay}
