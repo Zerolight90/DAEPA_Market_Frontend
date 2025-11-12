@@ -1,3 +1,4 @@
+//src/lib/server/products.js
 import "server-only";
 
 const API_BASE =

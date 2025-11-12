@@ -10,16 +10,14 @@ import styles from "./SellerPage.module.css";
 export const revalidate = 0;
 
 export default async function SellerPage(props) {
-    // Next 15 스타일
     const { sellerId } = await props.params;
     const sp = await props.searchParams;
 
     const page = Number(sp?.page ?? 0);
     const size = Number(sp?.size ?? 20);
-    const sort = String(sp?.sort ?? "recent");  // 최신순/낮은가격순/높은가격순
-    const status = String(sp?.status ?? "all"); // 전체/판매중/판매완료
+    const sort = String(sp?.sort ?? "recent");
+    const status = String(sp?.status ?? "all");
 
-    // 1) 이 판매자의 상품 목록
     const baseItems =
         (await fetchSellerProducts({
             sellerId,
@@ -29,18 +27,18 @@ export default async function SellerPage(props) {
             status,
         })) ?? [];
 
-    // 2) 첫 번째 상품으로부터 판매자 정보·dsell 정보 보강
     let sellerFromProduct = null;
 
     const itemsWithDetail = await Promise.all(
         baseItems.map(async (it, idx) => {
-            const id = it.id ?? it.pdIdx;
-            if (!id) return it;
+            const id = it.id ?? it.pdIdx ?? it.pd_idx;
+            if (!id) {
+                return { ...it, __deleted: true };
+            }
 
             try {
                 const detail = await fetchProductDetail(id);
 
-                // 첫 번째 아이템의 상세에서 판매자 정보 한 번만 가져오면 됨
                 if (idx === 0 && detail) {
                     sellerFromProduct = {
                         id:
@@ -75,29 +73,88 @@ export default async function SellerPage(props) {
                         0,
                     thumbnail: it.thumbnail ?? it.pdThumb ?? detail?.pdThumb ?? null,
                     createdAt: it.createdAt ?? detail?.pdCreate ?? it?.pdCreate ?? null,
-                    price: it.price ?? it.pdPrice ?? detail?.pdPrice ?? null,
+                    pdDel:
+                        it.pdDel ??
+                        it.pd_del ??
+                        detail?.pdDel ??
+                        detail?.pd_del ??
+                        0,
+                    pdEdate:
+                        it.pdEdate ??
+                        it.pd_edate ??
+                        detail?.pdEdate ??
+                        detail?.pd_edate ??
+                        null,
                 };
-            } catch {
-                return it;
+            } catch (e) {
+                return { ...it, __deleted: true };
             }
         })
     );
 
-    // 3) 프론트에서 탭 필터링
-    let filtered = itemsWithDetail;
+    const now = Date.now();
+    const threeDaysMs = 3 * 24 * 60 * 60 * 1000;
+
+    const aliveItems = itemsWithDetail.filter((it) => {
+        if (it.__deleted) return false;
+
+        const rawDel =
+            it.pdDel ??
+            it.pd_del ??
+            it.product?.pdDel ??
+            it.product?.pd_del ??
+            0;
+        const delStr = String(rawDel).trim().toLowerCase();
+        const isDeleted =
+            delStr === "1" ||
+            delStr === "true" ||
+            delStr === "y" ||
+            delStr === "yes";
+        if (isDeleted) return false;
+
+        const dSellRaw =
+            it.dsell ??
+            it.dSell ??
+            it.d_status ??
+            it.dStatus ??
+            0;
+        const dSell = Number(dSellRaw) || 0;
+        if (dSell !== 1) return true;
+
+        if (!it.pdEdate) return true;
+        const ed = new Date(String(it.pdEdate).replace(" ", "T")).getTime();
+        if (Number.isNaN(ed)) return true;
+
+        return ed >= now - threeDaysMs;
+    });
+
+    let filtered = aliveItems;
     if (status === "selling") {
-        // 판매중: d_sell != 1
-        filtered = itemsWithDetail.filter(
-            (it) => Number(it.dsell ?? it.dSell ?? 0) !== 1
-        );
+        filtered = aliveItems.filter((it) => {
+            const dSell =
+                Number(
+                    it.dsell ??
+                    it.dSell ??
+                    it.d_status ??
+                    it.dStatus ??
+                    0
+                ) || 0;
+            return dSell !== 1;
+        });
     } else if (status === "sold") {
-        // 판매완료: d_sell == 1
-        filtered = itemsWithDetail.filter(
-            (it) => Number(it.dsell ?? it.dSell ?? 0) === 1
-        );
+        filtered = aliveItems.filter((it) => {
+            const dSell =
+                Number(
+                    it.dsell ??
+                    it.dSell ??
+                    it.d_status ??
+                    it.dStatus ??
+                    0
+                ) || 0;
+            return dSell === 1;
+        });
     }
 
-    // 4) 프런트에서 정렬
     const sorted = [...filtered].sort((a, b) => {
         if (sort === "price_asc") {
             const pa = Number(a.price ?? a.pdPrice ?? 0);
@@ -109,13 +166,11 @@ export default async function SellerPage(props) {
             const pb = Number(b.price ?? b.pdPrice ?? 0);
             return pb - pa;
         }
-        // 최신순
         const da = new Date(a.createdAt ?? a.pdCreate ?? 0).getTime();
         const db = new Date(b.createdAt ?? b.pdCreate ?? 0).getTime();
         return db - da;
     });
 
-    // 5) 패널에 줄 데이터 (상품이 아예 없으면 기본값)
     const sellerForPanel =
         sellerFromProduct ?? {
             id: sellerId,
@@ -126,7 +181,6 @@ export default async function SellerPage(props) {
             since: null,
         };
 
-    // 탭/정렬 링크
     const makeQuery = (next = {}) => {
         const q = new URLSearchParams();
         q.set("page", String(page));
@@ -138,12 +192,10 @@ export default async function SellerPage(props) {
 
     return (
         <main className={styles.page}>
-            {/* 판매자 카드 */}
             <div className={styles.profilePanelWrap}>
                 <SellerProfilePanel seller={sellerForPanel} />
             </div>
 
-            {/* 탭 + 정렬 */}
             <section className={styles.tabsRow}>
                 <div className={styles.tabs}>
                     <a
@@ -202,7 +254,6 @@ export default async function SellerPage(props) {
                 </div>
             </section>
 
-            {/* 상품 리스트 – 너 원래 쓰던 ProductCard 그대로 들어감 */}
             <section className={styles.productsSection}>
                 {sorted.length > 0 ? (
                     <SellerProductsGrid items={sorted} />
