@@ -1,4 +1,4 @@
-// app/oauth/page.jsx
+// app/oauth/page.js
 import { Suspense } from "react";
 import OAuthClient from "./OAuthClient";
 
