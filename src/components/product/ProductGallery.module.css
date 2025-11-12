@@ -1,4 +1,5 @@
 /* 전체 갤러리 래퍼 */
+/*src/components/product/ProductGallery.module.css*/
 .wrap {
     display: flex;
     flex-direction: column;

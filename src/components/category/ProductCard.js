@@ -1,3 +1,4 @@
+// src/components/category/ProductCard.js
 "use client";
 
 import Link from "next/link";
@@ -12,34 +13,33 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
     const [fav, setFav] = useState(false);
     const [count, setCount] = useState(0);
 
-    // ✅ dSell / dsell / d_status / dstatus 전부 본다
-    const soldOut =
-        Number(
-            item?.dSell ??
-            item?.d_sell ??
-            item?.dsell ??      // ← 이게 목록에서 오는 값
-            item?.dStatus ??
-            item?.d_status ??
-            item?.dstatus ??    // ← 이것도 목록에서 올 수 있음
-            item?.dealStatus ??
-            0
-        ) === 1;
+    // d_sell 파싱
+    const rawSell =
+        item?.dSell ??
+        item?.d_sell ??
+        item?.dsell ??
+        item?.dStatus ??
+        item?.d_status ??
+        item?.dstatus ??
+        item?.dealStatus ??
+        0;
 
+    const sellState = Number(rawSell) || 0;
+    const isSold = sellState === 1;    // 판매완료
+    const isTrading = sellState === 2; // 거래중/판매 중 으로 보여줄 것
 
     const accessToken = tokenStore((state) => state.accessToken);
 
+    // 찜 상태 초기 조회
     useEffect(() => {
         if (!item?.id && !item?.pdIdx) return;
-        console.log("card item >>>", item);
+
         (async () => {
             try {
                 const headers = {};
-                if (accessToken) {
-                    headers.Authorization = `Bearer ${accessToken}`;
-                }
+                if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
                 const productId = item.id ?? item.pdIdx;
-
                 const res = await fetch(
                     `${API_BASE}${Endpoints.favoriteStatus(productId)}`,
                     {
@@ -59,6 +59,7 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
         })();
     }, [item?.id, item?.pdIdx, accessToken]);
 
+    // 찜 토글
     const onToggle = async (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -67,12 +68,8 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
         const url = `${API_BASE}${Endpoints.favoriteToggle(productId)}`;
 
         try {
-            const headers = {
-                "Content-Type": "application/json",
-            };
-            if (accessToken) {
-                headers.Authorization = `Bearer ${accessToken}`;
-            }
+            const headers = { "Content-Type": "application/json" };
+            if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
             const res = await fetch(url, {
                 method: "POST",
@@ -84,10 +81,8 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
                 alert("로그인이 필요합니다.");
                 return;
             }
-
             if (!res.ok) {
                 const msg = await res.text().catch(() => res.statusText);
-                console.error("[favoriteToggle] HTTP", res.status, msg);
                 alert(`찜 처리 실패 (${res.status})\n${msg}`);
                 return;
             }
@@ -97,10 +92,11 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
             setCount(data.count ?? 0);
         } catch (err) {
             console.error("[favoriteToggle] fetch error:", err);
-            alert(`찜 처리 중 오류가 발생했습니다.\n${String(err)}`);
+            alert("찜 처리 중 오류가 발생했습니다.");
         }
     };
 
+    // 화면용 필드
     const productId = item.id ?? item.pdIdx;
     const productTitle = item.title ?? item.pdTitle;
     const productPrice = item.price ?? item.pdPrice;
@@ -115,12 +111,12 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
                         alt={productTitle}
                         className={styles.thumb}
                         style={{
-                            filter: soldOut ? "brightness(0.45)" : "none",
+                            filter: isSold || isTrading ? "brightness(0.45)" : "none",
                             transition: "filter .15s",
                         }}
                     />
 
-                    {soldOut && (
+                    {(isSold || isTrading) && (
                         <div
                             style={{
                                 position: "absolute",
@@ -151,7 +147,7 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
                             >
                                 ✓
                             </div>
-                            <div>판매완료</div>
+                            <div>{isSold ? "판매완료" : "판매 중"}</div>
                         </div>
                     )}
 

@@ -1,11 +1,21 @@
+// src/components/product/ProductGallery.js
 "use client";
 
 import { useState } from "react";
 import styles from "./ProductGallery.module.css";
 
-export default function ProductGallery({ images = [], soldOut = false }) {
+export default function ProductGallery({
+                                           images = [],
+                                           soldOut = false,
+                                           dealState, // ← 상품 상세에서 d_sell 그대로 넘겨주면 여기서 판단
+                                       }) {
     const safeImages = images.length ? images : ["/images/no-image.png"];
     const [main, setMain] = useState(safeImages[0]);
+
+    // soldOut boolean 이 있으면 그걸 우선, 없으면 dealState 로 판단
+    const sellNum = typeof dealState === "number" ? dealState : null;
+    const isSold = soldOut || sellNum === 1;
+    const isTrading = !soldOut && sellNum === 2;
 
     return (
         <div className={styles.wrap} style={{ position: "relative" }}>
@@ -15,12 +25,12 @@ export default function ProductGallery({ images = [], soldOut = false }) {
                     alt="메인 이미지"
                     className={styles.mainImg}
                     style={{
-                        filter: soldOut ? "brightness(0.45)" : "none",
+                        filter: isSold || isTrading ? "brightness(0.45)" : "none",
                         transition: "filter .15s",
                     }}
                 />
 
-                {soldOut && (
+                {(isSold || isTrading) && (
                     <div
                         style={{
                             position: "absolute",
@@ -51,7 +61,7 @@ export default function ProductGallery({ images = [], soldOut = false }) {
                         >
                             ✓
                         </div>
-                        <div>판매완료</div>
+                        <div>{isSold ? "판매완료" : "판매 중"}</div>
                     </div>
                 )}
             </div>
@@ -62,7 +72,9 @@ export default function ProductGallery({ images = [], soldOut = false }) {
                         <button
                             key={i}
                             onClick={() => setMain(src)}
-                            className={`${styles.tBtn} ${main === src ? styles.active : ""}`}
+                            className={`${styles.tBtn} ${
+                                main === src ? styles.active : ""
+                            }`}
                             aria-label={`이미지 ${i + 1}`}
                         >
                             <img src={src} alt={`thumb-${i}`} className={styles.tImg} />

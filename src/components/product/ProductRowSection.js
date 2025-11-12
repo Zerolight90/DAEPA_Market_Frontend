@@ -17,15 +17,13 @@ export default function ProductRowSection({
                                           }) {
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [page, setPage] = useState(0); // 가로로 몇 번째 슬라이드인지
-    const PAGE_SIZE = 6; // 한 페이지에 6개
+    const [page, setPage] = useState(0);
+    const PAGE_SIZE = 6;
     const accessToken = tokenStore((state) => state.accessToken);
 
-    // 쿼리스트링 만들기
     const buildQueryString = () => {
         const params = new URLSearchParams();
         params.set("sort", sort);
-        // 가로 슬라이드 여러 장 보여줄 거니까 한 번에 넉넉히
         params.set("size", query.size ? String(query.size) : "30");
         if (query.upperId) params.set("upperId", query.upperId);
         if (query.middleId) params.set("middleId", query.middleId);
@@ -34,7 +32,6 @@ export default function ProductRowSection({
         return params.toString();
     };
 
-    // 1) 상품 목록 불러오기
     useEffect(() => {
         (async () => {
             try {
@@ -43,18 +40,20 @@ export default function ProductRowSection({
                 const res = await apiFetch(`/api/products?${qs}`);
                 const list = Array.isArray(res?.content) ? res.content : [];
 
-                const mapped = list.map((p) => ({
-                    id: p.pdIdx,
-                    title: p.pdTitle,
-                    price: p.pdPrice,
-                    thumb: p.pdThumb,
-                    createdAt: p.pdCreate,
-                    dsell: p.dsell ?? p.dSell ?? p.d_sell ?? null,
-                    dstatus: p.dstatus ?? p.dStatus ?? p.d_status ?? null,
-                    // 찜 값은 일단 기본
-                    favorited: false,
-                    favoriteCount: 0,
-                }));
+                const mapped = list
+                    // ✨ 삭제된 거 제외
+                    .filter((p) => Number(p.pdDel ?? p.pd_del ?? 0) === 0)
+                    .map((p) => ({
+                        id: p.pdIdx,
+                        title: p.pdTitle,
+                        price: p.pdPrice,
+                        thumb: p.pdThumb,
+                        createdAt: p.pdCreate,
+                        dsell: p.dsell ?? p.dSell ?? p.d_sell ?? null,
+                        dstatus: p.dstatus ?? p.dStatus ?? p.d_status ?? null,
+                        favorited: false,
+                        favoriteCount: 0,
+                    }));
 
                 setItems(mapped);
                 setPage(0);
@@ -66,10 +65,9 @@ export default function ProductRowSection({
         })();
     }, [sort, JSON.stringify(query)]);
 
-    // 2) 각 아이템의 찜 상태 불러오기 (네 ProductCard랑 동일한 흐름)
     useEffect(() => {
         if (!items.length) return;
-        if (!accessToken) return; // 비로그인은 안 불러도 됨
+        if (!accessToken) return;
 
         (async () => {
             try {
@@ -93,7 +91,7 @@ export default function ProductRowSection({
                                 favorited: !!data.favorited,
                                 favoriteCount: data.count ?? 0,
                             };
-                        } catch (e) {
+                        } catch {
                             return item;
                         }
                     })
@@ -106,7 +104,6 @@ export default function ProductRowSection({
         })();
     }, [items.length, accessToken]);
 
-    // 페이지(슬라이드) 단위로 자르기
     const pages = useMemo(() => {
         if (!items.length) return [];
         const arr = [];
@@ -115,12 +112,12 @@ export default function ProductRowSection({
         }
         return arr;
     }, [items]);
+
     const totalPages = pages.length || 1;
 
     const goPrev = () => setPage((p) => Math.max(0, p - 1));
     const goNext = () => setPage((p) => Math.min(totalPages - 1, p + 1));
 
-    // 찜 토글 (ProductCard에서 쓰던 흐름 그대로)
     const onToggle = async (e, productId) => {
         e.preventDefault();
         e.stopPropagation();
@@ -148,7 +145,6 @@ export default function ProductRowSection({
 
             if (!res.ok) {
                 const msg = await res.text().catch(() => res.statusText);
-                console.error("[favoriteToggle] HTTP", res.status, msg);
                 alert(`찜 처리 실패 (${res.status})\n${msg}`);
                 return;
             }
@@ -167,7 +163,6 @@ export default function ProductRowSection({
                 )
             );
         } catch (err) {
-            console.error("[favoriteToggle] fetch error:", err);
             alert(`찜 처리 중 오류가 발생했습니다.\n${String(err)}`);
         }
     };
@@ -195,7 +190,6 @@ export default function ProductRowSection({
                     className={styles.track}
                     style={{ transform: `translateX(-${page * 100}%)` }}
                 >
-                    {/* 로딩 스켈레톤 페이지 */}
                     {loading && (
                         <div className={styles.page}>
                             {Array.from({ length: PAGE_SIZE }).map((_, i) => (
@@ -208,15 +202,16 @@ export default function ProductRowSection({
                         pages.map((pageItems, idx) => (
                             <div key={idx} className={styles.page}>
                                 {pageItems.map((item) => {
-                                    const soldOut =
-                                        Number(
-                                            item.dsell ??
-                                            item.dSell ??
-                                            item.d_status ??
-                                            item.dstatus ??
-                                            item.dStatus ??
-                                            0
-                                        ) === 1;
+                                    const rawSell =
+                                        item.dsell ??
+                                        item.dSell ??
+                                        item.d_status ??
+                                        item.dstatus ??
+                                        item.dStatus ??
+                                        0;
+                                    const sellState = Number(rawSell) || 0;
+                                    const isSold = sellState === 1;
+                                    const isTrading = sellState === 2;
 
                                     return (
                                         <Link
@@ -230,21 +225,17 @@ export default function ProductRowSection({
                                                     alt={item.title}
                                                     className={styles.thumb}
                                                     style={{
-                                                        filter: soldOut
-                                                            ? "brightness(0.35)"
-                                                            : "none",
+                                                        filter:
+                                                            isSold || isTrading ? "brightness(0.35)" : "none",
                                                     }}
                                                 />
-                                                {soldOut && (
+                                                {(isSold || isTrading) && (
                                                     <div className={styles.soldOverlay}>
-                                                        <div className={styles.soldCircle}>
-                                                            ✓
-                                                        </div>
-                                                        <div>판매완료</div>
+                                                        <div className={styles.soldCircle}>✓</div>
+                                                        <div>{isSold ? "판매완료" : "판매 중"}</div>
                                                     </div>
                                                 )}
 
-                                                {/* 찜 버튼 */}
                                                 <button
                                                     className={styles.heartBtn}
                                                     onClick={(e) => onToggle(e, item.id)}
@@ -257,26 +248,19 @@ export default function ProductRowSection({
                                                         <FavoriteBorderIcon className={styles.heartOff} />
                                                     )}
                                                     <span className={styles.heartCnt}>
-                                                {item.favoriteCount}
-                                            </span>
+                            {item.favoriteCount}
+                          </span>
                                                 </button>
                                             </div>
                                             <div className={styles.meta}>
-                                                <div className={styles.name}>
-                                                    {item.title}
-                                                </div>
+                                                <div className={styles.name}>{item.title}</div>
                                                 <div className={styles.price}>
-                                                    {item.price?.toLocaleString?.() ??
-                                                        item.price}
-                                                    원
+                                                    {item.price?.toLocaleString?.() ?? item.price}원
                                                 </div>
                                                 <div className={styles.sub}>
-                                                    {/* 위치가 없으니까 날짜만 */}
-                                                    <span>
-                                                        {item.createdAt
-                                                            ? item.createdAt.slice(0, 10)
-                                                            : ""}
-                                                    </span>
+                          <span>
+                            {item.createdAt ? item.createdAt.slice(0, 10) : ""}
+                          </span>
                                                 </div>
                                             </div>
                                         </Link>
