@@ -1,7 +1,7 @@
 // src/app/seller/[sellerId]/reviews/page.js
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import SellerProfilePanel from "@/components/product/SellerProfilePanel";
 import useSellerHintStore from "@/store/SellerHintStore";
@@ -27,21 +27,30 @@ export default function SellerReceivedReviewsPage() {
 
     const [list, setList] = useState(initListState);
 
-    // ① 캐시/쿼리 힌트로 즉시 노출
-    const hint = useSellerHintStore((s) => s.getHint(sellerId));
+    // ✅ 셀렉터를 useCallback으로 캐싱 + 스토어의 원본 객체를 직접 선택(새 객체 만들지 않음)
+    const selectHint = useCallback(
+        (s) => s.hints[String(sellerId)],
+        [sellerId]
+    );
+    const hintObj = useSellerHintStore(selectHint);
+
+    // 쿼리스트링 힌트
     const hintFromQS = {
         nickname: sp.get("nick") || undefined,
         avatarUrl: sp.get("avatar") || undefined,
         freshness: sp.get("fresh") ? Number(sp.get("fresh")) : undefined,
     };
-    const initialSeller =
-        hint ||
-        (hintFromQS.nickname || hintFromQS.avatarUrl
-            ? { id: sellerId, ...hintFromQS }
-            : { id: sellerId, nickname: "판매자", avatarUrl: null, freshness: 0 });
 
-    const [seller, setSeller] = useState(initialSeller);
+    // 처음 표시용 seller(힌트 → 쿼리 → 기본값)
+    const [seller, setSeller] = useState(() => {
+        if (hintObj) return { id: sellerId, ...hintObj };
+        if (hintFromQS.nickname || hintFromQS.avatarUrl) {
+            return { id: sellerId, ...hintFromQS };
+        }
+        return { id: sellerId, nickname: "판매자", avatarUrl: null, freshness: 0 };
+    });
 
+    // 판매자 후기 목록
     async function fetchReviews(targetId, page = 0, append = false) {
         try {
             setList((s) => ({ ...s, loading: true, err: "" }));
@@ -79,7 +88,7 @@ export default function SellerReceivedReviewsPage() {
         }
     }
 
-    // ② 헤더 프로필은 서버 데이터로 보정
+    // 프로필 헤더(서버로 보정)
     async function fetchSellerHeader(targetId) {
         try {
             const res = await fetch(`${API_BASE}/api/users/${targetId}`, {
@@ -97,24 +106,27 @@ export default function SellerReceivedReviewsPage() {
                 since: u.uDate ?? prev?.since ?? null,
             }));
         } catch {
-            /* 조용히 무시: 힌트 그대로 유지 */
+            /* 힌트 유지 */
         }
     }
 
-    // ✅ sellerId 변경 시: 힌트 즉시 반영 → 서버 재요청
+    // sellerId 변경 시: 상태 리셋 + 힌트로 즉시 표시 + 서버 데이터로 보정 + 목록 로드
     useEffect(() => {
         if (!sellerId) return;
         setList(initListState);
-        setSeller(
-            hint ||
-            (hintFromQS.nickname || hintFromQS.avatarUrl
-                ? { id: sellerId, ...hintFromQS }
-                : { id: sellerId, nickname: "판매자", avatarUrl: null, freshness: 0 })
-        );
+
+        if (hintObj) {
+            setSeller({ id: sellerId, ...hintObj });
+        } else if (hintFromQS.nickname || hintFromQS.avatarUrl) {
+            setSeller({ id: sellerId, ...hintFromQS });
+        } else {
+            setSeller({ id: sellerId, nickname: "판매자", avatarUrl: null, freshness: 0 });
+        }
+
         fetchSellerHeader(sellerId);
         fetchReviews(sellerId, 0, false);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sellerId]);
+    }, [sellerId, hintObj?.nickname, hintObj?.avatarUrl, hintObj?.freshness]);
 
     const canMore = useMemo(
         () => list.page + 1 < list.totalPages && !list.loading,
@@ -123,37 +135,29 @@ export default function SellerReceivedReviewsPage() {
 
     return (
         <main className={styles.page}>
+            {/* 프로필(‘상점 보기/후기 보기’ 버튼 유지) */}
             <div className={styles.profilePanelWrap}>
                 <SellerProfilePanel seller={seller} />
             </div>
 
             <h1 className={styles.title}>판매자 후기</h1>
-            <p className={styles.sub}>
-                판매자 {seller?.nickname ?? sellerId} 가 받은 후기
-            </p>
+            <p className={styles.sub}>판매자 {seller?.nickname ?? sellerId} 가 받은 후기</p>
 
             {list.loading && list.items.length === 0 && (
                 <div className={styles.empty}>불러오는 중...</div>
             )}
-            {!list.loading && list.err && (
-                <div className={styles.empty}>{list.err}</div>
-            )}
+            {!list.loading && list.err && <div className={styles.empty}>{list.err}</div>}
 
             {!list.loading && !list.err && (
                 <section className={styles.listArea}>
                     {list.items.map((row) => (
-                        <article
-                            key={row.reIdx}
-                            className={`${styles.card} ${styles.cardClickable}`}
-                        >
+                        <article key={row.reIdx} className={`${styles.card} ${styles.cardClickable}`}>
                             <div className={styles.cardHead}>
                 <span className={styles.badge}>
                   {row.reType === "BUYER" ? "구매자 후기" : "판매자 후기"}
                 </span>
                                 <span className={styles.time}>
-                  {String(row.reUpdate ?? row.reCreate)
-                      .replace("T", " ")
-                      .slice(0, 19)}
+                  {String(row.reUpdate ?? row.reCreate).replace("T", " ").slice(0, 19)}
                 </span>
                             </div>
 
@@ -171,38 +175,30 @@ export default function SellerReceivedReviewsPage() {
                                 </div>
 
                                 <div className={styles.info}>
-                                    <div className={styles.itemTitle}>
-                                        {row.productTitle || "(제목 없음)"}
-                                    </div>
+                                    <div className={styles.itemTitle}>{row.productTitle || "(제목 없음)"}</div>
+
                                     <div className={styles.metaRow}>
                     <span className={styles.starsSmall}>
                       {Array.from({ length: 5 }).map((_, i) => (
                           <span
                               key={i}
-                              className={`${styles.star} ${
-                                  i < (row.reStar || 0) ? styles.filled : ""
-                              }`}
+                              className={`${styles.star} ${i < (row.reStar || 0) ? styles.filled : ""}`}
                           >
                           ★
                         </span>
                       ))}
                     </span>
                                         <span className={styles.pipe}>|</span>
-                                        <span className={styles.nick}>
-                      작성자: {row.writerNickname || "-"}
-                    </span>
+                                        <span className={styles.nick}>작성자: {row.writerNickname || "-"}</span>
                                     </div>
-                                    <p className={styles.contentText}>
-                                        {row.reContent || ""}
-                                    </p>
+
+                                    <p className={styles.contentText}>{row.reContent || ""}</p>
                                 </div>
                             </div>
                         </article>
                     ))}
 
-                    {list.items.length === 0 && (
-                        <div className={styles.empty}>받은 후기가 없습니다.</div>
-                    )}
+                    {list.items.length === 0 && <div className={styles.empty}>받은 후기가 없습니다.</div>}
 
                     {canMore && (
                         <button
@@ -218,11 +214,7 @@ export default function SellerReceivedReviewsPage() {
             )}
 
             <div style={{ textAlign: "center", marginTop: 24 }}>
-                <button
-                    type="button"
-                    onClick={() => router.back()}
-                    className={styles.backBtn}
-                >
+                <button type="button" onClick={() => router.back()} className={styles.backBtn}>
                     ← 판매자 상점으로 돌아가기
                 </button>
             </div>

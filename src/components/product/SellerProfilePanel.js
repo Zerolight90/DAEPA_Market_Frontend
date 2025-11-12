@@ -22,7 +22,7 @@ export default function SellerProfilePanel({ seller }) {
     const sellerId = seller.id ?? seller.uIdx ?? seller.uid;
     const hasAvatar = !!seller.avatarUrl;
 
-    // 👉 최근 본 판매자 프로필을 캐시에 기억
+    // 최근 본 판매자 힌트 캐시에 저장 → 다음 페이지에서 즉시 사용
     const remember = useSellerHintStore((s) => s.remember);
     useEffect(() => {
         if (!sellerId) return;
@@ -35,7 +35,7 @@ export default function SellerProfilePanel({ seller }) {
         });
     }, [sellerId, nickname, freshness, deals, seller?.since, seller?.avatarUrl, remember]);
 
-    // 👉 링크에 최소 정보(nick/avatar/fresh)를 쿼리로 태워서 전환 즉시 수화
+    // 페이지 전환 시 프로필 정보를 쿼리로 실어 즉시 수화
     const qs = useMemo(() => {
         const p = new URLSearchParams();
         if (nickname) p.set("nick", nickname);
@@ -82,6 +82,7 @@ export default function SellerProfilePanel({ seller }) {
                 </div>
             </div>
 
+            {/* ✅ 후기 페이지에서도 항상 보이도록 유지 */}
             <div className={styles.actions}>
                 {!!sellerId && (
                     <>
