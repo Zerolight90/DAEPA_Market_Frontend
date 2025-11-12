@@ -1,0 +1,212 @@
+.modalContent {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* 상품 정보 섹션 */
+.productInfo {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.productImage {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.productDetails {
+    display: flex;
+    flex-direction: column;
+}
+
+.productTitle {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.productPrice {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+/* 공용 섹션 스타일 */
+.section {
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
+
+.sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.sectionTitle {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0; /* 부모 요소인 sectionHeader에서 간격을 관리합니다. */
+}
+
+/* 배송지 정보 섹션 */
+.addressDisplay {
+    background-color: #f9f9f9;
+    padding: 16px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: #444;
+}
+
+.addressDisplay p {
+    margin: 0 0 4px 0; /* 줄 간격 추가 */
+    line-height: 1.5;
+}
+.addressDisplay p:last-child {
+    margin-bottom: 0;
+}
+
+.addressHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px; /* 헤더와 주소 내용 간의 간격 */
+}
+
+.addressTitle {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.defaultBadge {
+    background-color: #008c6e;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 16px; /* 둥근 모서리 */
+}
+
+/* addressActions는 더 이상 필요 없으므로 제거되었습니다. */
+
+.changeBtn {
+    background: none;
+    border: 1px solid #ccc;
+    color: #555;
+    font-size: 0.85rem;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+}
+
+.changeBtn:hover {
+    background-color: #f0f0f0;
+    border-color: #bbb;
+}
+
+/* 수량 조절 */
+.quantityControl {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.quantityLabel {
+    font-size: 1rem;
+    color: #555;
+}
+
+.quantityInput {
+    width: 80px;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 1rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.quantityInput:focus {
+    outline: none;
+    border-color: #008c6e;
+    box-shadow: 0 0 0 2px rgba(0, 140, 110, 0.2);
+}
+
+/* 최종 결제 금액 */
+.totalPriceWrapper {
+    text-align: right;
+    margin-top: 8px;
+}
+
+.totalPriceLabel {
+    font-size: 1rem;
+    color: #666;
+    margin-right: 8px;
+}
+
+.totalPrice {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #008c6e;
+}
+
+/* 버튼 그룹 */
+.buttonGroup {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 16px;
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+}
+
+.btn {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+}
+
+.btnPrimary {
+    background-color: #008c6e;
+    color: white;
+}
+
+.btnPrimary:hover {
+    background-color: #007a60;
+}
+
+.btnSecondary {
+    background-color: #1aab8a;
+    color: white;
+}
+
+.btnSecondary:hover {
+    background-color: #169475;
+}
+
+.btnGhost {
+    background-color: #f0f0f0;
+    color: #555;
+    border: 1px solid #ddd;
+}
+
+.btnGhost:hover {
+    background-color: #e5e5e5;
+}
