@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: ${IMAGE_NAME}:${IMAGE_TAG}
+    build: .
     env_file:
       - .env
     container_name: daepa-frontend
