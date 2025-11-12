@@ -15,10 +15,6 @@ on:
       - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
-env:
-  # ghcr.io/소유자명/이미지명 - 소문자로 작성
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner,, }}/daepa-market-frontend
-
 jobs:
   # =================================================================
   #  1. Docker 이미지를 빌드하고 GHCR(GitHub Container Registry)에 Push
@@ -36,6 +32,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set image name
+        run: echo "IMAGE_NAME=ghcr.io/$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/daepa-market-frontend" >> $GITHUB_ENV
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -90,8 +92,8 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script_stop: true
           debug: false
-          timeout: 15m
-          command_timeout: 15m
+          timeout: 30m
+          command_timeout: 30m
           script: |
             set -euo pipefail
             cd ~/apps/frontend
@@ -101,9 +103,11 @@ jobs:
             git checkout main
             git reset --hard origin/main
 
-            echo "[2/6] Create .env file with new image tag"
-            # build-and-push Job에서 전달받은 이미지 태그를 .env 파일에 쓰기
-            echo "IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}" > .env
+            echo "[2/6] Create .env file with new image details"
+            # 이미지 이름과 태그를 .env 파일에 쓰기
+            OWNER_LOWER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
+            echo "IMAGE_NAME=ghcr.io/$OWNER_LOWER/daepa-market-frontend" > .env
+            echo "IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}" >> .env
             # 나머지 환경변수 추가
             echo "${{ secrets.DAEPA_FRONTEND_ENV }}" >> .env
             echo ".env file created."

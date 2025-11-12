@@ -1,6 +1,6 @@
 services:
   frontend:
-    image: ghcr.io/zerolight90/daepa-market-frontend:${IMAGE_TAG}
+    image: ${IMAGE_NAME}:${IMAGE_TAG}
     env_file:
       - .env
     container_name: daepa-frontend
