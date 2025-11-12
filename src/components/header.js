@@ -11,7 +11,7 @@ import {
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 import ChatIcon from "@mui/icons-material/Chat";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
@@ -41,11 +41,28 @@ function getDisplayName(me) {
 
 export default function Header() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [me, setMe] = useState(null);
     const [chatUnread, setChatUnread] = useState(0);
+    const [searchKeyword, setSearchKeyword] = useState("");
     const fetchingRef = useRef(false);
     const timerRef = useRef(null);
     const { accessToken, setToken, clearToken } = TokeStore();
+
+    useEffect(() => {
+        const kw = searchParams?.get("keyword") ?? "";
+        setSearchKeyword(kw);
+    }, [searchParams]);
+
+    const handleSearchSubmit = (event) => {
+        event.preventDefault();
+        const trimmed = searchKeyword.trim();
+        const params = new URLSearchParams();
+        if (trimmed) {
+            params.set("keyword", trimmed);
+        }
+        router.push(params.toString() ? `/all?${params.toString()}` : "/all");
+    };
 
     // localStorage → zustand 복원
     useEffect(() => {
@@ -195,10 +212,17 @@ export default function Header() {
                         </div>
                     </Link>
 
-                    <form noValidate autoComplete="off" className={styles.search}>
+                    <form
+                        noValidate
+                        autoComplete="off"
+                        className={styles.search}
+                        onSubmit={handleSearchSubmit}
+                    >
                         <FormControl className={styles.searchControl}>
                             <OutlinedInput
                                 placeholder="찾으시는 상품을 검색해주세요"
+                                value={searchKeyword}
+                                onChange={(event) => setSearchKeyword(event.target.value)}
                                 startAdornment={
                                     <InputAdornment position="start">
                                         <SearchIcon />

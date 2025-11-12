@@ -78,7 +78,7 @@ export default function ReviewsPage() {
                         <span className={styles.mannerValue}>{MOCK_USER.manner}℃</span>
                         <span className={styles.mannerEmoji}>😊</span>
                     </div>
-                    <div className={styles.mannerLabel}>매너온도</div>
+                    <div className={styles.mannerLabel}>신선도</div>
                     <div className={styles.mannerBar}>
                         <div
                             className={styles.mannerFill}

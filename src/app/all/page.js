@@ -14,6 +14,7 @@ import { CircularProgress, Box, Typography } from "@mui/material";
 function AllProductsContent() {
     const searchParams = useSearchParams();
     const sort = searchParams.get("sort") || "recent";
+    const keyword = (searchParams.get("keyword") || "").trim();
 
     const [products, setProducts] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -56,9 +57,15 @@ function AllProductsContent() {
     async function loadProducts(reset = false) {
         try {
             setLoading(true);
-            const res = await apiFetch(
-                `/api/products?sort=${sort}&page=${reset ? 0 : page}&size=20`
-            );
+            const targetPage = reset ? 0 : page;
+            const params = new URLSearchParams();
+            params.set("sort", sort);
+            params.set("page", String(targetPage));
+            params.set("size", "20");
+            if (keyword) {
+                params.set("keyword", keyword);
+            }
+            const res = await apiFetch(`/api/products?${params.toString()}`);
             const list = Array.isArray(res?.content) ? res.content : [];
 
             let mapped = list.map((p) => ({
@@ -98,7 +105,7 @@ function AllProductsContent() {
     useEffect(() => {
         loadProducts(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [sort]);
+    }, [sort, keyword]);
 
     const handleMore = () => {
         if (!loading && hasMore) loadProducts(false);
