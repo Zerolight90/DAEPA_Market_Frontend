@@ -7,12 +7,6 @@ import styles from "./mypage.module.css";
 import tokenStore from "@/app/store/TokenStore";
 import SideNav from "@/components/mypage/sidebar";
 
-const METRICS = [
-    { key: "safe", label: "안심결제", value: 0 },
-    { key: "review", label: "거래후기", value: 0 },
-    { key: "eco", label: "대파 갯수", value: " 개" },
-];
-
 const TABS = [
     { key: "all", label: "전체" },
     { key: "selling", label: "거래중" },
@@ -34,17 +28,10 @@ function isDeleted(raw) {
     const val =
         raw?.pdDel ??
         raw?.pd_del ??
-        raw?.pd_del === 0
-            ? raw?.pd_del
-            : raw?.pdDel;
+        (raw?.pd_del === 0 ? raw?.pd_del : raw?.pdDel);
 
     const s = String(val).trim().toLowerCase();
-    return (
-        s === "1" ||
-        s === "true" ||
-        s === "y" ||
-        s === "yes"
-    );
+    return s === "1" || s === "true" || s === "y" || s === "yes";
 }
 
 /** ProductCard.js 와 같은 판매상태 파싱 */
@@ -109,38 +96,33 @@ export default function MyPage() {
     const [products, setProducts] = useState([]);
     const [productErr, setProductErr] = useState("");
 
-    const [myDaepa, setMyDaepa] = useState(0);
-    const [isLoading, setIsLoading] = useState(true); // ✅ 잔액 로딩 상태
-    const [error, setError] = useState(null); // ✅ 에러 상태
+    // ✅ 정산내역 개수
+    const [safeCount, setSafeCount] = useState(0);
 
-    // ✅ 페이지가 로드될 때 잔액을 가져오는 로직
+    // ✅ 대파 페이 잔액
+    const [myDaepa, setMyDaepa] = useState(0);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    // ✅ 페이지 로드시 잔액 가져오기 (토큰은 로컬 스토리지에서)
     useEffect(() => {
         const fetchBalance = async () => {
-            // ❗️ 실제 프로젝트에서는 토큰을 저장소(예: 쿠키, 로컬 스토리지)에서 가져와야 합니다.
-            // 아래는 예시이며, 프로젝트의 인증 방식에 맞게 수정이 필요합니다.
-            const token = localStorage.getItem('accessToken');
-
+            const token = localStorage.getItem("accessToken");
             if (!token) {
                 setError("로그인이 필요합니다.");
                 setIsLoading(false);
                 return;
             }
-
             try {
-                const response = await fetch('http://localhost:8080/api/pay/balance', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                    },
+                const response = await fetch("http://localhost:8080/api/pay/balance", {
+                    headers: { Authorization: `Bearer ${token}` },
                 });
-
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.error || '잔액을 불러오는 데 실패했습니다.');
+                    throw new Error(errorData.error || "잔액을 불러오는 데 실패했습니다.");
                 }
-
                 const data = await response.json();
                 setMyDaepa(data.balance);
-
             } catch (err) {
                 console.error("잔액 조회 실패:", err);
                 setError(err.message);
@@ -148,16 +130,10 @@ export default function MyPage() {
                 setIsLoading(false);
             }
         };
-
         fetchBalance();
-    }, []); // 빈 배열을 전달하여 컴포넌트가 처음 마운트될 때 한 번만 실행
-    const METRICS = [
-        { key: "safe", label: "안심결제", value: 0 },
-        { key: "review", label: "거래후기", value: 0 },
-        { key: "eco", label: "대파 갯수", value: myDaepa.toLocaleString() + " 개" },
-    ];
+    }, []);
 
-    // 내 정보
+    // ✅ 내 정보
     useEffect(() => {
         if (!accessToken) {
             setMyInfo({
@@ -181,14 +157,9 @@ export default function MyPage() {
                 if (res.ok) {
                     const data = await res.json();
 
-                    // ✅ 프로필
                     const profileUrl =
-                        data.uProfile ||
-                        data.u_profile ||
-                        data.avatarUrl ||
-                        "";
+                        data.u_profile ?? data.uProfile ?? data.avatarUrl ?? "";
 
-                    // ✅ 신선도(u_manner) 여러 이름 대응
                     const mannerScore =
                         data.uManner ??
                         data.u_manner ??
@@ -198,10 +169,7 @@ export default function MyPage() {
 
                     setMyInfo({
                         nickname:
-                            data.uName ||
-                            data.u_nickname ||
-                            data.uNickname ||
-                            "사용자",
+                            data.uName || data.u_nickname || data.uNickname || "사용자",
                         trust: Number(mannerScore) || 0,
                         avatarUrl: profileUrl,
                         uIdx: data.uIdx ?? data.u_idx ?? data.id ?? undefined,
@@ -226,7 +194,29 @@ export default function MyPage() {
         })();
     }, [accessToken]);
 
-    // 내 상품 목록
+    // ✅ 정산내역 개수 불러오기: 내 uIdx가 결정되면 호출
+    useEffect(() => {
+        if (!myInfo.uIdx) return;
+        (async () => {
+            try {
+                const res = await fetch(`/api/deal/safe/count?uIdx=${myInfo.uIdx}`, {
+                    cache: "no-store",
+                    credentials: "include",
+                    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                });
+                if (!res.ok) throw new Error("불러오기 실패");
+                const data = await res.json();
+                setSafeCount(
+                    typeof data === "number" ? data : data?.count ?? 0
+                );
+            } catch (e) {
+                console.error("정산내역 불러오기 오류", e);
+                setSafeCount(0);
+            }
+        })();
+    }, [myInfo.uIdx, accessToken]);
+
+    // ✅ 내 상품 목록
     useEffect(() => {
         if (!accessToken) {
             setProducts([]);
@@ -260,7 +250,7 @@ export default function MyPage() {
         })();
     }, [accessToken]);
 
-    // 내 상품만
+    // ✅ 내 상품만
     const myProductsAll = useMemo(() => {
         const myId = myInfo.uIdx;
         if (!myId) return [];
@@ -274,14 +264,12 @@ export default function MyPage() {
                 null;
             if (owner == null) return false;
             if (Number(owner) !== Number(myId)) return false;
-
             if (isDeleted(p)) return false;
-
             return true;
         });
     }, [products, myInfo.uIdx]);
 
-    // 판매중(= dealState 2 또는 0) : 우리의 카드 로직은 2를 “판매 중”으로 보여주니까 우선 2, 그다음 0
+    // 판매중(= dealState 2 또는 0)
     const myProductsSelling = useMemo(() => {
         return myProductsAll.filter((p) => {
             const state = getDealState(p);
@@ -319,11 +307,17 @@ export default function MyPage() {
     const trustVal = Number(myInfo.trust) || 0;
     const trustPercent = Math.max(0, Math.min(100, trustVal));
     const trustColor =
-        trustPercent < 30
-            ? "#8B4513"
-            : trustPercent < 60
-                ? "#A3E635"
-                : "#10B981";
+        trustPercent < 30 ? "#8B4513" : trustPercent < 60 ? "#A3E635" : "#10B981";
+
+    // ✅ 상단 메트릭(정산내역/후기/대파) — 렌더 시점 계산
+    const metrics = useMemo(
+        () => [
+            { key: "safe", label: "정산내역", value: `${safeCount.toLocaleString()} 건` },
+            { key: "review", label: "거래후기", value: 0 },
+            { key: "eco", label: "대파 갯수", value: `${myDaepa.toLocaleString()} 개` },
+        ],
+        [safeCount, myDaepa]
+    );
 
     return (
         <main className={styles.wrap}>
@@ -394,7 +388,7 @@ export default function MyPage() {
                         </Link>
 
                         <ul className={styles.metricRow}>
-                            {METRICS.map((m) => (
+                            {metrics.map((m) => (
                                 <li key={m.key} className={styles.metricItem}>
                                     <span className={styles.metricLabel}>{m.label}</span>
                                     <strong className={styles.metricValue}>{m.value}</strong>
@@ -460,8 +454,7 @@ export default function MyPage() {
                                 const title = it.pd_title || it.title || "(제목 없음)";
                                 const price = it.pd_price ?? it.price ?? 0;
                                 const when = formatDateRelative(it.pd_create ?? it.createdAt);
-                                const thumb =
-                                    it.pd_thumb || it.thumbnail || FALLBACK_IMG;
+                                const thumb = it.pd_thumb || it.thumbnail || FALLBACK_IMG;
 
                                 const id = it.pd_idx ?? it.pdIdx ?? it.id ?? null;
                                 const href = id ? `/store/${id}` : "#";
@@ -482,9 +475,7 @@ export default function MyPage() {
                                                 {(isSold || isTrading) && (
                                                     <div className={styles.cardOverlay}>
                                                         <div className={styles.cardOverlayCircle}>✓</div>
-                                                        <div>
-                                                            {isSold ? "판매완료" : "판매 중"}
-                                                        </div>
+                                                        <div>{isSold ? "판매완료" : "판매 중"}</div>
                                                     </div>
                                                 )}
                                             </div>
