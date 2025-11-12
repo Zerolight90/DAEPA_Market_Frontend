@@ -3,17 +3,14 @@ name: Deploy Frontend
 on:
   push:
     branches:
-      - main            # main 브랜치에 push될 때만 실행
+      - main # main 브랜치에 push될 때만 실행
     paths:
-      - 'frontend/**'
-      - 'conf/**'             # ← 추가
-      - 'src/**'              # ← 소스 변경도 태우려면
+      - 'src/**'
       - 'app/**'
       - 'public/**'
-      - 'next.config.mjs'     # ← 추가
+      - 'conf/**'
+      - 'next.config.mjs'
       - 'Dockerfile'
-      - 'docker/**'
-      - 'compose.yaml'
       - 'docker-compose.yml'
       - '.github/workflows/deploy.yml'
   workflow_dispatch:     # Actions 탭에서 수동 실행 허용
@@ -41,7 +38,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package.json', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
