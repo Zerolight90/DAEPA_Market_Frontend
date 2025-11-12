@@ -17,7 +17,7 @@ on:
 
 env:
   # ghcr.io/소유자명/이미지명 - 소문자로 작성
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner,, }}/daepa-market-frontend
+  IMAGE_NAME: ghcr.io/${{ toLower(github.repository_owner) }}/daepa-market-frontend
 
 jobs:
   # =================================================================
