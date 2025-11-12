@@ -1,102 +1,220 @@
+/* ==============================
+ * Footer Base
+ * ============================== */
 .footer {
-    background: #fafafa;
-    color: #4b5563;
+    background: #f8f9fa;
+    color: #6c757d;
+    font-size: 14px;
+    padding: 40px 0;
+    border-top: 1px solid #dee2e6;
 }
 
+/* ==============================
+ * Layout
+ * ============================== */
 .topRow {
-    display: grid;
+    display: flex;
+    justify-content: space-between;
     gap: 48px;
-    grid-template-columns: 1.4fr 1fr;
-    padding: 28px 0 20px;
+    padding-bottom: 24px;
 }
 
-@media (max-width: 1023px) {
-    .topRow { grid-template-columns: 1fr; gap: 32px; }
-    .csPhone { font-size: 28px; } /* 모바일에서 전화번호 크기 조정 */
-    .blockTitle { font-size: 14px; }
-    .bizList li { font-size: 13.5px; }
-    .k { min-width: 100px; } /* 라벨 너비 조정 */
-    .disclaimer { font-size: 12px; }
+.bottomRow {
+    padding-top: 24px;
+    border-top: 1px solid #dee2e6;
 }
 
-.brandRow { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-.brandLogo { border-radius: 8px; background: #e6f5eb; }
-.brandName { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -0.01em; color: #111; }
-
-/* 블록 타이틀 */
+/* ==============================
+ * Content Sections
+ * ============================== */
 .blockTitle {
-    margin: 10px 0 8px;
-    font-size: 15px;
-    font-weight: 700;
-    color: #1f2937;
+    font-size: 16px;
+    font-weight: 600;
+    color: #343a40;
+    margin-bottom: 16px;
 }
 
-.bizList { list-style: none; margin: 0 0 6px; padding: 0; }
-.bizList li { margin: 6px 0; line-height: 1.6; }
-.k { display: inline-block; min-width: 112px; color: #6b7280; } /* 키 라벨 */
+.bizList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
 
-.inlineLinks { margin-top: 6px; display: flex; align-items: center; gap: 10px; }
-.inlineLinks a { color: #667085; text-decoration: none; }
-.inlineLinks a:hover { color: #111; }
-.dot { color: #9ca3af; }
-.csHeader { margin-bottom: 16px; }
-.csLabel { font-size: 13px; color: #6b7280; margin-bottom: 6px; }
-.csPhone {
+.bizList li {
+    margin-bottom: 8px;
+    display: flex;
+}
+
+.k {
     display: inline-block;
-    font-size: 36px;
-    font-weight: 800;
-    color: #111;
-    letter-spacing: 0.5px;
-    line-height: 1.1;
-    margin-bottom: 6px;
+    min-width: 110px;
+    color: #6c757d;
+    font-weight: 500;
 }
-.csHours { margin: 0 0 10px; font-size: 13.5px; color: #6b7280; }
-.csLinks { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 14px; }
-.csLinks a { color: #667085; text-decoration: none; }
-.csLinks a:hover { color: #111; }
 
-.guarantee {
-    background: transparent;
-    margin-top: 8px;
+.inlineLinks {
+    margin-top: 12px;
+    display: flex;
+    gap: 12px;
 }
-.guaranteeTitle { margin: 0 0 6px; font-size: 14.5px; font-weight: 700; color: #111; }
-.guaranteeText { margin: 0 0 6px; font-size: 13.5px; color: #6b7280; line-height: 1.7; }
-.linkUnderline { color: #111; text-decoration: underline; text-underline-offset: 2px; }
-.linkUnderline:hover { opacity: .85; }
+
+.inlineLinks a {
+    color: #495057;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.inlineLinks a:hover {
+    text-decoration: underline;
+}
+
+.dot {
+    color: #adb5bd;
+}
+
+/* Customer Service */
+.csHeader {
+    margin-bottom: 20px;
+}
+
+.csLabel {
+    font-size: 14px;
+    color: #6c757d;
+    margin-bottom: 4px;
+}
+
+.csPhone {
+    font-size: 28px;
+    font-weight: 700;
+    color: #212529;
+    margin-bottom: 4px;
+}
+
+.csHours {
+    font-size: 13px;
+    margin-bottom: 16px;
+}
+
+.csLinks {
+    display: flex;
+    gap: 16px;
+}
+
+.csLinks a {
+    background: #e9ecef;
+    color: #495057;
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.csLinks a:hover {
+    background: #ced4da;
+}
+
+/* Guarantee & Copyright */
+.guarantee {
+    margin-bottom: 20px;
+}
+
+.guaranteeTitle {
+    font-size: 15px;
+    font-weight: 600;
+    color: #343a40;
+    margin-bottom: 8px;
+}
+
+.guaranteeText {
+    line-height: 1.6;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.linkUnderline {
+    color: #343a40;
+    text-decoration: underline;
+    font-weight: 500;
+}
 
 .copyright {
-    margin-top: 16px;
     font-size: 13px;
-    color: #6b7280;
+    color: #6c757d;
 }
 
-.hr {
-    border-top: 1px solid #e9e9e9;
+/* ==============================
+ * Bottom Row (Certification & Disclaimer)
+ * ============================== */
+.cert {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
 }
 
-.bottomRow { padding: 16px 0 28px; }
+.certImg {
+    flex-shrink: 0;
+}
 
-.cert { display: flex; align-items: center; gap: 12px; margin: 10px 0 12px; }
-.certImg { border-radius: 6px; background: #fff; }
-.certMeta { color: #6b7280; font-size: 13px; line-height: 1.6; }
-.certLine { margin: 0; }
+.certMeta {
+    font-size: 12px;
+    color: #6c757d;
+    line-height: 1.5;
+}
 
 .disclaimer {
-    margin: 8px 0 0;
-    font-size: 12.5px;
-    color: #6b7280;
-    line-height: 1.85;
+    font-size: 12px;
+    color: #6c757d;
+    line-height: 1.7;
 }
 
-/* 다크 모드 보정 */
+/* ==============================
+ * Responsive Design
+ * ============================== */
+@media (max-width: 767px) {
+    .footer {
+        padding: 32px 0;
+    }
+    .topRow {
+        flex-direction: column;
+        gap: 32px;
+    }
+    .csPhone {
+        font-size: 24px;
+    }
+    .csLinks {
+        gap: 12px;
+    }
+    .csLinks a {
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+}
+
+/* ==============================
+ * Dark Mode (Optional)
+ * ============================== */
 @media (prefers-color-scheme: dark) {
-    .footer { background: #0f0f10; color: #9aa3ad; }
-    .brandLogo { background: #12331f; }
-    .brandName, .blockTitle, .linkUnderline { color: #e5e7eb; }
-    .k { color: #9aa3ad; }
-    .csPhone { color: #fff; }
-    .csLinks a, .inlineLinks a { color: #a0a7b2; }
-    .hr { border-top-color: #222; }
-    .certImg { background: #0f0f10; }
-    .disclaimer, .csHours, .certMeta { color: #9aa3ad; }
+    .footer {
+        background: #181a1b;
+        border-top-color: #333;
+        color: #adb5bd;
+    }
+    .blockTitle, .csPhone, .guaranteeTitle, .linkUnderline, .inlineLinks a {
+        color: #e9ecef;
+    }
+    .k, .csLabel, .csHours, .copyright, .certMeta, .disclaimer {
+        color: #adb5bd;
+    }
+    .csLinks a {
+        background: #343a40;
+        color: #e9ecef;
+    }
+    .csLinks a:hover {
+        background: #495057;
+    }
+    .bottomRow {
+        border-top-color: #333;
+    }
 }

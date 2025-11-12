@@ -28,6 +28,28 @@ export default function AdminDashboard() {
   const [dailyTransactions, setDailyTransactions] = useState([]);
   const [categoryData, setCategoryData] = useState([]);
 
+  const CATEGORY_COLORS = {
+    "전자제품": "#2563eb",      // blue-600
+    "패션/의류": "#ef4444",     // red-500
+    "생활/가전": "#f97316",     // orange-500
+    "도서/음반": "#6366f1",     // indigo-500
+    "스포츠/레저": "#facc15",   // yellow-400
+    "자동차": "#d946ef",        // fuchsia-500
+    "반려동물": "#10b981",      // emerald-500
+    "기타": "#6b7280"          // gray-500
+  };
+
+  const EXTRA_CATEGORY_COLORS = [
+    "#0ea5e9", // sky-500
+    "#fbbf24", // amber-400
+    "#8b5cf6", // violet-500
+    "#ec4899", // pink-500
+    "#22d3ee", // cyan-400
+    "#047857", // emerald-700
+    "#ff7f11", // custom orange
+    "#7c3aed"  // purple-600
+  ];
+
   // 데이터 로딩
   useEffect(() => {
     const fetchData = async () => {
@@ -108,6 +130,64 @@ export default function AdminDashboard() {
           console.error("최근 등록 상품 조회 실패:", productsRes.status);
           setRecentProducts([]);
         }
+
+        // 카테고리 비율 조회
+        const categoryRes = await fetch("http://localhost:8080/api/admin/analytics/category-ratio");
+        if (categoryRes.ok) {
+          const categoryRaw = await categoryRes.json();
+          const categoriesOrder = [
+            "전자제품",
+            "패션/의류",
+            "생활/가전",
+            "도서/음반",
+            "스포츠/레저",
+            "자동차",
+            "반려동물",
+            "기타"
+          ];
+
+          const extraColorQueue = [...EXTRA_CATEGORY_COLORS];
+          const nextExtraColor = () => {
+            if (extraColorQueue.length > 0) {
+              return extraColorQueue.shift();
+            }
+            const hue = Math.floor(Math.random() * 360);
+            return `hsl(${hue}, 70%, 55%)`;
+          };
+
+          const colorMap = new Map();
+          categoriesOrder.forEach((name) => {
+            colorMap.set(name, CATEGORY_COLORS[name] || nextExtraColor());
+          });
+          categoryRaw.forEach((item) => {
+            if (!colorMap.has(item.category)) {
+              colorMap.set(item.category, nextExtraColor());
+            }
+          });
+
+          const mapped = categoriesOrder.map((name) => {
+            const found = categoryRaw.find((item) => item.category === name);
+            const count = found ? (found.count || 0) : 0;
+            return {
+              name,
+              value: count,
+              color: colorMap.get(name)
+            };
+          });
+
+          const extraCategories = categoryRaw
+            .filter((item) => !categoriesOrder.includes(item.category))
+            .map((item) => ({
+              name: item.category,
+              value: item.count || 0,
+              color: colorMap.get(item.category)
+            }));
+
+          setCategoryData([...mapped, ...extraCategories]);
+        } else {
+          console.error("카테고리 비율 조회 실패:", categoryRes.status);
+          setCategoryData([]);
+        }
       } catch (err) {
         console.error("데이터 조회 실패:", err);
         // 에러 시 빈 데이터로 초기화
@@ -124,17 +204,9 @@ export default function AdminDashboard() {
           emptyData.push({ date: `${month}/${day}`, value: 0, totalAmount: 0, sellerCount: 0 });
         }
         setDailyTransactions(emptyData);
+        setCategoryData([]);
       }
     };
-
-    // 상품 카테고리 비율 (더미 데이터)
-    setCategoryData([
-      { name: "전자기기", value: 35, color: "#3b82f6" },
-      { name: "의류/패션", value: 25, color: "#10b981" },
-      { name: "가구/인테리어", value: 20, color: "#f59e0b" },
-      { name: "도서/티켓", value: 12, color: "#ef4444" },
-      { name: "기타", value: 8, color: "#8b5cf6" }
-    ]);
 
     fetchData();
   }, []);
@@ -166,13 +238,16 @@ export default function AdminDashboard() {
       "#6ee7b7"  // emerald-300
     ];
 
-    // Y축 최대값 계산 (약간 여유있게)
-    const yAxisMax = Math.ceil(maxValue * 1.1);
-    const yAxisSteps = 5;
-    const yAxisStep = Math.ceil(yAxisMax / yAxisSteps);
+    const yAxisStep = 3;
+    const minYAxisMax = yAxisStep * 5;
+    const yAxisMax = Math.max(Math.ceil(maxValue / yAxisStep) * yAxisStep, minYAxisMax);
+    const yAxisLabels = Array.from(
+      { length: Math.floor(yAxisMax / yAxisStep) + 1 },
+      (_, i) => i * yAxisStep
+    );
 
     return (
-      <div style={{ 
+      <div style={{
         height: "300px",
         padding: "1.5rem 1rem 2rem 3rem",
         position: "relative"
@@ -190,35 +265,39 @@ export default function AdminDashboard() {
           color: "#94a3b8",
           width: "30px"
         }}>
-          {Array.from({ length: yAxisSteps + 1 }, (_, i) => yAxisSteps - i).map((step) => (
-            <span key={step}>{step * yAxisStep}</span>
-          ))}
+          {yAxisLabels
+            .slice()
+            .reverse()
+            .map((label) => (
+              <span key={label}>{label}</span>
+            ))}
         </div>
 
         {/* 막대 그래프 */}
-        <div style={{ 
+        <div style={{
           height: "100%",
-          display: "flex", 
-          alignItems: "flex-end", 
+          display: "flex",
+          alignItems: "flex-end",
           justifyContent: "space-between",
           gap: "0.75rem",
           position: "relative",
           paddingBottom: "1.5rem"
         }}>
           {data.map((item, index) => {
-            const height = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+            const height = yAxisMax > 0 ? (item.value / yAxisMax) * 100 : 0;
             const barColor = greenColors[index % greenColors.length];
             
             return (
-              <div 
-                key={index} 
-                style={{ 
-                  flex: 1, 
-                  position: "relative", 
+              <div
+                key={index}
+                style={{
+                  flex: 1,
+                  position: "relative",
                   height: "100%",
                   display: "flex",
                   flexDirection: "column",
-                  alignItems: "center"
+                  alignItems: "center",
+                  justifyContent: "flex-end"
                 }}
                 onMouseEnter={() => setHoveredIndex(index)}
                 onMouseLeave={() => setHoveredIndex(null)}
@@ -255,7 +334,7 @@ export default function AdminDashboard() {
                 {item.value > 0 && (
                   <div style={{
                     position: "absolute",
-                    top: `${100 - height - 8}%`,
+                    bottom: `calc(${height}% + 8px)`,
                     fontSize: "0.75rem",
                     color: "#1e293b",
                     fontWeight: 600,
@@ -324,9 +403,13 @@ export default function AdminDashboard() {
 
   // 파이차트 계산 함수
   const calculatePieChart = (data) => {
-    const total = data.reduce((sum, item) => sum + item.value, 0);
+    const validData = data.filter((item) => item.value > 0);
+    const total = validData.reduce((sum, item) => sum + item.value, 0);
+    if (total === 0) {
+      return [];
+    }
     let currentAngle = -90; // 시작 각도 (12시 방향)
-    const segments = data.map((item, index) => {
+    const segments = validData.map((item) => {
       const percentage = (item.value / total) * 100;
       const angle = (item.value / total) * 360;
       const startAngle = currentAngle;
@@ -346,6 +429,8 @@ export default function AdminDashboard() {
       const path = `M 100 100 L ${x1} ${y1} A ${radius} ${radius} 0 ${largeArc} 1 ${x2} ${y2} Z`;
       
       return {
+        name: item.name,
+        color: item.color,
         ...item,
         path,
         percentage: percentage.toFixed(1),
@@ -355,6 +440,8 @@ export default function AdminDashboard() {
     });
     return segments;
   };
+
+  const totalCategoryCount = categoryData.reduce((sum, item) => sum + item.value, 0);
 
   return (
     <div className={styles.pageContainer}>
@@ -448,7 +535,7 @@ export default function AdminDashboard() {
               <svg width="200" height="200" viewBox="0 0 200 200">
                 {calculatePieChart(categoryData).map((segment, index) => (
                   <path
-                    key={index}
+                    key={segment.name}
                     d={segment.path}
                     fill={segment.color}
                     stroke="#fff"
@@ -470,7 +557,7 @@ export default function AdminDashboard() {
                   }} />
                   <span style={{ fontSize: "0.875rem", color: "#374151" }}>{item.name}</span>
                   <span style={{ fontSize: "0.875rem", color: "#64748b", marginLeft: "0.5rem" }}>
-                    {item.value}%
+                    {totalCategoryCount === 0 ? "0%" : `${((item.value / totalCategoryCount) * 100).toFixed(1)}%`}
                   </span>
                 </div>
               ))}
@@ -505,18 +592,7 @@ export default function AdminDashboard() {
                   <tr 
                     key={product.id} 
                     style={{ 
-                      borderBottom: "1px solid #f1f5f9",
-                      cursor: "pointer",
-                      transition: "background-color 0.2s ease"
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "#f8fafc";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = "white";
-                    }}
-                    onClick={() => {
-                      window.location.href = `/product/${product.id}`;
+                      borderBottom: "1px solid #f1f5f9"
                     }}
                   >
                     <td style={{ padding: "0.75rem", fontSize: "0.875rem", color: "#1e293b", fontWeight: 500 }}>{product.name}</td>
@@ -592,7 +668,7 @@ export default function AdminDashboard() {
           }}
           >
              <Package size={20} color="#16a34a" />
-             <span style={{ fontSize: "0.875rem", color: "#374151" }}>상품 관리</span>
+             <span style={{ fontSize: "0.875rem", color: "#374151" }}>검수 관리</span>
           </Link>
           <Link href="/admin/reports" style={{
             padding: "20px",

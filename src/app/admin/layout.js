@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Users, Package, ShoppingCart, BarChart3,
   Menu, X, LogOut, User, Image, ChevronDown,
-  Edit, UserPlus, ShieldAlert
+  Edit, UserPlus, ShieldAlert, UserCog, Boxes
 } from "lucide-react";
 import styles from "./admin.module.css";
 import { Box, CircularProgress, Typography } from "@mui/material";
@@ -51,11 +51,13 @@ function AdminLayoutContent({ children }) {
   const menuItems = [
     { name: "대시보드", href: "/admin", icon: LayoutDashboard },
     { name: "회원 관리", href: "/admin/users", icon: Users },
+    { name: "상품 관리", href: "/admin/products", icon: Boxes },
     { name: "거래 후기", href: "/admin/reviews", icon: ShoppingCart },
-    { name: "배송 관리", href: "/admin/shipping", icon: Package },
     { name: "검수 관리", href: "/admin/inspection", icon: BarChart3 },
+    { name: "배송 관리", href: "/admin/shipping", icon: Package },
     { name: "배너 관리", href: "/admin/banner", icon: Image },
     { name: "신고 관리", href: "/admin/reports", icon: ShieldAlert },
+    { name: "관리자 조회", href: "/admin/admins", icon: UserCog },
   ];
 
   return (

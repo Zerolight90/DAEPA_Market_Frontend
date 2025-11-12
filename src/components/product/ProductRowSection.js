@@ -8,6 +8,7 @@ import { apiFetch, API_BASE, Endpoints } from "@/app/sell/api";
 import tokenStore from "@/app/store/TokenStore";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
+import { formatTimeAgo } from "@/lib/formatters";
 
 export default function ProductRowSection({
                                               title,
@@ -257,12 +258,11 @@ export default function ProductRowSection({
                                                 <div className={styles.price}>
                                                     {item.price?.toLocaleString?.() ?? item.price}원
                                                 </div>
-                                                <div className={styles.sub}>
-                          <span>
-                            {item.createdAt ? item.createdAt.slice(0, 10) : ""}
-                          </span>
-                                                </div>
-                                            </div>
+                                                                                                 <div className={styles.sub}>
+                                                                          <span>
+                                                                            {item.createdAt ? formatTimeAgo(item.createdAt) : ""}
+                                                                          </span>
+                                                                                                </div>                                            </div>
                                         </Link>
                                     );
                                 })}

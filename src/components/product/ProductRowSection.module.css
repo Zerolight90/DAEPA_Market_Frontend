@@ -2,31 +2,55 @@
 
 /* 섹션 전체 */
 .section {
-    margin-top: 80px;
-    background: transparent;
-    margin-bottom: 80px;
+    background: #fff;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+    margin-top: 40px;
+    margin-bottom: 40px;
+}
+
+@media (max-width: 767px) {
+    .section {
+        padding: 16px;
+        margin-top: 32px;
+        margin-bottom: 32px;
+    }
 }
 
 /* 헤더: 제목 + 전체보기 */
 .head {
     display: flex;
-    align-items: center;
+    align-items: baseline; /* 텍스트 베이스라인 기준으로 정렬 */
     justify-content: space-between;
-    margin-bottom: 14px;
+    margin-bottom: 24px; /* 하단 여백 증가 */
+    padding-bottom: 16px; /* 하단 패딩 및 구분선 추가 */
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .title {
-    font-size: 1.05rem;
+    font-size: 1.75rem; /* 폰트 크기 대폭 증가 */
     font-weight: 700;
+    letter-spacing: -0.02em;
 }
 
 .more {
-    font-size: 0.85rem;
-    color: #555;
+    font-size: 1rem; /* 폰트 크기 증가 */
+    font-weight: 600;
+    color: #4a90e2; /* 포인트 컬러 */
     text-decoration: none;
+    transition: color 0.2s ease;
+    align-self: flex-end; /* more 링크를 아래쪽에 붙임 */
 }
 .more:hover {
-    text-decoration: underline;
+    color: #357abd;
+    text-decoration: none;
+}
+/* '더보기' 화살표 추가 */
+.more::after {
+    content: ''; /* 원본 텍스트에 이미 화살표가 있어 CSS에서는 제거 */
+    font-family: sans-serif;
+    margin-left: 4px;
 }
 
 /* 가로 슬라이더 영역 */
@@ -84,6 +108,12 @@
     height: 100% !important;
     object-fit: cover !important;
     display: block;
+    transition: transform 0.3s ease-in-out; /* 부드러운 전환 효과 */
+}
+
+/* 카드에 호버 시 이미지 줌인 */
+.prodCard:hover .thumb {
+    transform: scale(1.08); /* 8% 확대 */
 }
 
 /* 판매완료 오버레이 */
@@ -136,7 +166,7 @@
 .name {
     font-size: 15px;
     line-height: 1.4;
-    font-weight: 700;
+    font-weight: 400; /* 상품명 굵기 보통으로 변경 */
     margin: 0 0 6px;
     overflow: hidden;
     display: -webkit-box;
@@ -145,7 +175,7 @@
 }
 .price {
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 600; /* 가격은 상품명보다 살짝 덜 굵게 */
     margin-bottom: 6px;
 }
 .sub {
@@ -227,5 +257,8 @@
     }
     .navBtn {
         display: none;
+    }
+    .title {
+        font-size: 1.4rem;
     }
 }

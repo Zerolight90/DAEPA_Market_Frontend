@@ -1,95 +1,74 @@
 /* Title */
 .categoryTitle {
-  text-align: left; /* Changed from center to left */
-  font-size: 1.8rem; /* Increased base font size */
+  text-align: center;
+  font-size: 1.5rem;
   font-weight: 700;
-  margin: 48px 0 24px; /* Adjusted margin for more space */
+  margin: 40px 0 24px; /* 상단 여백 추가 */
 }
-@media (min-width: 768px) { .categoryTitle { font-size: 2rem; } }
+@media (min-width: 768px) { .categoryTitle { font-size: 1.8rem; } }
 @media (min-width: 1024px) { .categoryTitle { font-size: 2.2rem; } }
 
 
 .categoryList {
   display: grid;
-  /* 화면 크기에 따라 열 개수가 유연하게 바뀌도록 수정 */
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 16px;
   margin-top: 8px;
+  background: #fff;
+  padding: 24px;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.04);
 }
 
 .cardLink { display: block; text-decoration: none; color: inherit; outline: none; }
 
 .categoryCard {
-  display: flex; /* Use flexbox for alignment */
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
   text-align: center;
-  padding: 16px;
-  border-radius: 12px; /* Slightly reduced border-radius */
-  border: 1px solid #e9ecef; /* Light border color */
-  background: #ffffff; /* White background */
+  padding: 12px 8px; /* 좌우 패딩을 줄여 글자 영역 확보 */
+  border-radius: 15px;
+  border-color: rgba(0, 0, 0, 0.08);
+  background: #fff;
   transition:
           transform 160ms ease,
           box-shadow 160ms ease,
-          border-color 160ms ease;
+          border-color 160ms ease,
+          background 160ms ease;
 }
 
 .categoryIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 56px; /* Fixed size for the icon background */
-  height: 56px;
   font-size: 2rem;
-  background-color: #f1f3f5; /* Light gray background for icon */
-  border-radius: 50%; /* Make it circular */
-  margin-bottom: 12px;
-  transition: transform 160ms ease, background-color 160ms ease;
+  margin-bottom: 8px;
+  transition: transform 160ms ease, opacity 160ms ease;
 }
 .categoryName { margin: 6px 0 2px; font-size: 1rem; font-weight: 600; }
-.categoryCount { margin: 0; font-size: 0.85rem; color: #868e96; } /* Adjusted color */
+.categoryCount { margin: 0; font-size: 0.9rem; opacity: 0.8; }
 
 @media (hover: hover) and (pointer: fine) {
   .cardLink:hover .categoryCard {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0,0,0,0.07);
-    border-color: transparent;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06), 0 1px 0 rgba(0,0,0,0.03);
+    border-color: rgba(0,0,0,0.12);
+    background: rgba(0,0,0,0.015);
   }
-  .cardLink:hover .categoryIcon {
-    background-color: #e9ecef; /* Slightly darker on hover */
-  }
+  .cardLink:hover .categoryIcon { transform: translateY(-2px) scale(1.06); opacity: 0.95; }
 }
 
 .cardLink:focus-visible .categoryCard {
-  outline: 2px solid #339af0; /* Blue outline for focus */
+  outline: 2px solid #22c55e;
   outline-offset: 2px;
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.07);
+  transform: translateY(-3px);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.06), 0 1px 0 rgba(0,0,0,0.03);
 }
 
 .cardLink:active .categoryCard {
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05), 0 1px 0 rgba(0,0,0,0.02);
 }
 
 @media (prefers-color-scheme: dark) {
-  .categoryCard {
-    background: #212529;
-    border-color: #495057;
-  }
-  .categoryIcon {
-    background-color: #343a40;
-  }
-  .categoryCount {
-    color: #adb5bd;
-  }
   .cardLink:hover .categoryCard {
-    border-color: #868e96;
-    background: #343a40;
-  }
-  .cardLink:hover .categoryIcon {
-    background-color: #495057;
+    border-color: rgba(255,255,255,0.16);
+    background: rgba(255,255,255,0.03);
   }
 }
 

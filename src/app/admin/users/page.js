@@ -136,7 +136,7 @@ export default function UsersPage() {
               <div className={styles.tableCell}>주소</div>
               <div className={styles.tableCell}>전화번호</div>
               <div className={styles.tableCell}>가입일</div>
-              <div className={styles.tableCell}>매너온도</div>
+              <div className={styles.tableCell}>신선도</div>
               <div className={styles.tableCell}>경고횟수</div>
               <div className={styles.tableCell}>상태</div>
               <div className={styles.tableCell}>관리</div>
