@@ -1,18 +1,19 @@
 .block {
-    width: 100%;
+    width: 1200px;
+    margin: 0 auto;
 }
 
 .swiper {
     width: 100%;
-    height: var(--banner-height);
+    height: 675px;
 }
 
 .slide {
     position: relative;
     width: 100%;
-    height: var(--banner-height);
+    height: 675px;
     background-position: center center;
-    background-size: cover;
+    background-size: 1200px auto;
     background-repeat: no-repeat;
 }
 
@@ -63,7 +64,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: var(--banner-height);
+    height: 675px;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     color: #64748b;
 }
@@ -99,6 +100,5 @@
     .slide,
     .loadingContainer {
         height: auto;
-        aspect-ratio: 16 / 9; /* 16:9 비율로 조정 */
     }
 }
