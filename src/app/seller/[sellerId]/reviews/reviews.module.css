@@ -1,186 +1,51 @@
+/* 컨테이너: 상품페이지와 동일 */
 .page {
-    max-width: 980px;
+    width: min(1120px, 100%);   /* ← 1120에 고정 */
     margin: 0 auto;
-    padding: 32px 16px 80px;
-    background: #fff;
+    padding: 16px 16px 40px;    /* ← 패딩도 동일 */
 }
 
-.header {
-    display: flex;
-    justify-content: space-between;
-    gap: 24px;
-    border-bottom: 1px solid #f1f1f1;
-    padding-bottom: 20px;
+/* 상단 프로필 패널 여백을 상품페이지와 통일 */
+.profilePanelWrap {
+    margin: 6px 0 18px;
 }
 
-.userBox {
-    display: flex;
-    gap: 16px;
-    align-items: center;
+/* 타이틀 */
+.title {
+    font-size: 26px;
+    font-weight: 800;
+    margin: 8px 0 6px;
 }
+.sub { color: #64748b; margin-bottom: 14px; }
 
-.avatar {
-    width: 64px;
-    height: 64px;
-    border-radius: 50%;
-    background: #f2f2f2;
-}
+/* 리스트 */
+.listArea { display: flex; flex-direction: column; gap: 14px; }
+.card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:14px 16px; }
+.cardClickable { cursor: default; }
 
-.userName {
-    font-size: 20px;
-    font-weight: 600;
-    color: #222;
-}
+.cardHead { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.badge { display:inline-flex; align-items:center; height:24px; padding:0 10px; border-radius:999px; background:#ecfdf3; border:1px solid #22c55e; color:#16a34a; font-size:12px; font-weight:700; }
+.time { font-size:12px; color:#6b7280; }
 
-.userLocation {
-    margin-top: 4px;
-    font-size: 14px;
-    color: #777;
-}
+.cardBody { display:flex; gap:12px; align-items:flex-start; }
+.thumbBox { width:64px; height:64px; border-radius:12px; overflow:hidden; background:#f1f5f9; flex:0 0 auto; }
+.thumbImg { width:100%; height:100%; object-fit:cover; }
 
-.mannerBox {
-    min-width: 160px;
-    text-align: right;
-}
+.info { flex:1; min-width:0; }
+.itemTitle { font-weight:700; font-size:15px; margin-bottom:4px; color:#111827; }
+.metaRow { display:flex; align-items:center; gap:8px; color:#64748b; font-size:12.5px; margin-bottom:6px; }
+.pipe { color:#cbd5e1; }
+.nick { color:#475569; }
+.starsSmall { display:inline-flex; gap:2px; }
+.star { font-size:14px; color:#e2e8f0; }
+.filled { color:#fbbf24; }
+.contentText { font-size:14px; color:#334155; white-space:pre-wrap; line-height:1.55; }
 
-.mannerRow {
-    display: flex;
-    justify-content: flex-end;
-    gap: 6px;
-    align-items: center;
+/* 빈 상태/더보기/뒤로 */
+.empty { border:1px dashed #e2e8f0; border-radius:12px; padding:28px 10px; text-align:center; color:#94a3b8; margin-top:8px; }
+.moreBtn, .backBtn {
+    display:inline-block; min-width:160px; border:1.5px solid #22c55e; background:#fff; color:#16a34a;
+    border-radius:10px; padding:10px 14px; font-weight:700; font-size:14px; text-align:center; cursor:pointer; transition:all .12s ease-out;
 }
-
-.mannerValue {
-    font-size: 20px;
-    font-weight: 600;
-    color: #14b36b;
-}
-
-.mannerEmoji {
-    font-size: 18px;
-}
-
-.mannerLabel {
-    font-size: 12px;
-    color: #888;
-}
-
-.mannerBar {
-    width: 140px;
-    height: 6px;
-    background: #edf3f1;
-    border-radius: 999px;
-    margin-left: auto;
-    margin-top: 6px;
-    overflow: hidden;
-}
-
-.mannerFill {
-    height: 100%;
-    background: linear-gradient(90deg, #14b36b, #48d597);
-}
-
-.tabs {
-    display: flex;
-    gap: 12px;
-    margin-top: 24px;
-    border-bottom: 1px solid #f1f1f1;
-}
-
-.tab {
-    background: none;
-    border: none;
-    padding: 10px 4px 14px;
-    font-size: 15px;
-    color: #777;
-    cursor: pointer;
-    border-bottom: 2px solid transparent;
-}
-
-.tab span {
-    font-weight: 500;
-}
-
-.activeTab {
-    color: #222;
-    font-weight: 600;
-    border-bottom-color: #222;
-}
-
-.reviewList {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    margin-top: 8px;
-}
-
-.reviewItem {
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 16px 0;
-    border-bottom: 1px solid #f6f6f6;
-}
-
-.reviewLeft {
-    display: flex;
-    gap: 14px;
-    align-items: flex-start;
-    flex: 1;
-}
-
-.reviewAvatar {
-    width: 40px;
-    height: 40px;
-    background: #ececec;
-    border-radius: 50%;
-    flex: 0 0 40px;
-}
-
-.reviewTop {
-    display: flex;
-    gap: 8px;
-    align-items: baseline;
-}
-
-.reviewWriter {
-    font-weight: 600;
-    color: #222;
-}
-
-.reviewMeta {
-    font-size: 12px;
-    color: #999;
-}
-
-.reviewContent {
-    margin-top: 4px;
-    font-size: 14px;
-    color: #555;
-    line-height: 1.5;
-    max-width: 570px;
-}
-
-.thumbnail {
-    width: 56px;
-    height: 56px;
-    border-radius: 6px;
-    object-fit: cover;
-    flex: 0 0 56px;
-}
-
-@media (max-width: 720px) {
-    .header {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .mannerBox {
-        text-align: left;
-    }
-    .reviewItem {
-        flex-direction: column;
-    }
-    .thumbnail {
-        margin-left: 54px;
-    }
-}
+.moreBtn { margin:12px auto 0; }
+.moreBtn:hover, .backBtn:hover { background:#ecfdf5; color:#15803d; box-shadow:0 2px 8px rgba(22,163,74,.12); }
