@@ -5,6 +5,7 @@ import "swiper/css/navigation";             // ✅ 네비게이션 쓰면
 import "swiper/css/pagination";          // ✅ 페이지네이션 쓰면
 
 import ConditionalLayout from "./ConditionalLayout";
+import ThemeRegistry from './ThemeRegistry';
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -18,7 +19,9 @@ export default function RootLayout({ children }) {
     return (
         <html lang="ko">
         <body className={`${geistSans.variable} ${geistMono.variable}`}>
-        <ConditionalLayout>{children}</ConditionalLayout>
+        <ThemeRegistry>
+            <ConditionalLayout>{children}</ConditionalLayout>
+        </ThemeRegistry>
         </body>
         </html>
     );
