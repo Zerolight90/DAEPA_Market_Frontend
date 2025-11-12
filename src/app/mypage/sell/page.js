@@ -253,14 +253,17 @@ export default function SellHistoryPage() {
     }
 
     // 검수 불합격 시 환불 처리
-    async function handleRefundClick(dealId, e) {
+    async function handleRefundClick(dIdx, e) {
         e.stopPropagation();
-        const url = `${BACKEND_BASE}/api/deal/${dealId}/refund`;
+        const url = `${BACKEND_BASE}/api/${dIdx}/payCancel`;
         try {
             const res = await fetch(url, {
-                method: 'PATCH',
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-                credentials: 'include',
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({ cancelReason: "고객 변심" }) // 취소 사유 전달
             });
             if (!res.ok) {
                 const txt = await res.text();
