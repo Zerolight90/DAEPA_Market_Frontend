@@ -1,0 +1,156 @@
+"use client";
+
+import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { useState } from "react";
+import tokenStore from "@/app/store/TokenStore";
+import Sidebar from "@/components/mypage/sidebar";
+import styles from "./review.module.css";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+
+export default function SellerWriteReviewPage() {
+    const params = useParams();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const { accessToken } = tokenStore();
+
+    // store → localStorage 대문자 → 소문자
+    const realToken =
+        accessToken ||
+        (typeof window !== "undefined"
+            ? localStorage.getItem("ACCESS_TOKEN") ||
+            localStorage.getItem("access_token")
+            : null);
+
+    const targetUserId = params.userId; // 후기 받는 사람(구매자)
+    const dealId = searchParams.get("dealId");
+
+    const [star, setStar] = useState(5);
+    const [content, setContent] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleStarClick = (value) => {
+        setStar(value);
+    };
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+
+        if (!dealId) {
+            alert("dealId가 없어 리뷰를 저장할 수 없습니다.");
+            return;
+        }
+
+        if (!realToken) {
+            alert("로그인이 필요합니다.");
+            return;
+        }
+
+        try {
+            setSubmitting(true);
+
+            // 1) 중복 확인
+            const existsRes = await fetch(
+                `${API_BASE}/api/review/exists?dealId=${dealId}&reType=SELLER`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${realToken}`,
+                    },
+                    credentials: "include",
+                }
+            );
+
+            if (existsRes.ok) {
+                const { exists } = await existsRes.json();
+                if (exists) {
+                    alert("이미 작성한 리뷰입니다.");
+                    return;
+                }
+            }
+
+            // 2) 실제 저장
+            const res = await fetch(`${API_BASE}/api/reviews`, {
+                method: "POST",
+                credentials: "include",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${realToken}`,
+                },
+                body: JSON.stringify({
+                    dIdx: Number(dealId),
+                    reStar: Number(star),
+                    reContent: content,
+                    reType: "SELLER", // 판매자가 구매자에게
+                }),
+            });
+
+            if (!res.ok) {
+                const txt = await res.text();
+                alert(txt || "리뷰 저장에 실패했습니다.");
+                return;
+            }
+
+            alert("후기가 등록되었습니다.");
+            router.back();
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    return (
+        <div className={styles.wrapper}>
+            <aside className={styles.sidebar}>
+                <Sidebar />
+            </aside>
+
+            <main className={styles.content}>
+                <header className={styles.topBar}>
+                    <h1 className={styles.pageTitle}>판매 후기 쓰기</h1>
+                </header>
+
+                <section className={styles.card}>
+                    <form onSubmit={handleSubmit} className={styles.form}>
+                        {/* 별점 */}
+                        <label className={styles.field}>
+                            <span className={styles.label}>별점</span>
+                            <div className={styles.stars}>
+                                {[1, 2, 3, 4, 5].map((value) => (
+                                    <span
+                                        key={value}
+                                        className={`${styles.star} ${
+                                            value <= star ? styles.filled : ""
+                                        }`}
+                                        onClick={() => handleStarClick(value)}
+                                    >
+                    ★
+                  </span>
+                                ))}
+                                <span className={styles.starValue}>{star} / 5</span>
+                            </div>
+                        </label>
+
+                        {/* 후기 내용 */}
+                        <label className={styles.field}>
+                            <span className={styles.label}>후기 내용</span>
+                            <textarea
+                                value={content}
+                                onChange={(e) => setContent(e.target.value)}
+                                rows={5}
+                                className={styles.textarea}
+                                placeholder="거래는 어떠셨나요? 자세히 작성해주시면 도움이 됩니다."
+                            />
+                        </label>
+
+                        <button
+                            type="submit"
+                            disabled={submitting}
+                            className={styles.submitBtn}
+                        >
+                            {submitting ? "저장 중..." : "후기 등록"}
+                        </button>
+                    </form>
+                </section>
+            </main>
+        </div>
+    );
+}
