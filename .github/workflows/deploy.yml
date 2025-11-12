@@ -88,29 +88,21 @@ jobs:
             
             cd ~/apps/frontend
             
-            echo "[1/6] Git update"
+            echo "[1/5] Git update"
             git fetch --all
             git checkout main
             git reset --hard origin/main
             
-            echo "[2/6] Create .env file"
-            echo "${{ secrets.DAEPA_FRONTEND_ENV }}" > .env
-            echo ".env file created."
-            
-            echo "[3/6] Stop and prepare"
+            echo "[2/5] Stop old containers"
             docker compose down || true
             
-            echo "Pruning old images and builder cache..."
-            docker image prune -f
-            docker builder prune -f --filter 'until=168h'
+            echo "[3/5] Build (no cache once)"
+            docker compose build --no-cache frontend
             
-            echo "[4/6] Build with cache"
-            docker compose build --progress=plain
-            
-            echo "[5/6] Start containers"
+            echo "[4/5] Up"
             docker compose up -d
             
-            echo "[6/6] Status & logs"
+            echo "[5/5] Status & logs"
             docker compose ps
             docker logs --tail=80 daepa-frontend || true
             
