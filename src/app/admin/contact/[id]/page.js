@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { ArrowLeft, Send, CheckCircle, Clock, User, Calendar, Tag, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import styles from "../../admin.module.css";
 
 export default function ContactDetailPage({ params }) {
+  const { id } = use(params);
   const [inquiry, setInquiry] = useState(null);
   const [reply, setReply] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -15,7 +16,7 @@ export default function ContactDetailPage({ params }) {
     const fetchInquiry = async () => {
       try {
         // 1. 상세 정보 조회
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${params.id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${id}`);
         if (!res.ok) throw new Error("문의 상세 정보를 불러오지 못했습니다.");
         const data = await res.json();
         setInquiry(data);
@@ -34,7 +35,7 @@ export default function ContactDetailPage({ params }) {
     };
 
     fetchInquiry();
-  }, [params.id]);
+  }, [id]);
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -86,16 +87,16 @@ export default function ContactDetailPage({ params }) {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${params.id}/reply`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${id}/reply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ replyContent: reply })
+        body: JSON.stringify({ reply })
       });
 
       if (!res.ok) throw new Error("답변 등록에 실패했습니다.");
 
       // 답변 등록 후 상세 정보 다시 불러오기
-      const detailRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${params.id}`);
+      const detailRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${id}`);
       if (detailRes.ok) {
         const updatedData = await detailRes.json();
         setInquiry(updatedData);
@@ -115,7 +116,7 @@ export default function ContactDetailPage({ params }) {
     if (!confirm(`상태를 '${newStatus === "pending" ? "답변 대기" : "답변 완료"}'로 변경하시겠습니까?`)) return;
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${params.id}/status`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${id}/status`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus })
@@ -123,8 +124,11 @@ export default function ContactDetailPage({ params }) {
 
       if (!res.ok) throw new Error("상태 변경 실패");
 
-      setInquiry(prev => ({ ...prev, status: newStatus }));
-      alert("상태가 변경되었습니다.");
+      const detailRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${id}`);
+      if (detailRes.ok) {
+        const updatedData = await detailRes.json();
+        setInquiry(updatedData);
+      }
     } catch (err) {
       console.error("상태 변경 실패:", err);
       alert("상태 변경 중 오류가 발생했습니다.");

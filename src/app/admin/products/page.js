@@ -1,194 +1,295 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Search, Filter, MoreVertical, CheckCircle, XCircle, Eye, AlertTriangle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  Loader2,
+  RefreshCcw,
+  Trash2,
+  ChevronsLeft,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsRight
+} from "lucide-react";
 import styles from "../admin.module.css";
 
-export default function ProductsPage() {
+const API_BASE = "http://localhost:8080";
+const PAGE_SIZE = 15; // 5 columns * 3 rows
+
+const formatCurrency = (value) => {
+  if (typeof value !== "number") return "-";
+  return new Intl.NumberFormat("ko-KR").format(value);
+};
+
+const formatDate = (value) => {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleDateString("ko-KR", { year: "numeric", month: "long", day: "numeric" });
+};
+
+const resolveImageUrl = (url) => {
+  if (!url) return "/images/placeholder.jpg";
+  if (url.startsWith("http")) return url;
+  return `${API_BASE}${url.startsWith("/") ? url : `/${url}`}`;
+};
+
+export default function AdminProductsPage() {
   const [products, setProducts] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [isMutating, setIsMutating] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    // Mock data
-    setProducts([
-      {
-        id: 1,
-        title: "아이폰 15 Pro 256GB",
-        seller: "김철수",
-        category: "전자제품",
-        price: 1200000,
-        status: "approved",
-        uploadDate: "2024-01-15",
-        views: 245,
-        likes: 12
-      },
-      {
-        id: 2,
-        title: "나이키 에어맥스 270",
-        seller: "이영희",
-        category: "패션/의류",
-        price: 150000,
-        status: "pending",
-        uploadDate: "2024-01-20",
-        views: 89,
-        likes: 5
-      },
-      {
-        id: 3,
-        title: "맥북 프로 14인치 M2",
-        seller: "박민수",
-        category: "전자제품",
-        price: 2500000,
-        status: "rejected",
-        uploadDate: "2024-01-18",
-        views: 156,
-        likes: 8
-      },
-      {
-        id: 4,
-        title: "자전거 픽시",
-        seller: "정수진",
-        category: "스포츠/레저",
-        price: 300000,
-        status: "approved",
-        uploadDate: "2024-01-22",
-        views: 78,
-        likes: 3
+    let ignore = false;
+    async function fetchProducts() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const params = new URLSearchParams({
+          page: String(Math.max(currentPage - 1, 0)),
+          size: String(PAGE_SIZE)
+        });
+        const response = await fetch(`${API_BASE}/api/admin/products?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error(`상품 목록을 불러오는 중 오류가 발생했습니다. (status ${response.status})`);
+        }
+        const data = await response.json();
+        if (!ignore) {
+          setProducts(Array.isArray(data.content) ? data.content : []);
+          setTotalPages(data.totalPages ?? 0);
+          setTotalElements(data.totalElements ?? 0);
+        }
+      } catch (err) {
+        console.error(err);
+        if (!ignore) {
+          setError(err.message ?? "상품 목록을 불러오는 중 오류가 발생했습니다.");
+          setProducts([]);
+        }
+      } finally {
+        if (!ignore) {
+          setIsLoading(false);
+        }
       }
-    ]);
-  }, []);
-
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.seller.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStatus === "all" || product.status === filterStatus;
-    return matchesSearch && matchesFilter;
-  });
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "approved":
-        return <span className={styles.statusSuccess}>승인됨</span>;
-      case "pending":
-        return <span className={styles.statusWarning}>대기중</span>;
-      case "rejected":
-        return <span className={styles.statusError}>거부됨</span>;
-      default:
-        return <span className={styles.statusWarning}>대기</span>;
     }
+
+    fetchProducts();
+    return () => {
+      ignore = true;
+    };
+  }, [currentPage, reloadKey]);
+
+  const handleRetry = () => {
+    setReloadKey((prev) => prev + 1);
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('ko-KR').format(price) + '원';
+  const getVisiblePages = useMemo(() => {
+    if (totalPages <= 1) return [1];
+
+    const delta = 2;
+    const range = [];
+    const rangeWithDots = [];
+    const start = Math.max(2, currentPage - delta);
+    const end = Math.min(totalPages - 1, currentPage + delta);
+
+    for (let i = start; i <= end; i++) {
+      range.push(i);
+    }
+
+    if (currentPage - delta > 2) {
+      rangeWithDots.push(1, "...");
+    } else {
+      rangeWithDots.push(1);
+    }
+
+    rangeWithDots.push(...range);
+
+    if (currentPage + delta < totalPages - 1) {
+      rangeWithDots.push("...", totalPages);
+    } else if (totalPages > 1) {
+      rangeWithDots.push(totalPages);
+    }
+
+    return rangeWithDots;
+  }, [currentPage, totalPages]);
+
+  const handleDelete = async (product) => {
+    if (!product?.id) return;
+    if (!confirm(`"${product.title}" 상품을 삭제 처리하시겠습니까?`)) return;
+
+    setIsMutating(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/admin/products/${product.id}`, {
+        method: "DELETE"
+      });
+      if (!res.ok && res.status !== 204) {
+        throw new Error("상품 삭제에 실패했습니다.");
+      }
+      setReloadKey((prev) => prev + 1);
+      alert("상품이 삭제 처리되었습니다.");
+    } catch (err) {
+      console.error(err);
+      alert(err.message ?? "상품 삭제 중 오류가 발생했습니다.");
+    } finally {
+      setIsMutating(false);
+    }
   };
 
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>상품 관리</h1>
-        <p className={styles.pageSubtitle}>등록된 상품들을 검토하고 관리하세요</p>
+        <p className={styles.pageSubtitle}>
+          판매자들이 등록한 전체 상품을 확인하고 관리할 수 있습니다.
+        </p>
       </div>
 
-      {/* Filters */}
-      <div className={styles.filtersContainer}>
-        <div className={styles.searchContainer}>
-          <Search size={20} className={styles.searchIcon} />
-          <input
-            type="text"
-            placeholder="상품명 또는 판매자로 검색..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className={styles.searchInput}
-          />
+      <div className={styles.productsToolbar}>
+        <div className={styles.productSummary}>
+          총 <strong>{totalElements}</strong>개의 상품
         </div>
-        <select
-          value={filterStatus}
-          onChange={(e) => setFilterStatus(e.target.value)}
-          className={styles.filterSelect}
-        >
-          <option value="all">전체 상태</option>
-          <option value="pending">승인 대기</option>
-          <option value="approved">승인됨</option>
-          <option value="rejected">거부됨</option>
-        </select>
-      </div>
-
-      {/* Products Table */}
-      <div className={styles.tableContainer}>
-        <div className={styles.tableHeader}>
-          <div className={styles.tableRow}>
-            <div className={styles.tableCell}>상품 정보</div>
-            <div className={styles.tableCell}>판매자</div>
-            <div className={styles.tableCell}>카테고리</div>
-            <div className={styles.tableCell}>가격</div>
-            <div className={styles.tableCell}>상태</div>
-            <div className={styles.tableCell}>조회수</div>
-            <div className={styles.tableCell}>작업</div>
+        {totalPages > 1 && (
+          <div style={{ fontSize: "0.875rem", color: "#64748b" }}>
+            {currentPage} / {totalPages} 페이지
           </div>
+        )}
+      </div>
+
+      {error && (
+        <div className={styles.errorNotice}>
+          <AlertTriangle size={18} />
+          <span>{error}</span>
+          <button onClick={handleRetry} className={styles.retryButton}>
+            <RefreshCcw size={16} />
+            다시 시도
+          </button>
         </div>
-        <div className={styles.tableBody}>
-          {filteredProducts.map((product) => (
-            <div key={product.id} className={styles.tableRow}>
-              <div className={styles.tableCell}>
-                <div className={styles.productInfo}>
-                  <div className={styles.productImage}>
-                    📱
+      )}
+
+      {isLoading ? (
+        <div className={styles.loadingState}>
+          <Loader2 className={styles.loadingIcon} size={28} />
+          <span>상품을 불러오는 중입니다...</span>
+        </div>
+      ) : products.length === 0 ? (
+        <div className={styles.emptyState}>
+          <h3 className={styles.emptyStateTitle}>표시할 상품이 없습니다</h3>
+          <p className={styles.emptyStateDescription}>
+            판매자가 등록한 상품이 없거나 모든 상품을 삭제했습니다.
+          </p>
+        </div>
+      ) : (
+        <div className={styles.productGrid}>
+          {products.map((product) => (
+            <article
+              key={product.id}
+              className={`${styles.productCard} ${product.reported ? styles.productCardReported : ""}`}
+            >
+              <div className={styles.productCardImage}>
+                <img src={resolveImageUrl(product.thumbnail)} alt={product.title} />
+                {product.reported && (
+                  <div className={styles.productBadges}>
+                    <span className={`${styles.productBadge} ${styles.reportedBadge}`}>신고된 사용자</span>
                   </div>
-                  <div>
-                    <div className={styles.productTitle}>{product.title}</div>
-                    <div className={styles.productDate}>
-                      등록일: {new Date(product.uploadDate).toLocaleDateString('ko-KR')}
-                    </div>
-                  </div>
+                )}
+              </div>
+
+              <div className={styles.productCardBody}>
+                <div className={styles.productCardHeader}>
+                  <h3 title={product.title}>{product.title}</h3>
+                  <p className={styles.productPrice}>₩{formatCurrency(product.price ?? 0)}</p>
+                </div>
+
+                <div className={styles.productMeta}>
+                  <span>{product.category ?? "카테고리 미지정"}</span>
+                  <span>{formatDate(product.createdAt)}</span>
                 </div>
               </div>
-              <div className={styles.tableCell}>
-                <div className={styles.sellerInfo}>
-                  {product.seller}
+
+              <div className={styles.productCardFooter}>
+                <div className={styles.productSeller}>
+                  판매자 <strong>{product.sellerName ?? `#${product.sellerId}`}</strong>
                 </div>
-              </div>
-              <div className={styles.tableCell}>
-                <span className={styles.categoryTag}>{product.category}</span>
-              </div>
-              <div className={styles.tableCell}>
-                <div className={styles.price}>
-                  {formatPrice(product.price)}
-                </div>
-              </div>
-              <div className={styles.tableCell}>
-                {getStatusBadge(product.status)}
-              </div>
-              <div className={styles.tableCell}>
-                <div className={styles.statsInfo}>
-                  <div>👁️ {product.views}</div>
-                  <div>❤️ {product.likes}</div>
-                </div>
-              </div>
-              <div className={styles.tableCell}>
-                <div className={styles.actionButtons}>
-                  <button className={styles.actionButton}>
-                    <Eye size={16} />
+                {product.reported && (
+                  <button
+                    className={styles.deleteButton}
+                    onClick={() => handleDelete(product)}
+                    disabled={isMutating}
+                  >
+                    <Trash2 size={16} />
+                    {isMutating ? "처리 중..." : "신고 상품 삭제"}
                   </button>
-                  {product.status === "pending" && (
-                    <>
-                      <button className={`${styles.actionButton} ${styles.approveButton}`}>
-                        <CheckCircle size={16} />
-                      </button>
-                      <button className={`${styles.actionButton} ${styles.rejectButton}`}>
-                        <XCircle size={16} />
-                      </button>
-                    </>
-                  )}
-                  <button className={styles.actionButton}>
-                    <MoreVertical size={16} />
-                  </button>
-                </div>
+                )}
               </div>
-            </div>
+            </article>
           ))}
         </div>
-      </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className={styles.paginationContainer}>
+        <div className={styles.paginationWrapper}>
+          <button
+            className={styles.paginationNavButton}
+            onClick={() => setCurrentPage(1)}
+            disabled={currentPage === 1 || isLoading || isMutating}
+            title="첫 페이지"
+          >
+            <ChevronsLeft size={16} />
+          </button>
+
+          <button
+            className={styles.paginationNavButton}
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={currentPage === 1 || isLoading || isMutating}
+            title="이전 페이지"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          <div className={styles.paginationInfo}>
+            {getVisiblePages.map((pageItem, index) =>
+              pageItem === "..." ? (
+                <span key={`dots-${index}`} className={styles.paginationButton} style={{ cursor: "default" }}>
+                  ...
+                </span>
+              ) : (
+                <button
+                  key={pageItem}
+                  className={`${styles.paginationButton} ${currentPage === pageItem ? styles.active : ""}`}
+                  onClick={() => setCurrentPage(pageItem)}
+                  disabled={isLoading || isMutating}
+                >
+                  {pageItem}
+                </button>
+              )
+            )}
+          </div>
+
+          <button
+            className={styles.paginationNavButton}
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={currentPage === totalPages || isLoading || isMutating}
+            title="다음 페이지"
+          >
+            <ChevronRight size={16} />
+          </button>
+
+          <button
+            className={styles.paginationNavButton}
+            onClick={() => setCurrentPage(totalPages)}
+            disabled={currentPage === totalPages || isLoading || isMutating}
+            title="마지막 페이지"
+          >
+            <ChevronsRight size={16} />
+          </button>
+        </div>
+        </div>
+      )}
     </div>
   );
 }
