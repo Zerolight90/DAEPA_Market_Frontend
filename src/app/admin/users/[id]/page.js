@@ -1,16 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { ArrowLeft, Edit, User, Calendar, MapPin, Phone, Star, ShoppingBag, MessageSquare, Shield } from "lucide-react";
+import { useState, useEffect, use } from "react";
+import {
+  ArrowLeft,
+  Edit,
+  User,
+  Calendar,
+  MapPin,
+  Phone,
+  Star,
+  ShoppingBag,
+  MessageSquare,
+  Shield,
+  AlertCircle
+} from "lucide-react";
 import Link from "next/link";
 import styles from "../../admin.module.css";
 
 export default function UserDetailPage({ params }) {
-  const { id } = params;
+  const { id } = use(params);
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState("sell");
   const [reviews, setReviews] = useState({ sell: [], buy: [] });
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingManner, setPendingManner] = useState(null);
 
   const getStatusBadge = (statusNum) => {
     switch (statusNum) {
@@ -27,39 +40,94 @@ export default function UserDetailPage({ params }) {
     }
   };
 
-  const renderStars = (rating) => {
+  const renderStars = (ratingValue) => {
+    const numeric = Number(ratingValue);
+    const stars = Number.isFinite(numeric) ? Math.round(Math.max(0, Math.min(5, numeric))) : 0;
     return Array.from({ length: 5 }, (_, index) => (
       <Star
         key={index}
         size={14}
-        className={index < rating ? styles.starFilled : styles.starEmpty}
+        className={index < stars ? styles.starFilled : styles.starEmpty}
       />
     ));
+  };
+
+  const getReviewerName = (review, type) => {
+    if (!review) return "-";
+    if (review.writerName) return review.writerName;
+    if (type === "sell") return review.buyer ?? review.writerName ?? "-";
+    return review.seller ?? review.writerName ?? "-";
+  };
+
+  const getReviewDate = (review) => {
+    if (!review) return "-";
+    const value = review.date ?? review.createdAt ?? review.reviewDate ?? review.updatedAt;
+    return value ? new Date(value).toLocaleDateString("ko-KR") : "-";
+  };
+
+  const getReviewComment = (review) => {
+    if (!review) return "-";
+    return review.comment ?? review.content ?? review.text ?? "-";
+  };
+
+  const getReviewRating = (review) => {
+    if (!review) return 0;
+    const raw = review.rating ?? review.score ?? review.star ?? review.points;
+    return Number(raw ?? 0);
+  };
+
+  const formatReportDate = (value) => {
+    if (!value) return "-";
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleString("ko-KR");
+    }
+    if (typeof value === "string") return value;
+    return "-";
+  };
+
+  const getReportTypeLabel = (type) => {
+    if (type === null || type === undefined) return "구분 없음";
+    switch (type) {
+      case 1:
+        return "거래 관련";
+      case 2:
+        return "욕설/비방";
+      case 3:
+        return "사기 의심";
+      default:
+        return `유형 ${type}`;
+    }
   };
 
   const handleMannerTempChange = async (change) => {
     if (!user) return;
 
-    const newTemp = user.umanner + change;
+    const newTemp = (pendingManner ?? user.umanner ?? 0) + change;
     if (newTemp < 0 || newTemp > 100) {
-      alert("매너온도는 0도에서 100도 사이여야 합니다.");
+      alert("신선도는 0도에서 100도 사이여야 합니다.");
       return;
     }
+    await commitManner(newTemp);
+  };
 
+  const commitManner = async (target) => {
+    const clamped = Math.min(100, Math.max(0, Math.round(target)));
+    setPendingManner(clamped);
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users/${id}/manner`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ manner: newTemp })
+        body: JSON.stringify({ umanner: clamped })
       });
 
-      if (!res.ok) throw new Error("매너온도 변경 실패");
+      if (!res.ok) throw new Error("신선도 변경 실패");
 
-      setUser(prev => ({ ...prev, umanner: newTemp }));
-      alert("매너온도가 변경되었습니다.");
+      setUser(prev => ({ ...prev, umanner: clamped }));
     } catch (err) {
       console.error(err);
-      alert("매너온도 변경 중 오류가 발생했습니다.");
+      alert("신선도 변경 중 오류가 발생했습니다.");
+      setPendingManner(user?.umanner ?? clamped);
     }
   };
 
@@ -72,16 +140,16 @@ export default function UserDetailPage({ params }) {
         if (!res.ok) throw new Error("사용자 정보를 불러오지 못했습니다.");
         const data = await res.json();
         setUser(data);
+        setPendingManner(data.umanner ?? 0);
 
-        // 판매/구매 후기
-        const reviewRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users/${id}/reviews/sell`);
-        if (reviewRes.ok) {
-          const reviewData = await reviewRes.json();
-          setReviews({
-            sell: reviewData.sellReviews || [],
-            buy: reviewData.buyReviews || []
-          });
-        }
+        const userId = Number(data.uidx ?? data.uIdx);
+        const sellReviews = Array.isArray(data.reviews)
+          ? data.reviews.filter((item) => item.type === "BUYER" && Number(item.sellerId) === userId)
+          : [];
+        const buyReviews = Array.isArray(data.reviews)
+          ? data.reviews.filter((item) => item.type === "SELLER" && Number(item.buyerId) === userId)
+          : [];
+        setReviews({ sell: sellReviews, buy: buyReviews });
       } catch (err) {
         console.error("데이터 조회 실패:", err);
       } finally {
@@ -195,7 +263,13 @@ export default function UserDetailPage({ params }) {
                 </div>
               </div>
 
-              <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: "1.5rem 2rem"
+                }}
+              >
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                   <Shield size={18} color="#64748b" />
                   <div>
@@ -204,10 +278,42 @@ export default function UserDetailPage({ params }) {
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <MessageSquare size={18} color="#64748b" />
+                  <div>
+                    <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.25rem" }}>닉네임</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b" }}>{user.unickname || "-"}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                   <Calendar size={18} color="#64748b" />
                   <div>
                     <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.25rem" }}>가입일</div>
                     <div style={{ fontWeight: 600, color: "#1e293b" }}>{new Date(user.udate).toLocaleDateString("ko-KR")}</div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <Calendar size={18} color="#64748b" />
+                  <div>
+                    <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.25rem" }}>생년월일</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b" }}>
+                      {user.ubirth ? new Date(user.ubirth).toLocaleDateString("ko-KR") : "-"}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <User size={18} color="#64748b" />
+                  <div>
+                    <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.25rem" }}>성별</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b" }}>
+                      {user.ugender ? (user.ugender === "M" ? "남성" : user.ugender === "F" ? "여성" : user.ugender) : "-"}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                  <AlertCircle size={18} color="#64748b" />
+                  <div>
+                    <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.25rem" }}>신고 횟수</div>
+                    <div style={{ fontWeight: 600, color: "#1e293b" }}>{(user.reportCount ?? (user.reportHistory ? user.reportHistory.length : 0))}회</div>
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
@@ -228,7 +334,7 @@ export default function UserDetailPage({ params }) {
             </div>
           </div>
 
-          {/* 매너온도 */}
+          {/* 신선도 */}
           <div className={styles.tableContainer}>
             <div style={{ padding: "2rem" }}>
               <h3 style={{
@@ -237,32 +343,131 @@ export default function UserDetailPage({ params }) {
                 fontWeight: 600,
                 color: "#1e293b"
               }}>
-                매너온도
+                신선도
               </h3>
               <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
-                <div style={{
-                  width: "100%",
-                  height: "12px",
-                  background: "#e2e8f0",
-                  borderRadius: "6px",
-                  overflow: "hidden"
-                }}>
-                  <div style={{
-                    width: `${user.umanner}%`,
-                    height: "100%",
-                    background: `linear-gradient(90deg, #34d399, #22c55e)`,
+                <div
+                  style={{
+                    width: "100%",
+                    height: "12px",
+                    background: "#e2e8f0",
                     borderRadius: "6px",
-                    transition: "width 0.5s ease"
-                  }}></div>
+                    overflow: "hidden",
+                    position: "relative"
+                  }}
+                >
+                  <div
+                    style={{
+                      width: `${pendingManner ?? user.umanner ?? 0}%`,
+                      height: "100%",
+                      background: "linear-gradient(90deg, #34d399, #22c55e)",
+                      borderRadius: "6px",
+                      transition: "width 0.5s ease"
+                    }}
+                  ></div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={pendingManner ?? user.umanner ?? 0}
+                    onChange={(event) => setPendingManner(Number(event.target.value))}
+                    onMouseUp={(event) => commitManner(Number(event.target.value))}
+                    onTouchEnd={(event) => commitManner(Number(event.target.value))}
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      width: "100%",
+                      height: "100%",
+                      opacity: 0,
+                      cursor: "pointer"
+                    }}
+                  />
                 </div>
-                <span style={{ fontSize: "1.25rem", fontWeight: 700, color: "#16a34a", minWidth: "60px", textAlign: "right" }}>
-                  {user.umanner}°C
+                <span
+                  style={{
+                    fontSize: "1.25rem",
+                    fontWeight: 700,
+                    color: "#16a34a",
+                    minWidth: "60px",
+                    textAlign: "right"
+                  }}
+                >
+                  {pendingManner ?? user.umanner ?? 0}°C
                 </span>
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
-                <button onClick={() => handleMannerTempChange(-1)} style={{ padding: "0.25rem 0.5rem", border: "1px solid #d1d5db", borderRadius: "0.25rem" }}>-1</button>
+                <button
+                  onClick={() => handleMannerTempChange(-1)}
+                  style={{ padding: "0.25rem 0.5rem", border: "1px solid #d1d5db", borderRadius: "0.25rem" }}>-1</button>
                 <button onClick={() => handleMannerTempChange(1)} style={{ padding: "0.25rem 0.5rem", border: "1px solid #d1d5db", borderRadius: "0.25rem" }}>+1</button>
               </div>
+            </div>
+          </div>
+
+          {/* 신고 내역 */}
+          <div className={styles.tableContainer}>
+            <div style={{ padding: "2rem" }}>
+              <h3
+                style={{
+                  margin: "0 0 1.5rem 0",
+                  fontSize: "1.125rem",
+                  fontWeight: 600,
+                  color: "#1e293b"
+                }}
+              >
+                신고 내역
+              </h3>
+
+              {!user.reportHistory || user.reportHistory.length === 0 ? (
+                <div
+                  style={{
+                    padding: "2rem 0",
+                    textAlign: "center",
+                    color: "#94a3b8"
+                  }}
+                >
+                  신고된 이력이 없습니다.
+                </div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                  {user.reportHistory.map((report, index) => (
+                    <div
+                      key={`${report.id ?? index}`}
+                      style={{
+                        paddingBottom: index < user.reportHistory.length - 1 ? "1.5rem" : 0,
+                        borderBottom: index < user.reportHistory.length - 1 ? "1px solid #f1f5f9" : "none"
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "0.75rem" }}>
+                        <div
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                            borderRadius: "50%",
+                            background: "#fee2e2",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center"
+                          }}
+                        >
+                          <AlertCircle size={20} color="#dc2626" />
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 600, color: "#1e293b", marginBottom: "0.25rem" }}>
+                            {report.reporter || "익명 신고자"}
+                          </div>
+                          <div style={{ fontSize: "0.8125rem", color: "#64748b" }}>
+                            {formatReportDate(report.date)} · {getReportTypeLabel(report.type)}
+                          </div>
+                        </div>
+                      </div>
+                      <p style={{ margin: 0, color: "#374151", lineHeight: 1.6 }}>
+                        {report.content || "신고 사유가 입력되지 않았습니다."}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -330,21 +535,15 @@ export default function UserDetailPage({ params }) {
                           <User size={20} color="#94a3b8" />
                         </div>
                         <div>
-                          <div style={{ fontWeight: 600, color: "#1e293b" }}>
-                            {activeTab === "sell" ? review.buyerName : review.sellerName}
-                          </div>
-                          <div style={{ fontSize: "0.875rem", color: "#64748b" }}>
-                            {new Date(review.date).toLocaleDateString("ko-KR")}
-                          </div>
+                          <div style={{ fontWeight: 600, color: "#1e293b" }}>{getReviewerName(review, activeTab)}</div>
+                          <div style={{ fontSize: "0.875rem", color: "#64748b" }}>{getReviewDate(review)}</div>
                         </div>
                       </div>
                       <div style={{ display: "flex", gap: "0.25rem" }}>
-                        {renderStars(review.rating)}
+                        {renderStars(getReviewRating(review))}
                       </div>
                     </div>
-                    <p style={{ margin: 0, color: "#374151", lineHeight: "1.6" }}>
-                      {review.comment}
-                    </p>
+                    <p style={{ margin: 0, color: "#374151", lineHeight: "1.6" }}>{getReviewComment(review)}</p>
                   </div>
                 ))}
               </div>

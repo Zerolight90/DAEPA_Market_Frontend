@@ -13,7 +13,8 @@ export default function ReportsPage() {
     isOpen: false,
     action: null,
     reportId: null,
-    reportedName: ""
+    reportedName: "",
+    report: null,
   });
   const [suspendForm, setSuspendForm] = useState({
     suspendDate: "",
@@ -51,12 +52,13 @@ export default function ReportsPage() {
     });
   }, [reports, searchTerm, filterType]);
 
-  const openModal = (action, reportId, reportedName) => {
+  const openModal = (action, reportId, reportedName, report = null) => {
     setModalState({
       isOpen: true,
       action,
       reportId,
-      reportedName
+      reportedName,
+      report,
     });
     // 폼 초기화
     if (action === "suspend") {
@@ -68,6 +70,10 @@ export default function ReportsPage() {
     } else if (action === "ban") {
       setBanForm({ reason: "" });
     }
+
+    if (!report && action === "details") {
+      setModalState((prev) => ({ ...prev, report }));
+    }
   };
 
   const closeModal = () => {
@@ -75,7 +81,8 @@ export default function ReportsPage() {
       isOpen: false,
       action: null,
       reportId: null,
-      reportedName: ""
+      reportedName: "",
+      report: null,
     });
   };
 
@@ -263,46 +270,13 @@ export default function ReportsPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className={styles.actionButtons}>
-                      <button
-                        className={`${styles.actionButton} ${styles.gray}`}
-                        onClick={() => openModal("suspend", report.id, report.reportedName)}
-                        disabled={actionLoading}
-                      >
-                        계정 정지
-                      </button>
-                      <button
-                        className={`${styles.actionButton}`}
-                        onClick={() => handleAction(report.id, "activate")}
-                        disabled={actionLoading === `${report.id}-activate`}
-                        style={{
-                          backgroundColor: "#dcfce7",
-                          borderColor: "#bbf7d0",
-                          color: "#166534"
-                        }}
-                        onMouseEnter={(e) => {
-                          if (!actionLoading) {
-                            e.target.style.backgroundColor = "#bbf7d0";
-                            e.target.style.borderColor = "#86efac";
-                          }
-                        }}
-                        onMouseLeave={(e) => {
-                          if (!actionLoading) {
-                            e.target.style.backgroundColor = "#dcfce7";
-                            e.target.style.borderColor = "#bbf7d0";
-                          }
-                        }}
-                      >
-                        {actionLoading === `${report.id}-activate` ? "처리중" : "활성화"}
-                      </button>
-                      <button
-                        className={`${styles.actionButton} ${styles.actionButtonRed}`}
-                        onClick={() => openModal("ban", report.id, report.reportedName)}
-                        disabled={actionLoading}
-                      >
-                        계정 탈퇴
-                      </button>
-                    </div>
+                    <button
+                      className={`${styles.actionButton} ${styles.gray}`}
+                    onClick={() => openModal("details", report.id, report.reportedName, report)}
+                      disabled={actionLoading}
+                    >
+                    조치하기
+                    </button>
                   )}
                 </div>
               </div>
@@ -311,8 +285,162 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* 모달 */}
-      {modalState.isOpen && (
+      {/* 신고 상세 및 조치 모달 */}
+      {modalState.isOpen && modalState.action === "details" && modalState.report && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={closeModal}
+        >
+          <div
+            style={{
+              backgroundColor: "#ffffff",
+              borderRadius: "0.75rem",
+              padding: "2rem",
+              maxWidth: "520px",
+              width: "90%",
+              maxHeight: "90vh",
+              overflow: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ marginBottom: "1.5rem" }}>
+              <h2 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#1e293b" }}>신고 상세 정보</h2>
+              <p style={{ margin: "0.5rem 0 0", fontSize: "0.875rem", color: "#64748b" }}>
+                신고자 <strong>{modalState.report.reporterName}</strong> → 피신고자{" "}
+                <strong>{modalState.report.reportedName}</strong>
+              </p>
+            </div>
+
+            <div
+              style={{
+                padding: "1rem",
+                borderRadius: "0.75rem",
+                backgroundColor: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                marginBottom: "1.5rem",
+              }}
+            >
+              <div style={{ fontSize: "0.75rem", color: "#64748b", marginBottom: "0.25rem" }}>신고 유형</div>
+              <div style={{ fontWeight: 600, color: "#1e293b", marginBottom: "0.75rem" }}>
+                {getTypeLabel(modalState.report.type)}
+              </div>
+              <div style={{ fontSize: "0.75rem", color: "#64748b", marginBottom: "0.25rem" }}>신고 내용</div>
+              <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.7, color: "#374151" }}>
+                {modalState.report.content || "내용이 없습니다."}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+                gap: "0.75rem",
+              }}
+            >
+              <button
+                onClick={() => openModal("suspend", modalState.report.id, modalState.report.reportedName)}
+                disabled={actionLoading}
+                style={{
+                  padding: "1rem 1.25rem",
+                  border: "1px solid #facc15",
+                  borderRadius: "0.75rem",
+                  backgroundColor: "#fefce8",
+                  color: "#b45309",
+                  fontWeight: 600,
+                  fontSize: "0.95rem",
+                  cursor: actionLoading ? "not-allowed" : "pointer",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#fde68a";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#fefce8";
+                }}
+              >
+                계정 정지
+              </button>
+              <button
+                onClick={() => handleAction(modalState.report.id, "activate")}
+                disabled={actionLoading === `${modalState.report.id}-activate`}
+                style={{
+                  padding: "1rem 1.25rem",
+                  border: "1px solid #bbf7d0",
+                  borderRadius: "0.75rem",
+                  backgroundColor: "#dcfce7",
+                  color: "#166534",
+                  fontWeight: 600,
+                  fontSize: "0.95rem",
+                  cursor: actionLoading === `${modalState.report.id}-activate` ? "not-allowed" : "pointer",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#bbf7d0";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#dcfce7";
+                }}
+              >
+                {actionLoading === `${modalState.report.id}-activate` ? "처리중" : "활성화"}
+              </button>
+              <button
+                onClick={() => openModal("ban", modalState.report.id, modalState.report.reportedName)}
+                disabled={actionLoading}
+                style={{
+                  padding: "1rem 1.25rem",
+                  border: "1px solid #fca5a5",
+                  borderRadius: "0.75rem",
+                  backgroundColor: "#fee2e2",
+                  color: "#991b1b",
+                  fontWeight: 600,
+                  fontSize: "0.95rem",
+                  cursor: actionLoading ? "not-allowed" : "pointer",
+                  transition: "all 0.2s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#fecaca";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#fee2e2";
+                }}
+              >
+                계정 탈퇴
+              </button>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "1.5rem" }}>
+              <button
+                onClick={closeModal}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: "0.5rem",
+                  backgroundColor: "#fff",
+                  color: "#374151",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 계정 정지 모달 */}
+      {modalState.isOpen && modalState.action === "suspend" && (
         <div style={{
           position: "fixed",
           top: 0,
