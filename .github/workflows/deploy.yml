@@ -1,91 +1,72 @@
-name: Deploy Frontend to GHCR
+name: Deploy Frontend
 
 on:
   push:
     branches:
-      - main
+      - main            # main 브랜치에 push될 때만 실행
     paths:
-      - 'src/**'
+      - 'frontend/**'
+      - 'conf/**'             # ← 추가
+      - 'src/**'              # ← 소스 변경도 태우려면
+      - 'app/**'
       - 'public/**'
-      - 'conf/**'
-      - 'next.config.mjs'
-      - 'package*.json'
+      - 'next.config.mjs'     # ← 추가
       - 'Dockerfile'
+      - 'docker/**'
+      - 'compose.yaml'
       - 'docker-compose.yml'
       - '.github/workflows/deploy.yml'
-  workflow_dispatch:
+  workflow_dispatch:     # Actions 탭에서 수동 실행 허용
+
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: true
 
 jobs:
-  # =================================================================
-  #  1. Docker 이미지를 빌드하고 GHCR(GitHub Container Registry)에 Push
-  # =================================================================
-  build-and-push:
-    name: Build and Push to GHCR
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write # GHCR에 쓰기 권한
-
-    outputs:
-      image_tag: ${{ steps.meta.outputs.version }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Set image name
-        run: echo "IMAGE_NAME=ghcr.io/$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')/daepa-market-frontend" >> $GITHUB_ENV
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.IMAGE_NAME }}
-          # Git의 Short SHA를 이미지 태그로 사용 (예: ghcr.io/owner/image:a1b2c3d)
-          tags: type=sha,prefix=,format=short
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          # 빌드 시 사용할 ARG 변수들 (Secrets에서 주입)
-          build-args: |
-            NEXT_PUBLIC_API_BASE=${{ secrets.NEXT_PUBLIC_API_BASE }}
-            NEXT_PUBLIC_API_ORIGIN=${{ secrets.NEXT_PUBLIC_API_ORIGIN }}
-            NEXT_PUBLIC_WS_BASE=${{ secrets.NEXT_PUBLIC_WS_BASE }}
-            NEXT_PUBLIC_SITE_URL=${{ secrets.NEXT_PUBLIC_SITE_URL }}
-          # 빌드 캐시 설정
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # =================================================================
-  #  2. 배포 서버에 접속하여 새 이미지를 Pull 받고 컨테이너 재시작
-  # =================================================================
   deploy:
-    name: Deploy to Server
-    needs: build-and-push # build-and-push Job이 성공해야 실행
-    runs-on: ubuntu-latest
+    # 추가 가드: main 브랜치 + 레포지토리 소유자만 실행
     if: |
       github.repository_owner == 'Zerolight90' &&
       github.ref == 'refs/heads/main'
+    timeout-minutes: 240     # 🔸 전체 Job 최대 4시간
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-        
+
+      # Node 모듈 캐시
+      - name: Cache Node modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      # Next.js 빌드 캐시
+      - name: Cache Next.js build
+        uses: actions/cache@v3
+        with:
+          path: ~/.next
+          key: ${{ runner.os }}-next-build-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-next-build-
+      # Node 환경 세팅
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # 의존성 설치
+      - name: Install dependencies
+        run: npm ci
+
+      # Next.js 빌드 검증 (에러나면 여기서 중단)!
+      - name: Build (validation only)
+        run: npx next build --no-lint
+
+      # SSH로 실제 서버에 배포
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -95,39 +76,31 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script_stop: true
           debug: false
-          timeout: 60m
-          command_timeout: 60m
+          timeout: 60m           # 🔸 SSH 세션 최대 시간
+          command_timeout: 60m   # 🔸 명령 실행 시간(기본 10분 → 60분으로 확장)
           script: |
             set -euo pipefail
+            export DOCKER_BUILDKIT=1
+            export COMPOSE_DOCKER_CLI_BUILD=1
             cd ~/apps/frontend
-
-            echo "[1/6] Git update (for docker-compose.yml)"
+            echo "[1/6] Git update"
             git fetch --all
             git checkout main
             git reset --hard origin/main
-
-            echo "[2/6] Create .env file with new image details"
-            # 이미지 이름과 태그를 .env 파일에 쓰기
-            OWNER_LOWER=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')
-            echo "IMAGE_NAME=ghcr.io/$OWNER_LOWER/daepa-market-frontend" > .env
-            echo "IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}" >> .env
-            # 나머지 환경변수 추가
-            echo "${{ secrets.DAEPA_FRONTEND_ENV }}" >> .env
+            echo "[2/6] Create .env file"
+            echo "${{ secrets.DAEPA_FRONTEND_ENV }}" > .env
             echo ".env file created."
-
-            echo "[3/6] Log in to GHCR"
-            # GHCR_TOKEN을 사용하여 서버에서 GHCR에 로그인
-            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
-
-            echo "[4/6] Pull new image and start containers"
-            docker compose pull
-            docker compose up -d --remove-orphans
-
-            echo "[5/6] Prune old images"
+            echo "[3/6] Stop and prepare"
+            docker compose down || true
+            
+            echo "Pruning old images and builder cache..."
             docker image prune -f
-
+            docker builder prune -f --filter 'until=168h'
+            echo "[4/6] Build with cache"
+            docker compose build --progress=plain
+            echo "[5/6] Start containers"
+            docker compose up -d
             echo "[6/6] Status & logs"
             docker compose ps
             docker logs --tail=80 daepa-frontend || true
-
             echo "✅ Deploy complete!"
