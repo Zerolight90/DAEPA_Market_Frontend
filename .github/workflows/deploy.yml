@@ -95,8 +95,8 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script_stop: true
           debug: false
-          timeout: 30m
-          command_timeout: 30m
+          timeout: 60m
+          command_timeout: 60m
           script: |
             set -euo pipefail
             cd ~/apps/frontend
