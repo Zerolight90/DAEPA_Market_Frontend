@@ -28,6 +28,7 @@ jobs:
     if: |
       github.repository_owner == 'Zerolight90' &&
       github.ref == 'refs/heads/main'
+
     timeout-minutes: 240     # 🔸 전체 Job 최대 4시간
     runs-on: ubuntu-latest
 
@@ -43,6 +44,7 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
+
       # Next.js 빌드 캐시
       - name: Cache Next.js build
         uses: actions/cache@v3
@@ -51,6 +53,7 @@ jobs:
           key: ${{ runner.os }}-next-build-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-next-build-
+
       # Node 환경 세팅
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -82,25 +85,33 @@ jobs:
             set -euo pipefail
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
+            
             cd ~/apps/frontend
+            
             echo "[1/6] Git update"
             git fetch --all
             git checkout main
             git reset --hard origin/main
+            
             echo "[2/6] Create .env file"
             echo "${{ secrets.DAEPA_FRONTEND_ENV }}" > .env
             echo ".env file created."
+            
             echo "[3/6] Stop and prepare"
             docker compose down || true
             
             echo "Pruning old images and builder cache..."
             docker image prune -f
             docker builder prune -f --filter 'until=168h'
+            
             echo "[4/6] Build with cache"
             docker compose build --progress=plain
+            
             echo "[5/6] Start containers"
             docker compose up -d
+            
             echo "[6/6] Status & logs"
             docker compose ps
             docker logs --tail=80 daepa-frontend || true
+            
             echo "✅ Deploy complete!"

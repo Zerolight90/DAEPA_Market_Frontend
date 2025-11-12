@@ -99,16 +99,20 @@ export default function SecPayWithPointModal({ id, close, itemId, title, qty, to
             <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom: 16 }}>
                 <span>수량: {qty}</span> {/* 수량 표시 */}
             </div>
-            <div style={{ fontSize: 18, fontWeight: 800, color: "#008c6e", marginBottom: 16 }}>
+            <div style={{ marginBottom: 20, fontSize: 14, color: error ? 'red' : '#555', fontWeight: 700 }}>
                 결제금액: {total.toLocaleString()} P {/* 단위 P로 변경 */}
             </div>
 
             {/* 잔액 표시 */}
-            <div style={{ marginBottom: 20, fontSize: 14, color: error ? 'red' : '#555' }}>
+            <div style={{ marginBottom: 20, fontSize: 14, color: error ? 'red' : '#555', fontWeight: 700 }}>
                 {isLoading ? "잔액 조회 중..." :
                     error ? `오류: ${error}` :
                         currentBalance !== null ? `현재 잔액: ${currentBalance.toLocaleString()} P` : "잔액 정보를 불러올 수 없습니다."
                 }
+            </div>
+
+            <div style={{ fontSize: 18, fontWeight: 800, color: "#008c6e", marginBottom: 16 }}>
+                결제 후 금액: {currentBalance - total} P
             </div>
 
             <div>

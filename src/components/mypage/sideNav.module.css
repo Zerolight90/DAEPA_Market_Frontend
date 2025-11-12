@@ -6,7 +6,7 @@
 }
 
 .sideNav {
-    background: var(--panel);
+    background: #fff; /* 흰색 배경으로 변경 */
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 16px;
