@@ -1,4 +1,3 @@
-// src/components/product/RightPanelClient.js
 "use client";
 
 import { useEffect, useState } from "react";
@@ -18,36 +17,39 @@ export default function RightPanelClient({
                                              wishCount = 0,
                                              description = "",
                                              seller,
-                                             soldOut = false, // 서버에서 내려준 초기 판매완료 여부
+                                             soldOut = false,   // 서버에서 주는 기존 값
+                                             dealState = null,  // d_sell 그대로
                                          }) {
     const [wishes, setWishes] = useState(wishCount);
     const [chatLoading, setChatLoading] = useState(false);
     const [me, setMe] = useState(null);
 
-    // ✅ 프론트에서 즉시 바뀌도록 로컬 상태로 한 번 감싼다
-    const [localSoldOut, setLocalSoldOut] = useState(!!soldOut);
-
     const modal = useModal();
     const router = useRouter();
 
-    // 1) 로그인 정보 가져오기
+    // 내 정보
     useEffect(() => {
         (async () => {
             try {
                 const m = await fetchMe();
                 setMe(m);
             } catch (e) {
-                // 비로그인 무시
+                // not logged in
             }
         })();
     }, []);
 
-    // 2) 내 id / 판매자 id
     const myId = me?.userId ?? me?.id ?? me?.uIdx ?? me?.u_idx ?? null;
     const sellerId = seller?.id ?? seller?.uIdx ?? seller?.u_idx ?? null;
     const isOwner = myId && sellerId && String(myId) === String(sellerId);
 
-    // 모달
+    // 👉 판매자일 때는 d_sell=2 이어도 잠그지 않는다
+    const isReallySoldForOwner = soldOut || dealState === 1;
+    // 👉 구매자(다른 사람)에게는 d_sell=1,2 모두 잠긴 상태로 보이게
+    const isSoldLikeForOthers = soldOut || dealState === 1 || dealState === 2;
+
+    const [localSoldOut, setLocalSoldOut] = useState(soldOut || dealState === 1);
+
     const openShare = () =>
         modal.open(({ id, close }) => <ShareModal id={id} close={close} />);
 
@@ -58,30 +60,15 @@ export default function RightPanelClient({
 
     const openBuy = () =>
         modal.open(({ id, close }) => (
-            <BuyModal
-                id={id}
-                close={close}
-                itemId={itemId}
-                title={title}
-                price={price}
-            />
+            <BuyModal id={id} close={close} itemId={itemId} title={title} price={price} />
         ));
 
     const openSecBuy = () =>
         modal.open(({ id, close }) => (
-            <BuySecModal
-                id={id}
-                close={close}
-                itemId={itemId}
-                title={title}
-                price={price}
-            />
+            <BuySecModal id={id} close={close} itemId={itemId} title={title} price={price} />
         ));
 
-    // 찜
-    const addWish = () => setWishes((v) => v + 1);
-
-    // ✅ 채팅
+    // 채팅
     const openChat = async () => {
         if (chatLoading) return;
         try {
@@ -91,7 +78,6 @@ export default function RightPanelClient({
             const myUid =
                 meInfo?.userId ?? meInfo?.id ?? meInfo?.uIdx ?? meInfo?.u_idx;
 
-            // ✅ 로그인 안 되어 있으면 알림 + 로그인페이지로 이동
             if (!myUid) {
                 alert("로그인 후 이용해주세요.");
                 router.push(`/sing/login?next=${encodeURIComponent("/chat")}`);
@@ -127,7 +113,7 @@ export default function RightPanelClient({
         }
     };
 
-    // ───── 오너 전용 액션 ─────
+    // 오너 전용
     const handleDelete = async () => {
         if (!confirm("정말로 삭제하시겠습니까?")) return;
         const res = await fetch(`/api/products/${itemId}/delete`, {
@@ -154,7 +140,6 @@ export default function RightPanelClient({
         }
     };
 
-    // ✅ 판매완료
     const handleComplete = async () => {
         const res = await fetch(`/api/products/${itemId}/complete`, {
             method: "POST",
@@ -162,33 +147,26 @@ export default function RightPanelClient({
         });
         if (res.ok) {
             alert("판매완료 처리되었습니다.");
-            // ✅ 프론트에서 바로 바꾸기
             setLocalSoldOut(true);
-            // ✅ 서버 컴포넌트도 새로고침해서 상단 뱃지 반영
             router.refresh?.();
         } else {
             alert("판매완료 처리에 실패했습니다.");
         }
     };
 
-    // ────────────────
-    // 렌더링
-    // ────────────────
+    // ───────────────── 렌더링 ─────────────────
 
-    // ✅ 1) 내가 올린 상품일 때
+    // 1) 내가 올린 상품
     if (isOwner) {
-        // 👉 내가 올린 상품인데 이미 판매완료 상태면 안내만
-        if (localSoldOut) {
+        // 1-1) 내가 올린 건데 진짜 팔린 상태(d_sell=1)
+        if (isReallySoldForOwner || localSoldOut) {
             return (
                 <>
                     <div className={styles.btnRow}>
                         <button
-                            className={styles.btnChat}   // 채팅하기랑 똑같은 버튼 스타일
-                            disabled                    // 클릭 안 되게
-                            style={{
-                                cursor: "default",
-                                opacity: 0.9,
-                            }}
+                            className={styles.btnChat}
+                            disabled
+                            style={{ cursor: "default", opacity: 0.9 }}
                         >
                             이미 판매한 상품입니다.
                         </button>
@@ -202,7 +180,7 @@ export default function RightPanelClient({
             );
         }
 
-        // 👉 내가 올린 상품 + 아직 판매중
+        // 1-2) 내가 올린 건데 d_sell=2 (거래중) → 원래 버튼 그대로
         return (
             <>
                 <div className={styles.btnRow}>
@@ -221,7 +199,6 @@ export default function RightPanelClient({
                     <button className={styles.btnBuy} onClick={handleBump}>
                         끌어올리기
                     </button>
-
                     <button className={styles.btnBuy} onClick={handleComplete}>
                         판매완료
                     </button>
@@ -236,8 +213,8 @@ export default function RightPanelClient({
         );
     }
 
-    // ✅ 2) 일반 사용자 + 판매완료 → 채팅만
-    if (localSoldOut) {
+    // 2) 다른 사람이 보는 화면 + 잠겨 있는 상태(d_sell=1 or 2)
+    if (isSoldLikeForOthers) {
         return (
             <>
                 <div className={styles.btnRow}>
@@ -262,7 +239,7 @@ export default function RightPanelClient({
         );
     }
 
-    // ✅ 3) 일반 사용자 + 판매중
+    // 3) 다른 사람이 보는 화면 + 정상 판매중
     return (
         <>
             <div className={styles.btnRow}>

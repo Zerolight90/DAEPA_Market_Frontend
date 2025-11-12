@@ -6,21 +6,16 @@ const API_BASE =
     process.env.API_BASE ||
     "http://localhost:8080";
 
-/**
- * 판매자가 올린 상품 목록
- * 백엔드에 이미 있는: GET /api/sellers/{sellerId}/products
- */
 export async function fetchSellerProducts({
                                               sellerId,
                                               page = 0,
                                               size = 20,
                                               sort = "recent",
-                                              status, // 지금은 안 써도 일단 받아둠
+                                              status,
                                           }) {
     const qs = new URLSearchParams();
     qs.set("page", String(page));
     qs.set("size", String(size));
-    // sort, status 는 네가 백엔드에서 아직 안 받으면 무시돼도 됨
 
     const url = new URL(`/api/sellers/${sellerId}/products`, API_BASE);
     url.search = qs.toString();
@@ -35,14 +30,39 @@ export async function fetchSellerProducts({
     }
 
     const data = await res.json();
-    // 이 API 가 List<ProductCardDTO> 를 바로 주고 있으니까 그대로 반환
-    return Array.isArray(data) ? data : [];
+    const items = Array.isArray(data?.content)
+        ? data.content
+        : Array.isArray(data)
+            ? data
+            : [];
+
+    // 혹시라도 pd_del이 섞여 있으면 한 번 더
+    const cleaned = items.filter((p) => {
+        const raw =
+            p.pdDel ??
+            p.pd_del ??
+            p.product?.pdDel ??
+            p.product?.pd_del ??
+            0;
+        const val = String(raw).trim().toLowerCase();
+        const isDeleted =
+            val === "1" ||
+            val === "true" ||
+            val === "y" ||
+            val === "yes";
+        return !isDeleted;
+    });
+
+    return cleaned.map((p) => ({
+        ...p,
+        id: p.pdIdx ?? p.id ?? p.pd_idx,
+        title: p.pdTitle ?? p.title ?? p.pd_title,
+        price: p.pdPrice ?? p.price ?? p.pd_price,
+        thumbnail: p.pdThumb ?? p.thumbnail ?? p.pd_thumb,
+        createdAt: p.pdCreate ?? p.createdAt ?? p.pd_create,
+    }));
 }
 
-/**
- * 상품 하나 상세 가져오기
- * 백엔드에 이미 있는: GET /api/products/{id}
- */
 export async function fetchProductDetail(productId) {
     if (!productId) return null;
 

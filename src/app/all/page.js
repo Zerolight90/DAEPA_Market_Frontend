@@ -1,6 +1,7 @@
+// src/app/all/page.js (content 부분만 전체 교체해도 됨)
 "use client";
 
-import {useEffect, useState, Suspense} from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { apiFetch, API_BASE, Endpoints } from "@/app/sell/api";
@@ -8,7 +9,7 @@ import tokenStore from "@/app/store/TokenStore";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import styles from "./all.module.css";
-import {CircularProgress, Box, Typography} from "@mui/material";
+import { CircularProgress, Box, Typography } from "@mui/material";
 
 function AllProductsContent() {
     const searchParams = useSearchParams();
@@ -19,14 +20,10 @@ function AllProductsContent() {
     const [page, setPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
 
-    // 토큰
     const accessToken = tokenStore((state) => state.accessToken);
 
-    // 공통: 한 번 불러온 목록에 대해 찜 상태 끼워넣기
     const fillFavoriteStatus = async (list) => {
-        // 비로그인일 땐 그냥 그대로
         if (!accessToken) return list;
-
         const headers = { Authorization: `Bearer ${accessToken}` };
 
         const updated = await Promise.all(
@@ -47,7 +44,7 @@ function AllProductsContent() {
                         favorited: !!data.favorited,
                         favoriteCount: data.count ?? 0,
                     };
-                } catch (e) {
+                } catch {
                     return item;
                 }
             })
@@ -64,7 +61,6 @@ function AllProductsContent() {
             );
             const list = Array.isArray(res?.content) ? res.content : [];
 
-            // 기본 매핑
             let mapped = list.map((p) => ({
                 id: p.pdIdx,
                 title: p.pdTitle,
@@ -73,11 +69,14 @@ function AllProductsContent() {
                 createdAt: p.pdCreate,
                 dsell: p.dsell ?? p.dSell ?? p.d_sell ?? null,
                 dstatus: p.dstatus ?? p.dStatus ?? p.d_status ?? null,
+                pdDel: p.pdDel ?? p.pd_del ?? 0,
                 favorited: false,
                 favoriteCount: 0,
             }));
 
-            // 찜 상태 붙이기
+            // ✨ 여기서 삭제된 상품은 바로 버려도 됨
+            mapped = mapped.filter((p) => Number(p.pdDel ?? 0) === 0);
+
             mapped = await fillFavoriteStatus(mapped);
 
             if (reset) {
@@ -96,7 +95,6 @@ function AllProductsContent() {
         }
     }
 
-    // sort 바뀔 때마다 처음부터
     useEffect(() => {
         loadProducts(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -106,7 +104,6 @@ function AllProductsContent() {
         if (!loading && hasMore) loadProducts(false);
     };
 
-    // 개별 카드에서 찜 토글
     const handleToggleFavorite = async (e, productId) => {
         e.preventDefault();
         e.stopPropagation();
@@ -134,7 +131,6 @@ function AllProductsContent() {
 
             if (!res.ok) {
                 const msg = await res.text().catch(() => res.statusText);
-                console.error("[favoriteToggle] HTTP", res.status, msg);
                 alert(`찜 처리 실패 (${res.status})\n${msg}`);
                 return;
             }
@@ -153,14 +149,12 @@ function AllProductsContent() {
                 )
             );
         } catch (err) {
-            console.error("[favoriteToggle] fetch error:", err);
             alert(`찜 처리 중 오류가 발생했습니다.\n${String(err)}`);
         }
     };
 
     return (
         <div className={styles.page}>
-            {/* 빵부스러기 비슷하게 */}
             <div className={styles.bcWrap}>
                 <Link href="/" className={styles.bc}>
                     홈
@@ -170,7 +164,6 @@ function AllProductsContent() {
             </div>
 
             <main className={styles.container}>
-                {/* 왼쪽: 리스트 */}
                 <div className={styles.leftCol}>
                     <div className={styles.section}>
                         <div className={styles.listHead}>
@@ -199,14 +192,15 @@ function AllProductsContent() {
 
                         <div className={styles.grid}>
                             {products.map((item) => {
-                                const soldOut =
-                                    Number(
-                                        item.dsell ??
-                                        item.dSell ??
-                                        item.dstatus ??
-                                        item.dStatus ??
-                                        0
-                                    ) === 1;
+                                const rawSell =
+                                    item.dsell ??
+                                    item.dSell ??
+                                    item.dstatus ??
+                                    item.dStatus ??
+                                    0;
+                                const sellState = Number(rawSell) || 0;
+                                const isSold = sellState === 1;
+                                const isTrading = sellState === 2;
 
                                 return (
                                     <Link
@@ -220,35 +214,30 @@ function AllProductsContent() {
                                                 alt={item.title}
                                                 className={styles.thumb}
                                                 style={{
-                                                    filter: soldOut ? "brightness(0.35)" : "none",
+                                                    filter: isSold || isTrading ? "brightness(0.35)" : "none",
                                                 }}
                                             />
-                                            {soldOut && (
+                                            {(isSold || isTrading) && (
                                                 <div className={styles.soldOverlay}>
                                                     <div className={styles.soldCircle}>✓</div>
-                                                    <div>판매완료</div>
+                                                    <div>{isSold ? "판매완료" : "판매 중"}</div>
                                                 </div>
                                             )}
 
-                                            {/* 찜 버튼 */}
                                             <button
                                                 className={styles.heartBtn}
-                                                onClick={(e) =>
-                                                    handleToggleFavorite(e, item.id)
-                                                }
+                                                onClick={(e) => handleToggleFavorite(e, item.id)}
                                                 aria-label="찜하기"
                                                 title="찜하기"
                                             >
                                                 {item.favorited ? (
                                                     <FavoriteIcon className={styles.heartOn} />
                                                 ) : (
-                                                    <FavoriteBorderIcon
-                                                        className={styles.heartOff}
-                                                    />
+                                                    <FavoriteBorderIcon className={styles.heartOff} />
                                                 )}
                                                 <span className={styles.heartCnt}>
-                                                    {item.favoriteCount}
-                                                </span>
+                          {item.favoriteCount}
+                        </span>
                                             </button>
                                         </div>
                                         <div className={styles.meta}>
@@ -264,13 +253,10 @@ function AllProductsContent() {
                                 );
                             })}
 
-                            {loading && (
-                                <>
-                                    {Array.from({ length: 6 }).map((_, i) => (
-                                        <div key={i} className={styles.skeleton}></div>
-                                    ))}
-                                </>
-                            )}
+                            {loading &&
+                                Array.from({ length: 6 }).map((_, i) => (
+                                    <div key={i} className={styles.skeleton}></div>
+                                ))}
 
                             {!loading && products.length === 0 && (
                                 <p className={styles.empty}>상품이 없습니다.</p>
@@ -285,7 +271,6 @@ function AllProductsContent() {
                     </div>
                 </div>
 
-                {/* 오른쪽: 비워두거나 나중에 인기검색, 배너 넣을 자리 */}
                 <div className={styles.rightCol}>
                     <div className={styles.infoCard}>
                         <h3>알림</h3>
@@ -299,12 +284,21 @@ function AllProductsContent() {
 
 export default function AllProductsPage() {
     return (
-        <Suspense fallback={
-            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
-                <CircularProgress />
-                <Typography sx={{ml: 2}}>페이지를 불러오는 중...</Typography>
-            </Box>
-        }>
+        <Suspense
+            fallback={
+                <Box
+                    sx={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        height: "100vh",
+                    }}
+                >
+                    <CircularProgress />
+                    <Typography sx={{ ml: 2 }}>페이지를 불러오는 중...</Typography>
+                </Box>
+            }
+        >
             <AllProductsContent />
         </Suspense>
     );
