@@ -1,12 +1,13 @@
-/* src/app/seller/[sellerId]/SellerPage.module.css */
+/* 컨테이너: 리뷰 페이지와 동일하게 통일 */
 .page {
-    width: min(1200px, 100%);
+    width: min(1120px, 100%);   /* ← 기존 1200 → 1120 으로 통일 */
     margin: 0 auto;
-    padding: 24px 16px 40px;
+    padding: 16px 16px 40px;    /* ← 패딩도 통일 */
 }
 
+/* 프로필 패널 여백도 통일 */
 .profilePanelWrap {
-    margin-bottom: 20px;
+    margin: 6px 0 18px;
 }
 
 .tabsRow {
@@ -17,62 +18,15 @@
     margin-bottom: 18px;
 }
 
-.tabs {
-    display: flex;
-    gap: 24px;
-}
+.tabs { display: flex; gap: 24px; }
+.tab { position: relative; font-size: 15px; color: #666; text-decoration: none; padding-bottom: 6px; }
+.tabActive { color: #111; font-weight: 700; }
+.tabActive::after { content: ""; position: absolute; left: 0; bottom: -10px; width: 100%; height: 3px; background: #111; border-radius: 999px; }
 
-.tab {
-    position: relative;
-    font-size: 15px;
-    color: #666;
-    text-decoration: none;
-    padding-bottom: 6px;
-}
+.sort { display: flex; gap: 8px; align-items: center; font-size: 14px; color: #888; }
+.sortItem { color: #888; text-decoration: none; }
+.sortActive { color: #111; font-weight: 600; }
+.sortSep { color: #ddd; }
 
-.tabActive {
-    color: #111;
-    font-weight: 700;
-}
-
-.tabActive::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: -10px;
-    width: 100%;
-    height: 3px;
-    background: #111;
-    border-radius: 999px;
-}
-
-.sort {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    font-size: 14px;
-    color: #888;
-}
-
-.sortItem {
-    color: #888;
-    text-decoration: none;
-}
-
-.sortActive {
-    color: #111;
-    font-weight: 600;
-}
-
-.sortSep {
-    color: #ddd;
-}
-
-.productsSection {
-    margin-top: 16px;
-}
-
-.empty {
-    margin-top: 20px;
-    color: #777;
-}
+.productsSection { margin-top: 16px; }
+.empty { margin-top: 20px; color: #777; }
