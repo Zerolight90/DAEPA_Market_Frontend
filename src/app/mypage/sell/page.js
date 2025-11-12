@@ -5,14 +5,24 @@ import styles from './sell.module.css';
 import Sidebar from '@/components/mypage/sidebar';
 import tokenStore from '@/app/store/TokenStore';
 
+// 백엔드 기본 주소
+const BACKEND_BASE =
+    typeof process !== 'undefined' &&
+    process.env &&
+    process.env.NEXT_PUBLIC_API_BASE
+        ? process.env.NEXT_PUBLIC_API_BASE
+        : 'http://localhost:8080';
+
+// 이미지 없을 때 쓸 기본이미지
+const FALLBACK_IMG =
+    'https://daepa-s3.s3.ap-northeast-2.amazonaws.com/products/KakaoTalk_20251104_145039505.jpg';
+
 export default function SellHistoryPage() {
     const { accessToken } = tokenStore();
     const [list, setList] = useState([]);
     const [keyword, setKeyword] = useState('');
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState('');
-
-    // ✅ 클릭해서 띄울 모달용
     const [selectedDeal, setSelectedDeal] = useState(null);
 
     // 판매 내역 가져오기
@@ -29,14 +39,17 @@ export default function SellHistoryPage() {
 
             if (!res.ok) {
                 const txt = await res.text();
+                console.warn('❌ /api/deal/mySell not ok:', res.status, txt);
                 setErr(txt || '판매내역을 불러오지 못했습니다.');
                 setList([]);
                 return;
             }
 
             const data = await res.json();
+            console.log('📦 /api/deal/mySell 응답 raw ===>', data);
             setList(Array.isArray(data) ? data : []);
         } catch (e) {
+            console.error('❌ /api/deal/mySell fetch error:', e);
             setErr('네트워크 오류가 발생했습니다.');
             setList([]);
         } finally {
@@ -72,7 +85,26 @@ export default function SellHistoryPage() {
         );
     }
 
-    // 스텝 계산
+    // 검수 상태 숫자로
+    function getCkStatus(item) {
+        const raw = item?.ckStatus ?? item?.ck_status ?? item?.CK_STATUS ?? null;
+        if (raw === null || raw === undefined) return null;
+        return Number(raw);
+    }
+
+    function getCkResult(item) {
+        const raw = item?.ckResult ?? item?.ck_result ?? item?.CK_RESULT ?? null;
+        if (raw === null || raw === undefined) return null;
+        return Number(raw);
+    }
+
+    // 검수 완료 + 불합격
+    function isInspectionFailed(item) {
+        const ckStatus = getCkStatus(item);
+        const ckResult = getCkResult(item);
+        return ckStatus === 1 && ckResult === 1;
+    }
+
     function calcBaseStep(item) {
         const dStatus = getDStatus(item);
         const dSell = getDSell(item);
@@ -104,8 +136,10 @@ export default function SellHistoryPage() {
         if (dv != null && dv >= 2) {
             steps.step6 = true;
         } else if (ck != null && ck === 0) {
+            // 검수 중일 때
             steps.step6 = true;
         }
+
         if (dv != null && dv >= 3) {
             steps.step7 = true;
         }
@@ -130,10 +164,12 @@ export default function SellHistoryPage() {
         const y = d.getFullYear();
         const m = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
-        return `${y}.${m}.${day}`;
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        return `${y}.${m}.${day} ${hh}:${mm}`;
     }
 
-    // ✅ d_sell=1 인 애들만 + 검색
+    // d_sell=1 만 + 검색
     const filtered = useMemo(() => {
         const paidOnly = list.filter((item) => {
             const dSell = getDSell(item);
@@ -154,15 +190,16 @@ export default function SellHistoryPage() {
                 .map((v) => String(v).toLowerCase());
 
             const dealIdStr = item.dealId ? String(item.dealId) : '';
+            const orderIdStr = item.orderId ? String(item.orderId) : '';
 
             return (
                 candidates.some((t) => t.includes(kw)) ||
-                dealIdStr.includes(kw)
+                dealIdStr.includes(kw) ||
+                orderIdStr.includes(kw)
             );
         });
     }, [list, keyword]);
 
-    // 거래방식
     function getTradeText(item) {
         const raw =
             (item?.dDeal ?? item?.ddeal ?? item?.d_deal ?? '').toString().trim();
@@ -175,16 +212,17 @@ export default function SellHistoryPage() {
 
     // 배송 보냄 확인
     async function handleSendClick(dealId, e) {
-        // 카드 클릭으로 모달 뜨는 거 막기
         e.stopPropagation();
+        const url = `${BACKEND_BASE}/api/delivery/${dealId}/sent`;
         try {
-            const res = await fetch(`/api/delivery/${dealId}/sent`, {
+            const res = await fetch(url, {
                 method: 'PATCH',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
             });
             if (!res.ok) {
-                alert('배송 보냄 확인에 실패했습니다.');
+                const txt = await res.text();
+                alert('배송 보냄 확인에 실패했습니다.\n' + txt);
                 return;
             }
             fetchSell();
@@ -196,14 +234,16 @@ export default function SellHistoryPage() {
     // 배송 완료 확인
     async function handleDoneClick(dealId, e) {
         e.stopPropagation();
+        const url = `${BACKEND_BASE}/api/delivery/${dealId}/done`;
         try {
-            const res = await fetch(`/api/delivery/${dealId}/done`, {
+            const res = await fetch(url, {
                 method: 'PATCH',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
             });
             if (!res.ok) {
-                alert('처리 중 오류가 발생했습니다.');
+                const txt = await res.text();
+                alert('처리 중 오류가 발생했습니다.\n' + txt);
                 return;
             }
             fetchSell();
@@ -212,11 +252,50 @@ export default function SellHistoryPage() {
         }
     }
 
-    function Step({ active, label }) {
+    // 검수 불합격 시 환불 처리
+    async function handleRefundClick(dealId, e) {
+        e.stopPropagation();
+        const url = `${BACKEND_BASE}/api/deal/${dealId}/refund`;
+        try {
+            const res = await fetch(url, {
+                method: 'PATCH',
+                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                credentials: 'include',
+            });
+            if (!res.ok) {
+                const txt = await res.text();
+                alert('환불 처리 중 오류가 발생했습니다.\n' + txt);
+                return;
+            }
+            alert('환불 처리가 완료되었습니다.');
+            fetchSell();
+        } catch (e2) {
+            alert('네트워크 오류가 발생했습니다.');
+        }
+    }
+
+    // 스텝 컴포넌트
+    function Step({ active, label, danger = false }) {
         return (
             <div className={`${styles.step} ${active ? styles.stepActive : ''}`}>
-                <span className={styles.stepDot} />
-                <span className={styles.stepLabel}>{label}</span>
+      <span
+          className={styles.stepDot}
+          style={
+              danger
+                  ? {
+                      background: '#ef4444',   // 빨간 점
+                      border: 'none',          // 초록 테두리 제거
+                      boxShadow: 'none',       // 혹시 그림자로 테두리 준 경우 제거
+                  }
+                  : undefined
+          }
+      />
+                <span
+                    className={styles.stepLabel}
+                    style={danger ? { color: '#ef4444', fontWeight: 600 } : undefined}
+                >
+        {label}
+      </span>
             </div>
         );
     }
@@ -230,6 +309,27 @@ export default function SellHistoryPage() {
             >
                 <span className={styles.stepSquareLabel}>{label}</span>
             </div>
+        );
+    }
+
+    function getBuyerName(deal) {
+        return (
+            deal?.buyerNickname ??
+            deal?.buyer_nickname ??
+            deal?.buyerName ??
+            deal?.buyer_name ??
+            '-'
+        );
+    }
+
+    function getBuyerPhone(deal) {
+        return (
+            deal?.buyerPhone ??
+            deal?.buyer_phone ??
+            deal?.phone ??
+            deal?.uPhone ??
+            deal?.u_phone ??
+            '-'
         );
     }
 
@@ -297,19 +397,29 @@ export default function SellHistoryPage() {
                                 isDelivery && currentDv !== null && currentDv === 3;
                             const showReviewBtn = item.showReviewBtn === true;
 
+                            const inspectionFailed = isInspectionFailed(item);
+
+                            const thumbSrc =
+                                item.productThumb ||
+                                item.pdThumb ||
+                                item.thumbnail ||
+                                FALLBACK_IMG;
+
+                            const dealId = item.dealId ?? item.dIdx;
+
                             return (
-                                <article
-                                    key={item.dealId}
-                                    className={styles.block}
-                                >
+                                <article key={dealId} className={styles.block}>
                                     <div className={styles.dateRow}>
                                         <span>{tradeText || '거래방식 미정'}</span>
                                     </div>
 
-                                    {/* ✅ 이 박스 한 덩어리를 클릭하면 모달 뜨게 */}
                                     <div
-                                        className={styles.card}
-                                        onClick={() => setSelectedDeal(item)}
+                                        className={`${styles.card} ${
+                                            inspectionFailed ? styles.cardDanger : ''
+                                        }`}
+                                        onClick={() => {
+                                            setSelectedDeal(item);
+                                        }}
                                         role="button"
                                         tabIndex={0}
                                         onKeyDown={(e) => {
@@ -320,7 +430,11 @@ export default function SellHistoryPage() {
 
                                         <div className={styles.productRow}>
                                             <div className={styles.thumbBox}>
-                                                <div className={styles.thumbPlaceholder} />
+                                                <img
+                                                    src={thumbSrc}
+                                                    alt={item.title || item.pdTitle || '상품 이미지'}
+                                                    className={styles.thumbImg}
+                                                />
                                             </div>
 
                                             <div className={styles.prodInfo}>
@@ -331,10 +445,7 @@ export default function SellHistoryPage() {
                                                         '(제목 없음)'}
                                                 </p>
                                                 <p className={styles.prodPrice}>
-                                                    {(
-                                                        (item.agreedPrice ?? item.pdPrice) ||
-                                                        0
-                                                    ).toLocaleString()}
+                                                    {(item.agreedPrice ?? item.pdPrice ?? 0).toLocaleString()}
                                                     원
                                                 </p>
                                             </div>
@@ -342,20 +453,20 @@ export default function SellHistoryPage() {
 
                                         <div className={styles.stepBar}>
                                             <Step active={baseStep >= 3} label="판매 완료" />
-
                                             {isDelivery && (
                                                 <>
-                                                    <SquareStep
-                                                        active={step4}
-                                                        label="배송 보냄 확인"
-                                                    />
+                                                    <SquareStep active={step4} label="배송 보냄 확인" />
                                                     <Step active={step5} label="배송" />
-                                                    <Step active={step6} label="대파에서 검수 중" />
-                                                    <Step active={step7} label="배송" />
-                                                    <SquareStep
-                                                        active={step8}
-                                                        label="후기 보내기"
+                                                    {/* 검수 불합격일 때 빨간색 */}
+                                                    <Step
+                                                        active={step6 || inspectionFailed}
+                                                        label={
+                                                            inspectionFailed ? '검수 불합격' : '대파에서 검수 중'
+                                                        }
+                                                        danger={inspectionFailed}
                                                     />
+                                                    <Step active={step7} label="배송" />
+                                                    <SquareStep active={step8} label="후기 보내기" />
                                                 </>
                                             )}
                                         </div>
@@ -365,7 +476,7 @@ export default function SellHistoryPage() {
                                                 <button
                                                     type="button"
                                                     className={styles.grayBtn}
-                                                    onClick={(e) => handleSendClick(item.dealId, e)}
+                                                    onClick={(e) => handleSendClick(dealId, e)}
                                                 >
                                                     배송 보냄 확인
                                                 </button>
@@ -375,7 +486,7 @@ export default function SellHistoryPage() {
                                                 <button
                                                     type="button"
                                                     className={styles.grayBtn}
-                                                    onClick={(e) => handleDoneClick(item.dealId, e)}
+                                                    onClick={(e) => handleDoneClick(dealId, e)}
                                                 >
                                                     배송 완료 확인
                                                 </button>
@@ -388,6 +499,17 @@ export default function SellHistoryPage() {
                                                     onClick={(e) => e.stopPropagation()}
                                                 >
                                                     후기 보내기
+                                                </button>
+                                            )}
+
+                                            {/* 검수 불합격이면 환불처리 버튼 노출 (기존 버튼 CSS 그대로) */}
+                                            {inspectionFailed && (
+                                                <button
+                                                    type="button"
+                                                    className={styles.grayBtn}
+                                                    onClick={(e) => handleRefundClick(dealId, e)}
+                                                >
+                                                    환불처리
                                                 </button>
                                             )}
                                         </div>
@@ -403,7 +525,7 @@ export default function SellHistoryPage() {
                 )}
             </main>
 
-            {/* ✅ 상세 모달 */}
+            {/* 상세 모달 */}
             {selectedDeal && (
                 <div
                     className={styles.modalOverlay}
@@ -428,20 +550,36 @@ export default function SellHistoryPage() {
                             <p className={styles.modalDealNo}>
                                 거래번호{' '}
                                 <strong>
-                                    {selectedDeal.dealNumber ??
-                                        selectedDeal.dealNo ??
-                                        selectedDeal.dealId ??
+                                    {selectedDeal.orderId ??
+                                        selectedDeal.order_id ??
                                         '-'}
                                 </strong>
                             </p>
                             <p className={styles.modalDate}>
-                                {formatDate(selectedDeal.dealEndDate)}
+                                {formatDate(
+                                    selectedDeal.dealEndDate ?? selectedDeal.deal_end_date
+                                )}
                             </p>
 
                             <div className={styles.modalSection}>
-                                <h3 className={styles.modalSectionTitle}>판매완료</h3>
+                                <h3 className={styles.modalSectionTitle}>
+                                    {isInspectionFailed(selectedDeal) ? '검수 불합격' : '판매완료'}
+                                </h3>
                                 <div className={styles.modalProduct}>
-                                    <div className={styles.modalThumb} />
+                                    <img
+                                        src={
+                                            selectedDeal.productThumb ||
+                                            selectedDeal.pdThumb ||
+                                            selectedDeal.thumbnail ||
+                                            FALLBACK_IMG
+                                        }
+                                        alt={
+                                            selectedDeal.title ||
+                                            selectedDeal.pdTitle ||
+                                            '상품 이미지'
+                                        }
+                                        className={styles.modalThumb}
+                                    />
                                     <div>
                                         <p className={styles.modalProdTitle}>
                                             {selectedDeal.title ??
@@ -451,16 +589,45 @@ export default function SellHistoryPage() {
                                         </p>
                                         <p className={styles.modalProdPrice}>
                                             {(
-                                                (selectedDeal.agreedPrice ?? selectedDeal.pdPrice) ||
+                                                (selectedDeal.agreedPrice ??
+                                                    selectedDeal.pdPrice) ||
                                                 0
                                             ).toLocaleString()}
                                             원
                                         </p>
                                     </div>
                                 </div>
-                                <button type="button" className={styles.modalActionBtn}>
-                                    후기 보내기
-                                </button>
+                                {!isInspectionFailed(selectedDeal) && (
+                                    <button type="button" className={styles.modalActionBtn}>
+                                        후기 보내기
+                                    </button>
+                                )}
+                                {isInspectionFailed(selectedDeal) && (
+                                    <button
+                                        type="button"
+                                        className={styles.grayBtn}
+                                        onClick={(e) =>
+                                            handleRefundClick(
+                                                selectedDeal.dealId ?? selectedDeal.dIdx,
+                                                e
+                                            )
+                                        }
+                                    >
+                                        환불처리
+                                    </button>
+                                )}
+                            </div>
+
+                            <div className={styles.modalSection}>
+                                <h3 className={styles.modalSectionTitle}>구매자 정보</h3>
+                                <div className={styles.modalInfoRow}>
+                                    <span>닉네임</span>
+                                    <span>{getBuyerName(selectedDeal)}</span>
+                                </div>
+                                <div className={styles.modalInfoRow}>
+                                    <span>연락처</span>
+                                    <span>{getBuyerPhone(selectedDeal)}</span>
+                                </div>
                             </div>
 
                             <div className={styles.modalSection}>
@@ -471,7 +638,12 @@ export default function SellHistoryPage() {
                                 </div>
                                 <div className={styles.modalInfoRow}>
                                     <span>결제일시</span>
-                                    <span>{formatDate(selectedDeal.dealEndDate)}</span>
+                                    <span>
+                    {formatDate(
+                        selectedDeal.dealEndDate ??
+                        selectedDeal.deal_end_date
+                    )}
+                  </span>
                                 </div>
                             </div>
 
@@ -481,7 +653,8 @@ export default function SellHistoryPage() {
                                     <span>상품금액</span>
                                     <span>
                     {(
-                        (selectedDeal.agreedPrice ?? selectedDeal.pdPrice) ||
+                        (selectedDeal.agreedPrice ??
+                            selectedDeal.pdPrice) ||
                         0
                     ).toLocaleString()}
                                         원
@@ -489,11 +662,9 @@ export default function SellHistoryPage() {
                                 </div>
                                 <div className={styles.modalInfoRow}>
                                     <span>정산상태</span>
-                                    <span>완료</span>
-                                </div>
-                                <div className={styles.modalInfoRow}>
-                                    <span>판매 대금 지급 완료일</span>
-                                    <span>{formatDate(selectedDeal.dealEndDate)}</span>
+                                    <span>
+                    {isInspectionFailed(selectedDeal) ? '환불 필요' : '완료'}
+                  </span>
                                 </div>
                             </div>
                         </div>

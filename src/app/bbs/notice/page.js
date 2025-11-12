@@ -2,49 +2,36 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Calendar, User } from "lucide-react";
-import { Pagination } from "@mui/material"; // Import MUI Pagination
+import { Calendar, User, Search } from "lucide-react";
+import { Pagination } from "@mui/material";
 import styles from "../bbs.module.css";
 
 export default function NoticeListPage() {
-  const [notices, setNotices] = useState([]);
+  const [allNotices, setAllNotices] = useState([]);
+  const [filteredNotices, setFilteredNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [page, setPage] = useState(1); // Current page, 1-indexed
-  const [rowsPerPage, setRowsPerPage] = useState(10); // Items per page
-  const [totalElements, setTotalElements] = useState(0); // Total number of notices
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [inputValue, setInputValue] = useState("");
 
   useEffect(() => {
-    const fetchNotices = async () => {
+    const fetchAllNotices = async () => {
+      setLoading(true);
       try {
         const queryParams = new URLSearchParams({
-          page: page - 1, // Backend often uses 0-indexed pages
-          size: rowsPerPage,
-          sort: "nIdx,desc", // Sort by nIdx descending (latest first)
-          // If backend supports category filtering, add it here:
-          // category: selectedCategory === "all" ? "" : selectedCategory,
+          page: 0,
+          size: 1000, // Fetch a large number of notices to simulate fetching all
+          sort: "nIdx,desc",
         }).toString();
 
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/public/notices?${queryParams}`);
         if (!res.ok) throw new Error("공지 목록을 불러오지 못했습니다.");
         
         const responseData = await res.json();
-        
-        // Log ncategory values to debug
-        console.log("Public API nCategory values:", responseData.content.map(notice => notice.ncategory));
-
-        // Filter by category client-side if backend doesn't support it
-        const filteredByCat = responseData.content.filter(notice => {
-          if (selectedCategory === "all") {
-            return true;
-          }
-          return convertCategory(notice.ncategory) === selectedCategory;
-        });
-
-        setNotices(filteredByCat || []);
-        setTotalElements(responseData.totalElements || 0);
-
+        setAllNotices(responseData.content || []);
       } catch (err) {
         console.error("공지 목록 조회 실패:", err);
         setError("공지사항을 불러오는 중 오류가 발생했습니다.");
@@ -53,8 +40,40 @@ export default function NoticeListPage() {
       }
     };
 
-    fetchNotices();
-  }, [page, rowsPerPage, selectedCategory]); // Re-fetch when page, rowsPerPage, or category changes
+    fetchAllNotices();
+  }, []);
+
+  useEffect(() => {
+    let notices = [...allNotices];
+
+    if (selectedCategory !== "all") {
+      notices = notices.filter(notice => convertCategory(notice.ncategory) === selectedCategory);
+    }
+
+    if (searchTerm) {
+      notices = notices.filter(notice =>
+        (notice.nsubject || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (notice.ncontent || "").toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    setFilteredNotices(notices);
+    setPage(1);
+  }, [allNotices, searchTerm, selectedCategory]);
+
+  const handleSearch = () => {
+    setSearchTerm(inputValue);
+  };
+
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
 
   const convertCategory = (num) => {
     switch (num) {
@@ -83,14 +102,14 @@ export default function NoticeListPage() {
 
   const handleCategoryChange = (e) => {
     setSelectedCategory(e.target.value);
-    setPage(1); // Reset to first page when category changes
   };
 
   const handlePageChange = (event, value) => {
     setPage(value);
   };
 
-  const totalPages = Math.ceil(totalElements / rowsPerPage);
+  const totalPages = Math.ceil(filteredNotices.length / rowsPerPage);
+  const currentNotices = filteredNotices.slice((page - 1) * rowsPerPage, page * rowsPerPage);
 
   if (loading) {
     return (
@@ -126,61 +145,84 @@ export default function NoticeListPage() {
           onChange={handleCategoryChange}
         >
           <option value="all">전체</option>
-          <option value="공지">공지</option>
+          <option value="공지사항">공지사항</option>
           <option value="업데이트">업데이트</option>
           <option value="안내">안내</option>
           <option value="이벤트">이벤트</option>
         </select>
+        <div className={styles.searchInputContainer}>
+          <Search size={20} className={styles.searchIcon} />
+          <input
+            type="text"
+            placeholder="공지사항 검색..."
+            value={inputValue}
+            onChange={handleInputChange}
+            onKeyPress={handleKeyPress}
+            className={styles.searchInput}
+          />
+        </div>
+        <button onClick={handleSearch} className={styles.searchButton}>
+          검색
+        </button>
       </div>
 
       <div className={styles.tableContainer}>
         <div className={styles.tableHeader} style={{ gridTemplateColumns: "80px 120px 1fr 120px 120px" }}>
           <div>No</div>
           <div>카테고리</div>
-          <div className={styles.textAlignLeft}>제목</div>
+          <div>제목</div>
           <div>작성자</div>
           <div>날짜</div>
         </div>
         <div className={styles.tableBody}>
-          {notices.length === 0 ? (
+          {currentNotices.length === 0 ? (
             <div className={styles.tableRow} style={{ justifyContent: "center", padding: "2rem" }}>
               등록된 공지사항이 없습니다.
             </div>
           ) : (
-            notices.map((notice) => {
-              const categoryStyle = getCategoryColor(convertCategory(notice.ncategory));
-              return (
-                <Link href={`/bbs/notice/${notice.nidx}`} key={notice.nidx} className={styles.tableRow} style={{ gridTemplateColumns: "80px 120px 1fr 120px 120px" }}>
-                  <div>{notice.nidx}</div>
-                  <div>
-                    <span 
-                      style={{ 
-                        backgroundColor: categoryStyle.bg, 
-                        color: categoryStyle.color,
-                        padding: "0.25rem 0.5rem",
-                        borderRadius: "0.375rem",
-                        fontSize: "0.75rem",
-                        fontWeight: "600"
-                      }}
+            currentNotices.map((notice) => {
+                  const noticeTextStyle = { color: notice.nfix === 1 ? 'gray' : 'inherit' };
+                  const categoryStyle = getCategoryColor(convertCategory(notice.ncategory));
+                  return (
+                    <Link
+                      href={`/bbs/notice/${notice.nidx}`}
+                      key={notice.nidx}
+                      className={`${styles.tableRow} ${notice.nfix === 1 ? styles.pinnedNoticeBg : ''}`}
+                      style={{ gridTemplateColumns: "80px 120px 1fr 120px 120px" }}
                     >
-                      {convertCategory(notice.ncategory)}
-                    </span>
-                  </div>
-                  <div className={styles.textAlignLeft}>{notice.nsubject}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", justifyContent: "center" }}>
-                    <User size={14} />
-                    <span>{notice.adminNick}</span>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", justifyContent: "center" }}>
-                    <Calendar size={14} />
-                    <span>{new Date(notice.ndate).toLocaleDateString("ko-KR")}</span>
-                  </div>
-                </Link>
-              );
+                      <div style={noticeTextStyle}>{notice.nidx}</div>
+                      <div>
+                        <span
+                          style={{
+                            backgroundColor: categoryStyle.bg,
+                            color: categoryStyle.color,
+                            padding: "0.25rem 0.5rem",
+                            borderRadius: "0.375rem",
+                            fontSize: "0.75rem",
+                            fontWeight: "600"
+                          }}
+                        >
+                          {convertCategory(notice.ncategory)}
+                        </span>
+                      </div>
+                      <div className={styles.textAlignLeft} style={noticeTextStyle}>
+                        {notice.nsubject}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", justifyContent: "center" }}>
+                        <User size={14} />
+                        <span style={noticeTextStyle}>{notice.adminNick}</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", justifyContent: "center" }}>
+                        <Calendar size={14} />
+                        <span style={noticeTextStyle}>{new Date(notice.ndate).toLocaleDateString("ko-KR")}</span>
+                      </div>
+                    </Link>
+                  );
             })
           )}
         </div>
       </div>
+
       {totalPages > 1 && (
         <div style={{ display: "flex", justifyContent: "center", marginTop: "2rem" }}>
           <Pagination

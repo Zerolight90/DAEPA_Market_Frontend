@@ -1,8 +1,10 @@
 //RoomList.js
 "use client";
 import ScrollArea from "./ScrollArea";
-import { fmtHHMM, resolveRole, formatKRW } from "@/lib/chat/chat-utils";
+import { fmtHHMM, resolveRole } from "@/lib/chat/chat-utils";
 import s from "./MarketChat.module.css";
+import Storefront from '@mui/icons-material/Storefront';
+import ShoppingCart from '@mui/icons-material/ShoppingCart';
 
 const safeSrc = (v) => {
     if (v == null) return null;
@@ -13,19 +15,26 @@ const safeSrc = (v) => {
 export default function RoomList({ rooms, meId, activeId, onSelect }) {
     return (
         <aside className={s.list}>
-            <h3 className={s.listTitle}>채팅 목록</h3>
+            <div className={s.listHeader}>
+                <h3 className={s.listTitle}>채팅 목록</h3>
+                <span className={s.legendItem}>
+                    <span className={s.legendSellerColor}></span> 판매자
+                </span>
+                <span className={s.legendItem}>
+                    <span className={s.legendBuyerColor}></span> 구매자
+                </span>
+            </div>
 
             <ScrollArea className={s.ul} component="ul" sx={{ maxHeight: "600px" }}>
                 {(rooms || []).map((r) => {
                     const role = resolveRole(r, meId); // "판매자" | "구매자" | null
                     const active = String(activeId) === String(r.roomId);
-                    const priceText = formatKRW(r.productPrice ?? r.displayPrice ?? null);
                     const thumb = safeSrc(r.productThumb) || "/images/placeholder.jpg";
 
                     return (
                         <li
                             key={r.roomId}
-                            className={`${s.item} ${active ? s.active : ""}`}
+                            className={`${s.item} ${active ? s.active : ""} ${role === "판매자" ? s.sellerBg : s.buyerBg}`}
                             onClick={() => onSelect(r.roomId)}
                         >
                             {/* 썸네일 (오버레이 라벨 없음) */}
@@ -36,18 +45,16 @@ export default function RoomList({ rooms, meId, activeId, onSelect }) {
                             {/* 우측 텍스트 */}
                             <div className={s.itemMain}>
                                 <div className={s.top}>
-                  <span className={s.name}>
-                    {r.counterpartyName}
-                      {role && (
-                          <span
-                              className={`${s.rolePill} ${
-                                  role === "판매자" ? s.roleSeller : s.roleBuyer
-                              }`}
-                          >
-                        {role}
-                      </span>
-                      )}
-                  </span>
+                                    <span className={s.name}>
+                                        {role === '판매자' && <Storefront className={s.roleIcon} />}
+                                        {role === '구매자' && <ShoppingCart className={s.roleIcon} />}
+                                        {r.counterpartyName}
+                                        {r.productStatus && (
+                                            <span className={`${s.status} ${s[r.productStatus] || ""}`}>
+                                                {r.productStatus}
+                                            </span>
+                                        )}
+                                    </span>
 
                                     <div className={s.metaRight}>
                                         {Number(r.unread) > 0 && (
@@ -57,23 +64,17 @@ export default function RoomList({ rooms, meId, activeId, onSelect }) {
                                                 }`}
                                                 aria-label={`안읽음 ${r.unread}건`}
                                             >
-                        {r.unread > 99 ? "99+" : r.unread}
-                      </span>
+                                                {r.unread > 99 ? "99+" : r.unread}
+                                            </span>
                                         )}
                                         <span className={s.time}>
-                      {r.lastAt ? fmtHHMM(new Date(r.lastAt)) : "-"}
-                    </span>
+                                            {r.lastAt ? fmtHHMM(new Date(r.lastAt)) : "-"}
+                                        </span>
                                     </div>
                                 </div>
 
                                 <div className={s.productRow}>
-                                    <span className={s.product}>{r.productTitle}</span>
-                                    {priceText && <span className={s.price}>{priceText}</span>}
-                                    {r.productStatus && (
-                                        <span className={`${s.status} ${s[r.productStatus] || ""}`}>
-                      {r.productStatus}
-                    </span>
-                                    )}
+                                    <span className={s.product}>상품명 : {r.productTitle}</span>
                                 </div>
 
                                 {r.lastMessage && (
