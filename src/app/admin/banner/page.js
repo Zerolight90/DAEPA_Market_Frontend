@@ -16,13 +16,13 @@ import {
 } from "lucide-react";
 import styles from "../admin.module.css";
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8080";
-const BANNER_ENDPOINT = `${API_BASE}/api/admin/banners`;
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || ""; // For image resolution fallback
+const BANNER_ENDPOINT = "/api/admin/banners";
 
 const resolveImageUrl = (url) => {
   if (!url) return null;
   if (url.startsWith("http")) return url;
-  return `${API_BASE}${url.startsWith("/") ? url : `/${url}`}`;
+  return url.startsWith("/") ? url : `/${url}`;
 };
 
 const initialFormState = (nextOrder = 1) => ({

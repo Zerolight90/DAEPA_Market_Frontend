@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import styles from "../admin.module.css";
 
-const API_BASE = "http://localhost:8080";
+
 const PAGE_SIZE = 15; // 5 columns * 3 rows
 
 const formatCurrency = (value) => {
@@ -31,7 +31,7 @@ const formatDate = (value) => {
 const resolveImageUrl = (url) => {
   if (!url) return "/images/placeholder.jpg";
   if (url.startsWith("http")) return url;
-  return `${API_BASE}${url.startsWith("/") ? url : `/${url}`}`;
+  return url.startsWith("/") ? url : `/${url}`;
 };
 
 export default function AdminProductsPage() {
@@ -54,7 +54,7 @@ export default function AdminProductsPage() {
           page: String(Math.max(currentPage - 1, 0)),
           size: String(PAGE_SIZE)
         });
-        const response = await fetch(`${API_BASE}/api/admin/products?${params.toString()}`);
+        const response = await fetch(`/api/admin/products?${params.toString()}`);
         if (!response.ok) {
           throw new Error(`상품 목록을 불러오는 중 오류가 발생했습니다. (status ${response.status})`);
         }
@@ -123,7 +123,7 @@ export default function AdminProductsPage() {
 
     setIsMutating(true);
     try {
-      const res = await fetch(`${API_BASE}/api/admin/products/${product.id}`, {
+      const res = await fetch(`/api/admin/products/${product.id}`, {
         method: "DELETE"
       });
       if (!res.ok && res.status !== 204) {
