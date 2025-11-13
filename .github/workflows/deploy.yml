@@ -79,8 +79,8 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script_stop: true
           debug: false
-          timeout: 60m           # 🔸 SSH 세션 최대 시간
-          command_timeout: 60m   # 🔸 명령 실행 시간(기본 10분 → 60분으로 확장)
+          timeout: 120m           # 🔸 SSH 세션 최대 시간
+          command_timeout: 240m   # 🔸 명령 실행 시간(기본 10분 → 60분으로 확장)
           script: |
             set -euo pipefail
             export DOCKER_BUILDKIT=1
