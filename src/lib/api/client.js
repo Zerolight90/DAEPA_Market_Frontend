@@ -10,12 +10,14 @@ function buildUrl(path) {
 
     const isServer = typeof window === "undefined";
     if (isServer) {
-        const backendUrl = process.env.NEXT_PUBLIC_API_BASE;
-        if (!backendUrl) {
-            // 서버사이드에서는 환경변수가 없으면 요청을 보낼 수 없으므로 에러 발생
-            throw new Error("CRITICAL: NEXT_PUBLIC_API_BASE environment variable is not set for server-side rendering.");
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+        try {
+            // Use URL constructor for robust joining
+            return new URL(withApi, backendUrl).toString();
+        } catch (e) {
+            // This will catch if backendUrl is not a valid absolute URL (e.g., "/api")
+            throw new Error(`FATAL: Invalid NEXT_PUBLIC_API_BASE environment variable. It must be an absolute URL. Value: "${backendUrl}"`);
         }
-        return `${backendUrl}${withApi}`;
     }
 
     // return `${API_BASE}${withApi}`; // Removed API_BASE

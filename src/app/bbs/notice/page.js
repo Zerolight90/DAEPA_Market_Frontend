@@ -27,7 +27,7 @@ export default function NoticeListPage() {
           sort: "nIdx,desc",
         }).toString();
 
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/public/notices?${queryParams}`);
+        const res = await fetch(`/api/public/notices?${queryParams}`);
         if (!res.ok) throw new Error("공지 목록을 불러오지 못했습니다.");
         
         const responseData = await res.json();

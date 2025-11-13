@@ -16,7 +16,7 @@ export default function NoticeDetailPage() {
 
     const fetchNotice = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${id}`);
+        const res = await fetch(`/api/admin/notices/${id}`);
         if (!res.ok) throw new Error("공지사항을 불러오지 못했습니다.");
         const data = await res.json();
 
