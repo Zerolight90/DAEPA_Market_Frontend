@@ -113,7 +113,6 @@
 
 import { useState, useEffect } from "react";
 import { loadTossPayments } from "@tosspayments/payment-sdk";
-import { v4 as uuidv4 } from "uuid";
 import styles from "./payCharge.module.css";
 
 const PACKAGES = [
