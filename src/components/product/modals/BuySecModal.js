@@ -5,7 +5,6 @@ import BaseModal from "@/components/ui/modal/BaseModal";
 import { useModal } from "@/components/ui/modal/ModalProvider";
 import SecPayWithPointModal from "./SecPayWithPointModal";
 import { loadTossPayments } from '@tosspayments/payment-sdk';
-import { v4 as uuidv4 } from 'uuid';
 import styles from './BuyModal.module.css';
 import AddressChangeModal from "@/components/product/modals/AddressChangeModal";
 
