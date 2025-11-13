@@ -3,8 +3,7 @@
 import { useRef, useState } from "react";
 import "./contact.css";
 
-const BASE_URL =
-    process.env.NEXT_PUBLIC_BACKEND_BASE || "http://localhost:8080";
+
 
 const CATEGORIES = [
     { code: 1, label: "불편 신고" },
@@ -77,7 +76,7 @@ export default function ContactPage() {
 
         try {
             setSubmitting(true);
-            const res = await fetch(`${BASE_URL}/api/1on1/create-multipart`, {
+            const res = await fetch(`/api/1on1/create-multipart`, {
                 method: "POST",
                 body: formData,
                 credentials: "include",

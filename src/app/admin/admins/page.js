@@ -37,7 +37,7 @@ export default function AdminManagePage() {
   useEffect(() => {
     const fetchAdmins = async () => {
       try {
-        const res = await fetch("http://localhost:8080/api/admin/admins");
+        const res = await fetch("/api/admin/admins");
         if (!res.ok) throw new Error("관리자 목록을 불러오지 못했습니다.");
         const data = await res.json();
         setAdmins(Array.isArray(data) ? data : []);
