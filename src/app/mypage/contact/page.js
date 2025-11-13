@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import SideNav from "@/components/mypage/sidebar";
 import "./mypage-contact.css";
 
-const BASE_URL =
-    process.env.NEXT_PUBLIC_BACKEND_BASE || "http://localhost:8080";
+
 
 const STATUS_LABELS = {
     1: "불편 신고",
@@ -23,7 +22,7 @@ export default function MyContactPage() {
     useEffect(() => {
         (async () => {
             try {
-                const res = await fetch(`${BASE_URL}/api/1on1/my`, {
+                const res = await fetch(`/api/1on1/my`, {
                     credentials: "include",
                 });
                 if (!res.ok) {
