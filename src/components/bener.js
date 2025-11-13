@@ -9,8 +9,7 @@ import "swiper/css/pagination";
 
 import styles from "./css/bener.module.css";
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8080";
-const PUBLIC_BANNER_ENDPOINT = `${API_BASE}/api/admin/banners/active`;
+const PUBLIC_BANNER_ENDPOINT = "/api/admin/banners/active";
 
 export default function Bener() {
     const [slides, setSlides] = useState([]);
@@ -22,9 +21,10 @@ export default function Bener() {
 
     const resolveImage = (url) => {
         if (!url) return null;
+        // If the URL is absolute, use it as is.
         if (url.startsWith("http")) return url;
-        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8080";
-        return `${base}${url.startsWith("/") ? url : `/${url}`}`;
+        // Otherwise, treat it as a relative path from the root.
+        return url.startsWith("/") ? url : `/${url}`;
     };
 
     const fetchBanners = async () => {
@@ -66,7 +66,7 @@ export default function Bener() {
 
     if (isLoading) {
         return (
-            <div className={`fullBleed ${styles.block}`}>
+            <div className={styles.block}>
                 <div className={styles.loadingContainer}>
                     <div className={styles.loadingSpinner}></div>
                     <p>배너를 불러오는 중...</p>
@@ -80,7 +80,7 @@ export default function Bener() {
     }
 
     return (
-        <div className={`fullBleed ${styles.block}`}>
+        <div className={styles.block}>
             <Swiper
                 modules={[Navigation, Autoplay, Pagination, A11y]}
                 slidesPerView={1}

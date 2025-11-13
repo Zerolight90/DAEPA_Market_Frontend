@@ -1,6 +1,8 @@
-// next.config.mjs
 /** @type {import('next').NextConfig} */
-const BACKEND = process.env.NEXT_PUBLIC_API_BASE
+
+// 환경 구분
+const isProd = process.env.NODE_ENV === 'production';
+const DEV_BACKEND = process.env.DEV_BACKEND_URL || 'http://localhost:8080';
 
 const nextConfig = {
     images: {
@@ -13,14 +15,19 @@ const nextConfig = {
             },
         ],
     },
+
     async rewrites() {
-        if (!BACKEND) return []; // 값이 없으면 프록시 비활성화(빌드 통과)
+        // ✅ 배포환경: Nginx가 /api → 백엔드로 프록시하므로 rewrites 사용 안 함
+        if (isProd) return [];
+
+        // ✅ 개발환경: Next가 /api → localhost:8080 으로 프록시
         return [
-            { source: '/api/:path*',     destination: `${BACKEND}/api/:path*` },
+            {
+                source: "/api/:path*",
+                destination: `${DEV_BACKEND}/api/:path*`,
+            },
         ];
     },
 };
 
 export default nextConfig;
-
-

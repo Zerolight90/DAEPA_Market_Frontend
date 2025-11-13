@@ -6,9 +6,9 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
-  --banner-height: 500px;
 }
 
+/* Dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -16,7 +16,7 @@
   }
 }
 
-/* Reset & Base */
+/* Reset */
 html,
 body {
   max-width: 100vw;
@@ -24,11 +24,10 @@ body {
 }
 
 body {
+  background: #f8f9fa;
   color: var(--foreground);
-  background: #f8f9fa; /* Softer background */
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  "Helvetica Neue", Arial, sans-serif;
 }
 
 * {
@@ -40,12 +39,6 @@ body {
 a {
   color: inherit;
   text-decoration: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
 }
 
 /* ==============================
@@ -65,23 +58,16 @@ a {
 }
 
 /* ==============================
-   🌀 Swiper Global Overrides
+   🌀 Swiper — Global Overrides (height 제거)
    ============================== */
-.swiper {
-  width: 100%;
-  height: var(--banner-height);
-}
+
+/* height/style은 모두 bener.module.css가 관리 */
 
 .swiper-button-prev,
 .swiper-button-next {
   color: #fff;
   width: 44px;
   height: 44px;
-}
-
-.swiper-button-prev:hover,
-.swiper-button-next:hover {
-  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
 }
 
 .swiper-pagination-bullet {
@@ -91,10 +77,4 @@ a {
 
 .swiper-pagination-bullet-active {
   background: #fff;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .swiper {
-    scroll-behavior: auto;
-  }
 }

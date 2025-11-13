@@ -78,7 +78,7 @@ export default function ProductRowSection({
                     items.map(async (item) => {
                         try {
                             const res = await fetch(
-                                `${API_BASE}${Endpoints.favoriteStatus(item.id)}`,
+                                Endpoints.favoriteStatus(item.id),
                                 {
                                     credentials: "include",
                                     cache: "no-store",
@@ -123,7 +123,7 @@ export default function ProductRowSection({
         e.preventDefault();
         e.stopPropagation();
 
-        const url = `${API_BASE}${Endpoints.favoriteToggle(productId)}`;
+        const url = Endpoints.favoriteToggle(productId);
 
         try {
             const headers = {
