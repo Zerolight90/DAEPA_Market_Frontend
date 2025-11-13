@@ -320,7 +320,7 @@ export default function SellHistoryPage() {
         if (!dealId) return;
         setPendingRefundId(dealId);
         try {
-            const res = await fetch(`${BACKEND_BASE}/api/deal/${dealId}/refund`, {
+            const res = await fetch(`${BACKEND_BASE}/api/${dealId}/payCancel`, {
                 method: 'PATCH',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
