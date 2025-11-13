@@ -1,4 +1,3 @@
-// bener.js
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -10,21 +9,14 @@ import 'swiper/css/pagination';
 
 import styles from './css/bener.module.css';
 
-// ✅ 프론트 도메인 기준으로 반드시 프록시(/api) 경유
+// 프리셋: 프론트 도메인의 Nginx 프록시만 사용
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '/api';
 const PUBLIC_BANNER_ENDPOINT = `${API_BASE}/admin/banners`;
 
-// 배포/로컬 모두에서 동일하게 동작하도록 이미지 URL 정규화
 function resolveImage(url) {
     if (!url) return null;
-    // 완전한 URL이면 그대로 사용
     if (url.startsWith('http')) return url;
-
-    // 백엔드가 '/uploads/xxx.jpg' 형태를 주면
-    // 프런트 Nginx가 S3로 프록시하므로 그대로 상대경로 유지 (동일 오리진)
     if (url.startsWith('/')) return url;
-
-    // 혹시 'uploads/xxx.jpg' 처럼 앞에 슬래시가 빠진 경우를 보정
     return `/uploads/${url}`;
 }
 
@@ -47,7 +39,6 @@ export default function Bener() {
                     .map(item => ({
                         ...item,
                         image: resolveImage(item.image ?? item.imageUrl),
-                        href: null,
                     }));
 
                 if (active.length > 0) {
@@ -55,18 +46,19 @@ export default function Bener() {
                     return;
                 }
             }
-            // 폴백(퍼블릭 정적 파일) — /public/banners/* 가 있어야 함
+
+            // fallback (public 폴더)
             setSlides([
-                { id: 1, image: '/banners/banner1.jpg', order: 1, isActive: true },
-                { id: 2, image: '/banners/banner2.jpg', order: 2, isActive: true },
-                { id: 3, image: '/banners/banner3.jpg', order: 3, isActive: true },
+                { id: 1, image: '/banners/banner1.jpg' },
+                { id: 2, image: '/banners/banner2.jpg' },
+                { id: 3, image: '/banners/banner3.jpg' },
             ]);
         } catch (e) {
-            console.error('배너 데이터 로드 실패:', e);
+            console.error('배너 로드 실패:', e);
             setSlides([
-                { id: 1, image: '/banners/banner1.jpg', order: 1, isActive: true },
-                { id: 2, image: '/banners/banner2.jpg', order: 2, isActive: true },
-                { id: 3, image: '/banners/banner3.jpg', order: 3, isActive: true },
+                { id: 1, image: '/banners/banner1.jpg' },
+                { id: 2, image: '/banners/banner2.jpg' },
+                { id: 3, image: '/banners/banner3.jpg' },
             ]);
         } finally {
             setIsLoading(false);
@@ -75,34 +67,41 @@ export default function Bener() {
 
     if (isLoading) {
         return (
-            <div className={`fullBleed ${styles.block}`}>
-                <div className={styles.loadingContainer}>
-                    <div className={styles.loadingSpinner} />
-                    <p>배너를 불러오는 중...</p>
+            <div className="fullBleed">
+                <div className={styles.block}>
+                    <div className={styles.loadingContainer}>
+                        <div className={styles.loadingSpinner} />
+                        <p>배너를 불러오는 중...</p>
+                    </div>
                 </div>
             </div>
         );
     }
+
     if (slides.length === 0) return null;
 
     return (
-        <div className={`fullBleed ${styles.block}`}>
-            <Swiper
-                modules={[Navigation, Autoplay, Pagination, A11y]}
-                slidesPerView={1}
-                spaceBetween={0}
-                loop={slides.length > 1}
-                navigation
-                pagination={{ clickable: true }}
-                autoplay={{ delay: 3000, disableOnInteraction: false }}
-                className={styles.swiper}
-            >
-                {slides.map(s => (
-                    <SwiperSlide key={s.id}>
-                        <div className={styles.slide} style={{ backgroundImage: `url(${s.image})` }} />
-                    </SwiperSlide>
-                ))}
-            </Swiper>
+        <div className="fullBleed">
+            <div className={styles.block}>
+                <Swiper
+                    modules={[Navigation, Autoplay, Pagination, A11y]}
+                    slidesPerView={1}
+                    loop={slides.length > 1}
+                    navigation
+                    pagination={{ clickable: true }}
+                    autoplay={{ delay: 3000, disableOnInteraction: false }}
+                    className={styles.swiper}
+                >
+                    {slides.map(s => (
+                        <SwiperSlide key={s.id}>
+                            <div
+                                className={styles.slide}
+                                style={{ backgroundImage: `url(${s.image})` }}
+                            />
+                        </SwiperSlide>
+                    ))}
+                </Swiper>
+            </div>
         </div>
     );
 }
