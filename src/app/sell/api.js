@@ -2,7 +2,7 @@
 // ▶ 권장: next.config.mjs에 /api 프록시 rewrites가 있다면 BASE는 빈 문자열로.
 //    (없고 직접 백엔드로 붙을 거면 NEXT_PUBLIC_API_BASE를 "http://localhost:8080/api"처럼 넣으세요.)
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
-const API_PREFIX = "";  // ← Next rewrite를 쓰면 이 값 유지
+const API_PREFIX = "/api";  // ← Next rewrite를 쓰면 이 값 유지
 
 // 안전한 URL 조립 (중복 슬래시 방지)
 function join(base, path) {
@@ -28,7 +28,7 @@ export const Endpoints = {
 
 // 공통 fetch 헬퍼 (쿠키 포함)
 export async function apiFetch(path, opts = {}) {
-    const url = join(API_BASE, path.startsWith("/") ? path : `/${path}`);
+    const url = path.startsWith("/") ? path : `/${path}`;
     const res = await fetch(url, { credentials: "include", ...opts });
 
     // JSON이면 json 파싱, 아니면 text/빈값
