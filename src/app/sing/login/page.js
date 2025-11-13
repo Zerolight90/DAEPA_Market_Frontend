@@ -22,13 +22,13 @@ export default function Page() {
     // ✅ 네이버 로그인 버튼
     const handleNaverLogin = () => {
         const backendUrl = getApiBaseUrl();
-        window.location.href = `${backendUrl}/oauth2/authorization/naver`;
+        window.location.href = `${backendUrl}/api/oauth2/authorization/naver`;
     };
 
     // ✅ 카카오 로그인 버튼
     const handleKakaoLogin = () => {
         const backendUrl = getApiBaseUrl();
-        window.location.href = `${backendUrl}/oauth2/authorization/kakao`;
+        window.location.href = `${backendUrl}/api/oauth2/authorization/kakao`;
     };
 
     // ✅ 저장된 로그인 옵션 불러오기
