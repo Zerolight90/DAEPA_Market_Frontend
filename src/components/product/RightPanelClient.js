@@ -18,7 +18,7 @@ export default function RightPanelClient({
                                              description = "",
                                              seller,
                                              soldOut = false,   // 서버에서 주는 기존 값
-                                             dealState = null,  // d_sell 그대로
+                                             dealState = null,  // d_sell 그대로 (1:완료, 2:거래중)
                                          }) {
     const [wishes, setWishes] = useState(wishCount);
     const [chatLoading, setChatLoading] = useState(false);
@@ -33,25 +33,40 @@ export default function RightPanelClient({
             try {
                 const m = await fetchMe();
                 setMe(m);
-            } catch (e) {
+            } catch {
                 // not logged in
             }
         })();
     }, []);
 
-    const myId = me?.userId ?? me?.id ?? me?.uIdx ?? me?.u_idx ?? null;
-    const sellerId = seller?.id ?? seller?.uIdx ?? seller?.u_idx ?? null;
+    const myId =
+        me?.userId ?? me?.id ?? me?.uIdx ?? me?.u_idx ?? null;
+    const sellerId =
+        seller?.id ?? seller?.uIdx ?? seller?.u_idx ?? null;
     const isOwner = myId && sellerId && String(myId) === String(sellerId);
 
-    // 👉 판매자일 때는 d_sell=2 이어도 잠그지 않는다
+    // 판매자 화면에서의 진짜 판매완료 판단(완료일 때만 잠금)
     const isReallySoldForOwner = soldOut || dealState === 1;
-    // 👉 구매자(다른 사람)에게는 d_sell=1,2 모두 잠긴 상태로 보이게
+    // 구매자(타인)에게는 거래중(2)도 잠금처럼 보이게
     const isSoldLikeForOthers = soldOut || dealState === 1 || dealState === 2;
 
     const [localSoldOut, setLocalSoldOut] = useState(soldOut || dealState === 1);
 
-    const openShare = () =>
-        modal.open(({ id, close }) => <ShareModal id={id} close={close} />);
+    // 현재 페이지 URL (모달 공유용)
+    const currentUrl =
+        typeof window !== "undefined" ? window.location.href : "";
+
+    // ────────────── 모달 열기 ──────────────
+     const openShare = () =>
+           modal.open(({ id, close }) => (
+                 <ShareModal
+       open={true}
+           onClose={close}
+           title={title}
+           url={currentUrl}
+               // image={...}
+             />
+           ));
 
     const openReport = () =>
         modal.open(({ id, close }) => (

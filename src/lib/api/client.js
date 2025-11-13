@@ -1,12 +1,25 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE;
+// const API_BASE = process.env.NEXT_PUBLIC_API_BASE; // No longer needed for client-side calls
 
 /** 내부: 절대/상대 경로 처리 + /api prefix 보장 */
 function buildUrl(path) {
     if (!path) throw new Error("api(): path is required");
     if (/^https?:\/\//i.test(path)) return path;         // 절대 URL이면 그대로
+    
     const clean = path.startsWith("/") ? path : `/${path}`;
     const withApi = clean.startsWith("/api/") ? clean : `/api${clean}`;
-    return `${API_BASE}${withApi}`;
+
+    const isServer = typeof window === "undefined";
+    if (isServer) {
+        const backendUrl = process.env.NEXT_PUBLIC_API_BASE;
+        if (!backendUrl) {
+            // 서버사이드에서는 환경변수가 없으면 요청을 보낼 수 없으므로 에러 발생
+            throw new Error("CRITICAL: NEXT_PUBLIC_API_BASE environment variable is not set for server-side rendering.");
+        }
+        return `${backendUrl}${withApi}`;
+    }
+
+    // return `${API_BASE}${withApi}`; // Removed API_BASE
+    return withApi; // Return relative path for proxy
 }
 
 /**
