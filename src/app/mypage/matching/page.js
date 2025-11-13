@@ -5,6 +5,7 @@ import Link from "next/link";
 import styles from "./matching.module.css"; // ✅ 새 CSS 모듈 임포트
 import tokenStore from "@/app/store/TokenStore";
 import Sidebar from "@/components/mypage/sidebar";
+import { api } from "@/lib/api/client";
 
 const NOTIFICATIONS_PER_PAGE = 5;
 
@@ -38,8 +39,6 @@ export default function MatchingPage() {
     const [isNotificationLoading, setIsNotificationLoading] = useState(false);
     const [visibleNotificationsCount, setVisibleNotificationsCount] = useState(NOTIFICATIONS_PER_PAGE);
 
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
-
     // 내 관심 조건 불러오기
     useEffect(() => {
         const fetchUserPicks = async () => {
@@ -50,11 +49,9 @@ export default function MatchingPage() {
                 return;
             }
             try {
-                const response = await fetch(`${API_BASE_URL}/api/userpicks`, {
+                const data = await api("/userpicks", {
                     headers: { 'Authorization': `Bearer ${currentToken}` },
                 });
-                if (!response.ok) throw new Error('데이터를 불러오는 데 실패했습니다.');
-                const data = await response.json();
                 setUserPicks(data);
             } catch (err) {
                 setError(err.message);
@@ -70,8 +67,7 @@ export default function MatchingPage() {
         (async () => {
             try {
                 setLoadingCategories(true);
-                const res = await fetch(`${API_BASE_URL}/api/category/uppers`);
-                const data = await res.json();
+                const data = await api("/category/uppers");
                 setUpperCategories(data);
             } catch (e) {
                 console.error("상위 카테고리 로딩 실패:", e);
@@ -93,8 +89,7 @@ export default function MatchingPage() {
         (async () => {
             setLoadingMiddle(true);
             try {
-                const res = await fetch(`${API_BASE_URL}/api/category/uppers/${selectedUpper}/middles`);
-                const data = await res.json();
+                const data = await api(`/category/uppers/${selectedUpper}/middles`);
                 setMiddleCategories(data);
             } catch (e) {
                 console.error("중위 카테고리 로딩 실패:", e);
@@ -114,8 +109,7 @@ export default function MatchingPage() {
         (async () => {
             setLoadingLow(true);
             try {
-                const res = await fetch(`${API_BASE_URL}/api/category/middles/${selectedMiddle}/lows`);
-                const data = await res.json();
+                const data = await api(`/category/middles/${selectedMiddle}/lows`);
                 setLowCategories(data);
             } catch (e) {
                 console.error("하위 카테고리 로딩 실패:", e);
@@ -130,11 +124,10 @@ export default function MatchingPage() {
         if (!confirm('해당 항목을 정말 삭제하시겠습니까?')) return;
         const currentToken = token || localStorage.getItem('accessToken');
         try {
-            const res = await fetch(`${API_BASE_URL}/api/userpicks/${idToDelete}`, {
+            await api(`/userpicks/${idToDelete}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${currentToken}` },
             });
-            if (!res.ok) throw new Error('삭제에 실패했습니다.');
             setUserPicks(prev => prev.filter(p => p.upIdx !== idToDelete));
         } catch (err) {
             alert(err.message);
@@ -161,16 +154,14 @@ export default function MatchingPage() {
         };
 
         try {
-            const res = await fetch('${API_BASE_URL}/userpicks/add', {
+            const added = await api('/userpicks/add', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${currentToken}`
                 },
-                body: JSON.stringify(newPickData),
+                body: newPickData,
             });
-            if (!res.ok) throw new Error('관심 상품 추가에 실패했습니다.');
-            const added = await res.json();
             setUserPicks(prev => [...prev, added]);
             // 입력 필드 초기화
             setSelectedUpper('');
@@ -194,16 +185,14 @@ export default function MatchingPage() {
 
         const currentToken = token || localStorage.getItem('accessToken');
         try {
-            const response = await fetch(`${API_BASE_URL}/api/userpicks/notifications`, {
+            const data = await api("/userpicks/notifications", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${currentToken}`,
                 },
-                body: JSON.stringify(pick),
+                body: pick,
             });
-            if (!response.ok) throw new Error('알림을 불러오는 중 오류가 발생했습니다.');
-            const data = await response.json();
             setNotifications(data);
         } catch (error) {
             console.error('Error fetching notifications:', error);
@@ -220,11 +209,10 @@ export default function MatchingPage() {
     const handleDeleteNotification = async (productIdToDelete) => {
         const currentToken = token || localStorage.getItem('accessToken');
         try {
-            const response = await fetch(`http://localhost:8080/api/alarm/delete/${productIdToDelete}`, {
+            await api(`/alarm/delete/${productIdToDelete}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${currentToken}` },
             });
-            if (!response.ok) throw new Error('알림 삭제에 실패했습니다.');
             setNotifications(prev => prev.filter(n => n.productId !== productIdToDelete));
         } catch (error) {
             console.error('Error deleting notification:', error);

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import styles from "./mypage.module.css";
 import tokenStore from "@/app/store/TokenStore";
 import SideNav from "@/components/mypage/sidebar";
+import { api } from "@/lib/api/client";
 
 const TABS = [
     { key: "all", label: "전체" },
@@ -114,14 +115,10 @@ export default function MyPage() {
                 return;
             }
             try {
-                const response = await fetch("http://localhost:8080/api/pay/balance", {
+                // `api` 유틸리티를 사용하여 잔액 조회
+                const data = await api("/pay/balance", {
                     headers: { Authorization: `Bearer ${token}` },
                 });
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || "잔액을 불러오는 데 실패했습니다.");
-                }
-                const data = await response.json();
                 setMyDaepa(data.balance);
             } catch (err) {
                 console.error("잔액 조회 실패:", err);

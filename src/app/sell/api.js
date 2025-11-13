@@ -1,6 +1,5 @@
 // src/app/sell/api.js
 // ▶ 권장: next.config.mjs에 /api 프록시 rewrites가 있다면 BASE는 빈 문자열로.
-//    (없고 직접 백엔드로 붙을 거면 NEXT_PUBLIC_API_BASE를 "http://localhost:8080/api"처럼 넣으세요.)
 export const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "";
 const API_PREFIX = "/api";  // ← Next rewrite를 쓰면 이 값 유지
 

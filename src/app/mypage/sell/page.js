@@ -6,13 +6,7 @@ import { useRouter } from 'next/navigation';
 import styles from './sell.module.css';
 import Sidebar from '@/components/mypage/sidebar';
 import tokenStore from '@/app/store/TokenStore';
-
-const BACKEND_BASE =
-    typeof process !== 'undefined' &&
-    process.env &&
-    process.env.NEXT_PUBLIC_API_BASE
-        ? process.env.NEXT_PUBLIC_API_BASE
-        : 'http://localhost:8080';
+import { api } from "@/lib/api/client";
 
 const FALLBACK_IMG =
     'https://daepa-s3.s3.ap-northeast-2.amazonaws.com/products/KakaoTalk_20251104_145039505.jpg';
@@ -85,36 +79,25 @@ export default function SellHistoryPage() {
 
     // ---------- API ----------
     async function fetchSell() {
-        const ac = new AbortController();
         try {
             setLoading(true);
             setErr('');
-            const res = await fetch('/api/deal/mySell', {
+            const data = await api('/deal/mySell', {
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
                 cache: 'no-store',
-                signal: ac.signal,
             });
 
-            if (!res.ok) {
-                const txt = await res.text().catch(() => '');
-                if (!mountedRef.current) return;
-                setErr(txt || '판매내역을 불러오지 못했습니다.');
-                setList([]);
-                return;
-            }
-
-            const data = await res.json().catch(() => []);
             if (!mountedRef.current) return;
             setList(Array.isArray(data) ? data : []);
         } catch (e) {
             if (!mountedRef.current) return;
-            setErr('네트워크 오류가 발생했습니다.');
+            const errorMessage = e.data?.message || e.message || '판매내역을 불러오지 못했습니다.';
+            setErr(errorMessage);
             setList([]);
         } finally {
             if (mountedRef.current) setLoading(false);
         }
-        return () => ac.abort();
     }
 
     useEffect(() => {
@@ -273,19 +256,15 @@ export default function SellHistoryPage() {
         if (!dealId) return;
         setPendingSendId(dealId);
         try {
-            const res = await fetch(`${BACKEND_BASE}/api/delivery/${dealId}/sent`, {
+            await api(`/delivery/${dealId}/sent`, {
                 method: 'PATCH',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
             });
-            if (!res.ok) {
-                const txt = await res.text().catch(() => '');
-                alert('배송 보냄 확인에 실패했습니다.\n' + txt);
-                return;
-            }
             await fetchSell();
-        } catch {
-            alert('네트워크 오류가 발생했습니다.');
+        } catch (error) {
+            const txt = error.data?.message || error.message || '배송 보냄 확인에 실패했습니다.';
+            alert('배송 보냄 확인에 실패했습니다.\n' + txt);
         } finally {
             setPendingSendId((prev) => (prev === dealId ? null : prev));
         }
@@ -296,20 +275,16 @@ export default function SellHistoryPage() {
         if (!dealId) return;
         setPendingDoneId(dealId);
         try {
-            const res = await fetch(`${BACKEND_BASE}/api/delivery/${dealId}/done`, {
+            await api(`/delivery/${dealId}/done`, {
                 method: 'PATCH',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
             });
-            if (!res.ok) {
-                const txt = await res.text().catch(() => '');
-                alert('처리 중 오류가 발생했습니다.\n' + txt);
-                return;
-            }
             // dv_status=5로 갱신되면 재조회 → 버튼 사라지고 후기 버튼만 보이도록
             await fetchSell();
-        } catch {
-            alert('네트워크 오류가 발생했습니다.');
+        } catch (error) {
+            const txt = error.data?.message || error.message || '처리 중 오류가 발생했습니다.';
+            alert('처리 중 오류가 발생했습니다.\n' + txt);
         } finally {
             setPendingDoneId((prev) => (prev === dealId ? null : prev));
         }
@@ -320,20 +295,16 @@ export default function SellHistoryPage() {
         if (!dealId) return;
         setPendingRefundId(dealId);
         try {
-            const res = await fetch(`${BACKEND_BASE}/api/deal/${dealId}/refund`, {
+            await api(`/deal/${dealId}/refund`, {
                 method: 'PATCH',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
             });
-            if (!res.ok) {
-                const txt = await res.text().catch(() => '');
-                alert('환불 처리 중 오류가 발생했습니다.\n' + txt);
-                return;
-            }
             alert('환불 처리가 완료되었습니다.');
             await fetchSell();
-        } catch {
-            alert('네트워크 오류가 발생했습니다.');
+        } catch (error) {
+            const txt = error.data?.message || error.message || '환불 처리 중 오류가 발생했습니다.';
+            alert('환불 처리 중 오류가 발생했습니다.\n' + txt);
         } finally {
             setPendingRefundId((prev) => (prev === dealId ? null : prev));
         }
@@ -347,16 +318,13 @@ export default function SellHistoryPage() {
         }
 
         try {
-            const res = await fetch(`/api/review/exists?dealId=${dealId}&reType=SELLER`, {
+            const data = await api(`/review/exists?dealId=${dealId}&reType=SELLER`, {
                 credentials: 'include',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
             });
-            if (res.ok) {
-                const data = await res.json().catch(() => ({}));
-                if (data?.exists) {
-                    alert('이미 작성한 리뷰입니다.');
-                    return;
-                }
+            if (data?.exists) {
+                alert('이미 작성한 리뷰입니다.');
+                return;
             }
         } catch {
             // 조회 실패해도 이동은 허용 가능

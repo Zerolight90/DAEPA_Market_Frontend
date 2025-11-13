@@ -2,14 +2,13 @@
 
 import tokenStore from "@/app/store/TokenStore";
 import {useState} from "react";
+import { api } from "@/lib/api/client";
 
 // 구매 내역 목록의 개별 아이템 컴포넌트 (가정)
 export default function PurchaseItem({ deal }) {
     const { token } = tokenStore();
     const [isCanceling, setIsCanceling] = useState(false);
     const [error, setError] = useState(null);
-
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
     // ✅ 테스트 모드: deal이 없으면 가짜 데이터 사용
     deal = { dIdx: 15};
@@ -25,7 +24,7 @@ export default function PurchaseItem({ deal }) {
         const currentToken = token || localStorage.getItem('accessToken');
 
         try {
-            const res = await fetch(`${API_BASE_URL}/api/${deal.dIdx}/payCancel`, {
+            await api(`/${deal.dIdx}/payCancel`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -34,19 +33,15 @@ export default function PurchaseItem({ deal }) {
                 body: JSON.stringify({ cancelReason: "고객 변심" }) // 취소 사유 전달
             });
 
-            if (!res.ok) {
-                const errData = await res.json();
-                throw new Error(errData.error || "취소 요청에 실패했습니다.");
-            }
-
             alert("결제가 성공적으로 취소되었습니다.");
             // TODO: UI를 '취소됨' 상태로 변경 (예: 부모 컴포넌트에 상태 업데이트 요청)
-            // onCancelSuccess(deal.dIdx); 
+            // onCancelSuccess(deal.dIdx);
 
         } catch (err) {
             console.error("취소 오류:", err);
-            setError(err.message);
-            alert(`오류: ${err.message}`);
+            const errorMessage = err.data?.message || err.message || "취소 요청에 실패했습니다.";
+            setError(errorMessage);
+            alert(`오류: ${errorMessage}`);
         } finally {
             setIsCanceling(false);
         }
