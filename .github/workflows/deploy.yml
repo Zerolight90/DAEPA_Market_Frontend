@@ -79,31 +79,31 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script_stop: true
           debug: false
-          timeout: 120m           # 🔸 SSH 세션 최대 시간
-          command_timeout: 240m   # 🔸 명령 실행 시간(기본 10분 → 60분으로 확장)
+          timeout: 120m
+          command_timeout: 240m
           script: |
             set -euo pipefail
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
-            
+
             cd ~/apps/frontend
-            
+
             echo "[1/5] Git update"
             git fetch --all
             git checkout main
             git reset --hard origin/main
-            
+
             echo "[2/5] Stop old containers"
             docker compose down || true
-            
-            echo "[3/5] Build (no cache once)"
-            docker compose build --no-cache frontend
-            
+
+            echo "[3/5] Build (use cache)"
+            docker compose build frontend        # ✅ --no-cache 제거
+
             echo "[4/5] Up"
             docker compose up -d
-            
+
             echo "[5/5] Status & logs"
             docker compose ps
             docker logs --tail=80 daepa-frontend || true
-            
+
             echo "✅ Deploy complete!"
