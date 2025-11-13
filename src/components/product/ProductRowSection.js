@@ -38,7 +38,7 @@ export default function ProductRowSection({
             try {
                 setLoading(true);
                 const qs = buildQueryString();
-                const res = await apiFetch(`/api/products?${qs}`);
+                const res = await apiFetch(`/products?${qs}`);
                 const list = Array.isArray(res?.content) ? res.content : [];
 
                 const mapped = list
