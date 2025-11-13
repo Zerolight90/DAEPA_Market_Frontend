@@ -50,7 +50,7 @@ export default function MatchingPage() {
                 return;
             }
             try {
-                const response = await fetch('${API_BASE_URL}/userpicks', {
+                const response = await fetch(`${API_BASE_URL}/userpicks`, {
                     headers: { 'Authorization': `Bearer ${currentToken}` },
                 });
                 if (!response.ok) throw new Error('데이터를 불러오는 데 실패했습니다.');
@@ -70,7 +70,7 @@ export default function MatchingPage() {
         (async () => {
             try {
                 setLoadingCategories(true);
-                const res = await fetch('${API_BASE_URL}/category/uppers');
+                const res = await fetch(`${API_BASE_URL}/category/uppers`);
                 const data = await res.json();
                 setUpperCategories(data);
             } catch (e) {
