@@ -24,7 +24,7 @@ export default function SecPayWithPointModal({ id, close, itemId, title, qty, to
 
             try {
                 // ✅ 백엔드의 페이 잔액 조회 API 호출 (경로 예시)
-                const res = await fetch(`${API_BASE_URL}/pay/balance`, {
+                const res = await fetch(`${API_BASE_URL}/api/pay/balance`, {
                     headers: { 'Authorization': `Bearer ${currentToken}` },
                 });
                 if (!res.ok) {
@@ -61,7 +61,7 @@ export default function SecPayWithPointModal({ id, close, itemId, title, qty, to
         try {
             // 3. ✅ 백엔드 페이 결제 API 호출 (경로 예시)
             const currentToken = token || localStorage.getItem('accessToken');
-            const res = await fetch(`${API_BASE_URL}/pay/purchase-with-points`, {
+            const res = await fetch(`${API_BASE_URL}/api/pay/purchase-with-points`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -134,6 +134,13 @@ export default function DaepaChargePage() {
 
     const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
+    function generateUUID() {
+           return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                 var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                 return v.toString(16);
+               });
+         }
+
     // ✅ 페이지가 로드될 때 잔액을 가져오는 로직
     useEffect(() => {
         const fetchBalance = async () => {
@@ -148,7 +155,7 @@ export default function DaepaChargePage() {
                 }
 
             try {
-                const response = await fetch(`${API_BASE_URL}/pay/balance`, {
+                const response = await fetch(`${API_BASE_URL}/api/pay/balance`, {
                     headers: {
                     'Authorization': `Bearer ${token}`,
                     },
@@ -191,10 +198,10 @@ export default function DaepaChargePage() {
         try {
             await tossPayments.requestPayment("카드", {
                 amount: chargeAmount,
-                orderId: `charge-${uuidv4()}`,
+                orderId: `charge-${generateUUID()}`,
                 orderName: `대파 ${chargeAmount.toLocaleString()}원 충전`,
                 customerName: "대파", // TODO: 실제 로그인 유저 이름으로 교체
-                successUrl: `${API_BASE_URL}/charge/success`,
+                successUrl: `${API_BASE_URL}/api/charge/success`,
                 failUrl: `${window.location.origin}/pay/fail`,
             });
         } catch (error) {

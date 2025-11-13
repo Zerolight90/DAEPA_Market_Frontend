@@ -18,7 +18,7 @@ export default function AddressChangeModal({ id, close, onAddressSelect }) {
         try {
             // localStorage에서 토큰을 가져옵니다. (실제 저장 위치에 맞게 수정 필요)
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${API_BASE_URL}/sing/locations`, {
+            const response = await fetch(`${API_BASE_URL}/api/sing/locations`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -53,7 +53,7 @@ export default function AddressChangeModal({ id, close, onAddressSelect }) {
     const handleSetDefault = async (locationId) => {
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${API_BASE_URL}/sing/location/${locationId}/update`, {
+            const response = await fetch(`${API_BASE_URL}/api/sing/location/${locationId}/update`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`
