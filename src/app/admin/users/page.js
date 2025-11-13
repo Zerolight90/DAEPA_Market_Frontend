@@ -153,7 +153,7 @@ export default function UsersPage() {
                   <div className={styles.tableCell}>
                     {user.udate ? new Date(user.udate).toLocaleDateString("ko-KR") : "-"}
                   </div>
-                  <div className={styles.tableCell}>{user.umanner}°C</div>
+                  <div className={styles.tableCell}>{user.umanner}%</div>
                   <div className={styles.tableCell}>{user.uwarn}회</div>
                   <div className={styles.tableCell}>{getStatusBadge(user.ustatus)}</div>
                   <div className={styles.tableCell}>
