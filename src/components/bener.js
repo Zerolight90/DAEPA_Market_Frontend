@@ -66,7 +66,7 @@ export default function Bener() {
 
     if (isLoading) {
         return (
-            <div className={`fullBleed ${styles.block}`}>
+            <div className={styles.block}>
                 <div className={styles.loadingContainer}>
                     <div className={styles.loadingSpinner}></div>
                     <p>배너를 불러오는 중...</p>
@@ -80,7 +80,7 @@ export default function Bener() {
     }
 
     return (
-        <div className={`fullBleed ${styles.block}`}>
+        <div className={styles.block}>
             <Swiper
                 modules={[Navigation, Autoplay, Pagination, A11y]}
                 slidesPerView={1}

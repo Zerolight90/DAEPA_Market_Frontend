@@ -55,7 +55,7 @@ export default function AdminDashboard() {
     const fetchData = async () => {
       try {
         // 대시보드 통계 조회
-        const statsRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/analytics/stats`);
+        const statsRes = await fetch(`/api/admin/analytics/stats`);
         if (statsRes.ok) {
           const statsData = await statsRes.json();
           setStats({
@@ -69,7 +69,7 @@ export default function AdminDashboard() {
         }
 
         // 일간 거래 추이 조회
-        const transactionRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/analytics/daily-transactions`);
+        const transactionRes = await fetch(`/api/admin/analytics/daily-transactions`);
         if (transactionRes.ok) {
           const transactionData = await transactionRes.json();
           setDailyTransactions(transactionData.map(item => ({
@@ -96,7 +96,7 @@ export default function AdminDashboard() {
         }
 
         // 최근 등록 상품 조회
-        const productsRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/analytics/recent-products?limit=5`);
+        const productsRes = await fetch(`/api/admin/analytics/recent-products?limit=5`);
         if (productsRes.ok) {
           const productsData = await productsRes.json();
           setRecentProducts(productsData.map(item => {
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
         }
 
         // 카테고리 비율 조회
-        const categoryRes = await fetch("http://localhost:8080/api/admin/analytics/category-ratio");
+        const categoryRes = await fetch("/api/admin/analytics/category-ratio");
         if (categoryRes.ok) {
           const categoryRaw = await categoryRes.json();
           const categoriesOrder = [
