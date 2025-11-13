@@ -28,7 +28,7 @@ export const Endpoints = {
 
 // 공통 fetch 헬퍼 (쿠키 포함)
 export async function apiFetch(path, opts = {}) {
-    const url = join(API_BASE, path.startsWith("/") ? path : `/${path}`);
+    const url = path.startsWith("/") ? path : `/${path}`;
     const res = await fetch(url, { credentials: "include", ...opts });
 
     // JSON이면 json 파싱, 아니면 text/빈값

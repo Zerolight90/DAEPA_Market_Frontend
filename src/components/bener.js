@@ -9,8 +9,7 @@ import "swiper/css/pagination";
 
 import styles from "./css/bener.module.css";
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8080";
-const PUBLIC_BANNER_ENDPOINT = `${API_BASE}/api/admin/banners`;
+const PUBLIC_BANNER_ENDPOINT = "/api/admin/banners/active";
 
 export default function Bener() {
     const [slides, setSlides] = useState([]);
@@ -22,9 +21,10 @@ export default function Bener() {
 
     const resolveImage = (url) => {
         if (!url) return null;
+        // If the URL is absolute, use it as is.
         if (url.startsWith("http")) return url;
-        const base = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8080";
-        return `${base}${url.startsWith("/") ? url : `/${url}`}`;
+        // Otherwise, treat it as a relative path from the root.
+        return url.startsWith("/") ? url : `/${url}`;
     };
 
     const fetchBanners = async () => {
@@ -34,31 +34,31 @@ export default function Bener() {
             });
             if (response.ok) {
                 const data = await response.json();
+                // 백엔드에서 이미 활성 배너만 반환하므로 추가 필터링 불필요
+                // displayOrder로 정렬 (백엔드에서 이미 정렬되어 있지만 확실히 하기 위해)
                 const activeBanners = (Array.isArray(data) ? data : [])
-                    .filter(banner => banner.isActive !== false)
-                    .sort((a, b) => (a.order ?? a.displayOrder ?? 0) - (b.order ?? b.displayOrder ?? 0))
+                    .sort((a, b) => {
+                        const orderA = a.displayOrder ?? 999;
+                        const orderB = b.displayOrder ?? 999;
+                        return orderA - orderB;
+                    })
                     .map(item => ({
                         ...item,
-                        image: resolveImage(item.image ?? item.imageUrl),
+                        image: resolveImage(item.imageUrl),
                         href: null
                     }));
                 if (activeBanners.length > 0) {
                     setSlides(activeBanners);
+                    setIsLoading(false);
                     return;
                 }
             }
-            setSlides([
-                { id: 1, title: "", subtitle: "", image: "/banners/banner1.jpg", href: "/event/1", order: 1, isActive: true },
-                { id: 2, title: "", subtitle: "", image: "/banners/banner2.jpg", href: "/event/2", order: 2, isActive: true },
-                { id: 3, title: "", subtitle: "", image: "/banners/banner3.jpg", href: "/event/3", order: 3, isActive: true },
-            ]);
+            // 배너가 없으면 빈 배열로 설정 (기본 배너 표시 안 함)
+            setSlides([]);
         } catch (error) {
             console.error("배너 데이터 로드 실패:", error);
-            setSlides([
-                { id: 1, title: "", subtitle: "", image: "/banners/banner1.jpg", href: "/event/1", order: 1, isActive: true },
-                { id: 2, title: "", subtitle: "", image: "/banners/banner2.jpg", href: "/event/2", order: 2, isActive: true },
-                { id: 3, title: "", subtitle: "", image: "/banners/banner3.jpg", href: "/event/3", order: 3, isActive: true },
-            ]);
+            // 에러 발생 시 빈 배열로 설정
+            setSlides([]);
         } finally {
             setIsLoading(false);
         }
@@ -66,7 +66,7 @@ export default function Bener() {
 
     if (isLoading) {
         return (
-            <div className={`fullBleed ${styles.block}`}>
+            <div className={styles.block}>
                 <div className={styles.loadingContainer}>
                     <div className={styles.loadingSpinner}></div>
                     <p>배너를 불러오는 중...</p>
@@ -80,7 +80,7 @@ export default function Bener() {
     }
 
     return (
-        <div className={`fullBleed ${styles.block}`}>
+        <div className={styles.block}>
             <Swiper
                 modules={[Navigation, Autoplay, Pagination, A11y]}
                 slidesPerView={1}

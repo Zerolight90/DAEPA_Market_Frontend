@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Eye, CheckCircle, XCircle, X, Package, User } from "lucide-react";
+import { Search, Eye, CheckCircle, XCircle, X, Package, User, Edit } from "lucide-react";
 import styles from "../admin.module.css";
 
 export default function InspectionPage() {
@@ -10,6 +10,7 @@ export default function InspectionPage() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [selectedInspection, setSelectedInspection] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const fetchInspections = async () => {
@@ -22,7 +23,7 @@ export default function InspectionPage() {
           product: item.productName || "-",
           seller: item.sellerName || "-",
           status: item.ckStatus === 1 ? "completed" : "processing",
-          result: item.ckResult === 1 ? "passed" : item.ckResult === 0 ? "failed" : null,
+          result: item.ckResult === 0 ? "passed" : item.ckResult === 1 ? "failed" : null,
           tradeType: item.tradeType || "-",
           dvStatus: item.dvStatus // 배송 상태
         })));
@@ -51,6 +52,7 @@ export default function InspectionPage() {
   const closeModal = () => {
     setIsModalOpen(false);
     setSelectedInspection(null);
+    setIsEditing(false);
   };
 
   const getStatusBadge = (status) => {
@@ -173,16 +175,11 @@ export default function InspectionPage() {
   const handleStatusChange = async (newStatus) => {
     if (!selectedInspection) return;
     
-    // 이미 검수 완료된 항목은 처리하지 않음
-    if (selectedInspection.status === "completed" && selectedInspection.result) {
-      alert("이미 검수 결과가 등록된 항목입니다.");
-      return;
-    }
-    
     try {
       // newStatus가 "passed" 또는 "failed"면 검수 완료로 변경하고 결과 설정
+      // ck_result: 0 = 합격, 1 = 불합격
       if (newStatus === "passed" || newStatus === "failed") {
-        const resultValue = newStatus === "passed" ? 1 : 0;
+        const resultValue = newStatus === "passed" ? 0 : 1;
         
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/checks/${selectedInspection.id}`, {
           method: "PATCH",
@@ -201,19 +198,28 @@ export default function InspectionPage() {
         const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/checks`);
         if (refreshRes.ok) {
           const refreshData = await refreshRes.json();
-          setInspections(refreshData.map(item => ({
+          const updatedInspections = refreshData.map(item => ({
             id: item.ckIdx,
             product: item.productName || "-",
             seller: item.sellerName || "-",
             status: item.ckStatus === 1 ? "completed" : "processing",
-            result: item.ckResult === 1 ? "passed" : item.ckResult === 0 ? "failed" : null,
+            result: item.ckResult === 0 ? "passed" : item.ckResult === 1 ? "failed" : null,
             tradeType: item.tradeType || "-",
             dvStatus: item.dvStatus
-          })));
+          }));
+          setInspections(updatedInspections);
+          
+          // 선택된 검수 항목도 업데이트
+          const updatedSelected = updatedInspections.find(item => item.id === selectedInspection.id);
+          if (updatedSelected) {
+            setSelectedInspection(updatedSelected);
+          }
         }
 
-        alert("검수 결과가 등록되었습니다.");
-        closeModal();
+        alert(selectedInspection.status === "completed" && selectedInspection.result 
+          ? "검수 결과가 수정되었습니다." 
+          : "검수 결과가 등록되었습니다.");
+        setIsEditing(false);
       }
     } catch (err) {
       console.error(err);
@@ -407,38 +413,86 @@ export default function InspectionPage() {
 
               {/* 검수 결과 선택 */}
               <div style={{ padding: "3rem" }}>
-                {selectedInspection.status === "completed" && selectedInspection.result ? (
-                  <div style={{
-                    textAlign: "center",
-                    padding: "2rem",
-                    backgroundColor: "#f3f4f6",
-                    borderRadius: "0.75rem"
-                  }}>
+                {selectedInspection.status === "completed" && selectedInspection.result && !isEditing ? (
+                  <div>
                     <div style={{
-                      fontSize: "1rem",
-                      color: "#64748b",
-                      marginBottom: "0.5rem",
-                      fontWeight: 600
+                      textAlign: "center",
+                      padding: "2rem",
+                      backgroundColor: "#f3f4f6",
+                      borderRadius: "0.75rem",
+                      marginBottom: "1.5rem"
                     }}>
-                      이미 검수 결과가 등록되었습니다.
+                      <div style={{
+                        fontSize: "0.875rem",
+                        color: "#64748b",
+                        marginBottom: "0.5rem",
+                        fontWeight: 600
+                      }}>
+                        현재 검수 결과
+                      </div>
+                      <div style={{
+                        fontSize: "1.5rem",
+                        color: selectedInspection.result === "passed" ? "#22c55e" : "#ef4444",
+                        fontWeight: 700
+                      }}>
+                        {selectedInspection.result === "passed" ? "✓ 검수 합격" : "✗ 검수 불합격"}
+                      </div>
                     </div>
-                    <div style={{
-                      fontSize: "1.25rem",
-                      color: selectedInspection.result === "passed" ? "#22c55e" : "#ef4444",
-                      fontWeight: 700
-                    }}>
-                      {selectedInspection.result === "passed" ? "✓ 검수 합격" : "✗ 검수 불합격"}
-                    </div>
+                    <button
+                      onClick={() => setIsEditing(true)}
+                      style={{
+                        width: "100%",
+                        padding: "1rem 1.5rem",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "0.75rem",
+                        backgroundColor: "#ffffff",
+                        color: "#475569",
+                        fontWeight: "600",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "0.5rem",
+                        fontSize: "0.9375rem",
+                        transition: "all 0.2s"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.backgroundColor = "#f8fafc";
+                        e.target.style.borderColor = "#cbd5e1";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.backgroundColor = "#ffffff";
+                        e.target.style.borderColor = "#e2e8f0";
+                      }}
+                    >
+                      <Edit size={18} />
+                      검수 결과 수정
+                    </button>
                   </div>
                 ) : (
                   <>
+                    {selectedInspection.status === "completed" && selectedInspection.result && isEditing && (
+                      <div style={{
+                        fontSize: "0.875rem",
+                        color: "#64748b",
+                        marginBottom: "1.5rem",
+                        fontWeight: 600,
+                        textAlign: "center",
+                        padding: "0.75rem",
+                        backgroundColor: "#fef3c7",
+                        borderRadius: "0.5rem",
+                        border: "1px solid #fbbf24"
+                      }}>
+                        검수 결과를 수정할 수 있습니다. 새로운 결과를 선택해주세요.
+                      </div>
+                    )}
                     <div style={{
                       fontSize: "0.875rem",
                       color: "#64748b",
                       marginBottom: "1.5rem",
                       fontWeight: 600
                     }}>
-                      검수 결과를 선택해주세요
+                      {isEditing ? "수정할 검수 결과를 선택해주세요" : "검수 결과를 선택해주세요"}
                     </div>
                     <div style={{
                       display: "flex",
@@ -452,7 +506,7 @@ export default function InspectionPage() {
                           padding: "1.25rem 1.5rem",
                           border: "2px solid #22c55e",
                           borderRadius: "0.75rem",
-                          backgroundColor: "#ffffff",
+                          backgroundColor: selectedInspection.result === "passed" ? "#f0fdf4" : "#ffffff",
                           color: "#22c55e",
                           fontWeight: "600",
                           cursor: "pointer",
@@ -469,7 +523,7 @@ export default function InspectionPage() {
                           e.target.style.transform = "translateY(-2px)";
                         }}
                         onMouseLeave={(e) => {
-                          e.target.style.backgroundColor = "#ffffff";
+                          e.target.style.backgroundColor = selectedInspection.result === "passed" ? "#f0fdf4" : "#ffffff";
                           e.target.style.borderColor = "#22c55e";
                           e.target.style.transform = "translateY(0)";
                         }}
@@ -484,7 +538,7 @@ export default function InspectionPage() {
                           padding: "1.25rem 1.5rem",
                           border: "2px solid #ef4444",
                           borderRadius: "0.75rem",
-                          backgroundColor: "#ffffff",
+                          backgroundColor: selectedInspection.result === "failed" ? "#fef2f2" : "#ffffff",
                           color: "#ef4444",
                           fontWeight: "600",
                           cursor: "pointer",
@@ -501,7 +555,7 @@ export default function InspectionPage() {
                           e.target.style.transform = "translateY(-2px)";
                         }}
                         onMouseLeave={(e) => {
-                          e.target.style.backgroundColor = "#ffffff";
+                          e.target.style.backgroundColor = selectedInspection.result === "failed" ? "#fef2f2" : "#ffffff";
                           e.target.style.borderColor = "#ef4444";
                           e.target.style.transform = "translateY(0)";
                         }}
@@ -510,6 +564,34 @@ export default function InspectionPage() {
                         검수 불합격
                       </button>
                     </div>
+                    {isEditing && (
+                      <button
+                        onClick={() => setIsEditing(false)}
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem 1.5rem",
+                          marginTop: "1rem",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "0.75rem",
+                          backgroundColor: "#ffffff",
+                          color: "#64748b",
+                          fontWeight: "600",
+                          cursor: "pointer",
+                          fontSize: "0.9375rem",
+                          transition: "all 0.2s"
+                        }}
+                        onMouseEnter={(e) => {
+                          e.target.style.backgroundColor = "#f8fafc";
+                          e.target.style.borderColor = "#cbd5e1";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.target.style.backgroundColor = "#ffffff";
+                          e.target.style.borderColor = "#e2e8f0";
+                        }}
+                      >
+                        취소
+                      </button>
+                    )}
                   </>
                 )}
               </div>

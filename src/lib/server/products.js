@@ -1,10 +1,7 @@
 //src/lib/server/products.js
 import "server-only";
 
-const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE ||
-    process.env.API_BASE ||
-    "http://localhost:8080";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
 /**
  * 상품 목록 조회
@@ -54,13 +51,13 @@ export async function fetchProducts({
         if (middleId) qs.set("mid", String(middleId)); // 컨트롤러에서 name="mid" 로 받으니까 그대로
         if (lowId) qs.set("low", String(lowId));
 
-        url = new URL("/api/products", API_BASE);
+        url = new URL("/api/products", API_BASE_URL);
         url.search = qs.toString();
     } else {
         if (!category) return { items: [], page, size, total: 0 };
 
         qs.set("big", category);
-        url = new URL("/api/products/by-name", API_BASE);
+        url = new URL("/api/products/by-name", API_BASE_URL);
         url.search = qs.toString();
     }
 
