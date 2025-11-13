@@ -55,7 +55,7 @@ export default function RightPanelClient({
 
     const openReport = () =>
         modal.open(({ id, close }) => (
-            <ReportModal id={id} close={close} itemId={itemId} />
+            <ReportModal id={id} close={close} productId={itemId} />
         ));
 
     const openBuy = () =>
