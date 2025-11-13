@@ -19,16 +19,17 @@ export default function Page() {
     const { setToken } = tokenStore();
 
     // ✅ 백엔드 주소
-    const BACKEND_URL = "http://52.79.241.142:8080";
+    // const BACKEND_URL = "http://52.79.241.142:8080";
+    const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "";
 
     // ✅ 네이버 로그인 버튼
     const handleNaverLogin = () => {
-        window.location.href = `${BACKEND_URL}/oauth2/authorization/naver`;
+        window.location.href = `${API_BASE}/api/oauth2/authorization/naver`;
     };
 
     // ✅ 카카오 로그인 버튼
     const handleKakaoLogin = () => {
-        window.location.href = `${BACKEND_URL}/oauth2/authorization/kakao`;
+        window.location.href = `${API_BASE}/api/oauth2/authorization/kakao`;
     };
 
     // ✅ 저장된 로그인 옵션 불러오기
