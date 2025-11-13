@@ -10,6 +10,8 @@ export default function SecPayWithPointModal({ id, close, itemId, title, qty, to
     const [error, setError] = useState(null); // ✅ 에러 상태
     const { token } = tokenStore(); // 토큰 가져오기
 
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+
     // ✅ 컴포넌트 로드 시 현재 페이 잔액 가져오기 (백엔드 API 필요)
     useEffect(() => {
         const fetchBalance = async () => {
@@ -22,7 +24,7 @@ export default function SecPayWithPointModal({ id, close, itemId, title, qty, to
 
             try {
                 // ✅ 백엔드의 페이 잔액 조회 API 호출 (경로 예시)
-                const res = await fetch('http://localhost:8080/api/pay/balance', {
+                const res = await fetch(`${API_BASE_URL}/pay/balance`, {
                     headers: { 'Authorization': `Bearer ${currentToken}` },
                 });
                 if (!res.ok) {
@@ -59,7 +61,7 @@ export default function SecPayWithPointModal({ id, close, itemId, title, qty, to
         try {
             // 3. ✅ 백엔드 페이 결제 API 호출 (경로 예시)
             const currentToken = token || localStorage.getItem('accessToken');
-            const res = await fetch('http://localhost:8080/api/pay/purchase-with-points', {
+            const res = await fetch(`${API_BASE_URL}/pay/purchase-with-points`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
