@@ -15,7 +15,7 @@ function JoinFormContent() {
     const check_nickname = "/api/sing/join/check_nickname";
     const check_phone = "/api/sing/join/check_phone";
 
-    // ✅ 이메일 인증 API (백엔드 경로 맞게 바꿔도 됨)
+    // 이메일 인증 API
     const send_code_api = "/api/mail/send";
     const verify_code_api = "/api/mail/verify";
 
@@ -70,23 +70,34 @@ function JoinFormContent() {
         return `${m}:${ss}`;
     };
 
-    // 이메일 코드 발송
+    // =====================
+    // 인증코드 발송
+    // =====================
     const onSendEmailCode = async () => {
         setEmailErr("");
+
+        // 이미 사용 중이면 인증 발송 자체를 막기
+        if (checkMsg.u_id.color === "red") {
+            setEmailErr("이미 사용 중인 이메일입니다. 다른 이메일로 시도해 주세요.");
+            return;
+        }
+
         if (!vo.u_id) {
             setEmailErr("이메일을 입력해 주세요.");
             return;
         }
-        // 간단한 이메일 패턴 체크
+
         const re = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/;
         if (!re.test(vo.u_id)) {
             setEmailErr("올바른 이메일 형식이 아닙니다.");
             return;
         }
+
         try {
             setIsSending(true);
             // 백엔드로 인증코드 발송 요청
             await axios.post(send_code_api, { email: vo.u_id });
+
             setCodeBoxOpen(true);
             setTimer(300); // 5분
             setEmailErr("인증코드를 보냈습니다. 메일함을 확인해 주세요.");
@@ -97,7 +108,9 @@ function JoinFormContent() {
         }
     };
 
+    // =====================
     // 인증코드 확인
+    // =====================
     const onVerifyCode = async () => {
         setEmailErr("");
         if (!authCode) {
@@ -114,7 +127,6 @@ function JoinFormContent() {
                 email: vo.u_id,
                 code: authCode,
             });
-            // 성공 기준은 백엔드 응답에 맞추세요 (여기선 200만 성공으로 처리)
             if (res.status === 200) {
                 setIsEmailVerified(true);
                 setEmailErr("이메일 인증이 완료되었습니다.");
@@ -194,27 +206,30 @@ function JoinFormContent() {
             const res = await axios.get(url, { params });
 
             if (res.data === true) {
+                // 이미 사용 중
                 setCheckMsg((prev) => ({
                     ...prev,
                     [field]: { text: "이미 사용 중입니다.", color: "red" },
                 }));
-                // 이메일일 경우 인증창 닫기
+
                 if (field === "u_id") {
+                    // 이메일일 경우 인증창 완전 종료 + 타이머 리셋
                     setCodeBoxOpen(false);
                     setIsEmailVerified(false);
                     setTimer(0);
                     setAuthCode("");
                 }
             } else {
+                // 사용 가능
                 setCheckMsg((prev) => ({
                     ...prev,
                     [field]: { text: "사용 가능합니다.", color: "green" },
                 }));
 
-                // ✅ 이메일이 사용 가능하면 자동으로 인증창 열기
+                // 이메일이 사용 가능하면 자동으로 인증창 열기 + 타이머 시작
                 if (field === "u_id") {
-                    setCodeBoxOpen(true);   // 인증코드 입력칸 표시
-                    setTimer(300);          // 5분 타이머
+                    setCodeBoxOpen(true);
+                    setTimer(300);
                     setEmailErr("이메일 인증코드를 입력해주세요.");
                 }
             }
@@ -224,12 +239,11 @@ function JoinFormContent() {
         }
     };
 
-
     // 제출
     function saveData(e) {
         e.preventDefault();
 
-        // ✅ 이메일 인증 강제
+        // 이메일 인증 필수
         if (!isEmailVerified) {
             alert("이메일 인증을 완료해 주세요.");
             return;
@@ -328,7 +342,11 @@ function JoinFormContent() {
                             type="button"
                             className={styles.addrBtn}
                             onClick={onSendEmailCode}
-                            disabled={isSending || isEmailVerified}
+                            disabled={
+                                isSending ||
+                                isEmailVerified ||
+                                checkMsg.u_id.color === "red" // 이미 사용 중이면 버튼 비활성화
+                            }
                             aria-label="이메일 인증코드 발송"
                         >
                             {isEmailVerified ? "인증완료" : isSending ? "발송중..." : "인증하기"}
@@ -347,42 +365,44 @@ function JoinFormContent() {
                     </div>
 
                     {/* 인증코드 입력 박스 + 5분 타이머 */}
-                    {codeBoxOpen && !isEmailVerified && (
-                        <div style={{ marginTop: 10 }}>
-                            <div style={{ display: "flex", gap: 8 }}>
-                                <input
-                                    type="text"
-                                    placeholder="인증코드 6자리"
-                                    className={styles.input}
-                                    value={authCode}
-                                    onChange={(e) => setAuthCode(e.target.value)}
-                                    maxLength={8}
-                                />
-                                <button
-                                    type="button"
-                                    className={styles.addrBtn}
-                                    onClick={onVerifyCode}
-                                    disabled={isVerifying || timer <= 0}
-                                >
-                                    {isVerifying ? "확인 중..." : "확인"}
-                                </button>
-                            </div>
-                            <div style={{ marginTop: 6, fontSize: 13 }}>
-                                {timer > 0 ? (
-                                    <span>남은 시간: {formatTimer(timer)}</span>
-                                ) : (
-                                    <span style={{ color: "crimson" }}>
-                    유효 시간이 만료되었습니다. 다시 인증을 요청해 주세요.
-                  </span>
+                    {codeBoxOpen &&
+                        !isEmailVerified &&
+                        checkMsg.u_id.color !== "red" && ( // 이미 사용 중이면 절대 안 뜨게
+                            <div style={{ marginTop: 10 }}>
+                                <div style={{ display: "flex", gap: 8 }}>
+                                    <input
+                                        type="text"
+                                        placeholder="인증코드 6자리"
+                                        className={styles.input}
+                                        value={authCode}
+                                        onChange={(e) => setAuthCode(e.target.value)}
+                                        maxLength={8}
+                                    />
+                                    <button
+                                        type="button"
+                                        className={styles.addrBtn}
+                                        onClick={onVerifyCode}
+                                        disabled={isVerifying || timer <= 0}
+                                    >
+                                        {isVerifying ? "확인 중..." : "확인"}
+                                    </button>
+                                </div>
+                                <div style={{ marginTop: 6, fontSize: 13 }}>
+                                    {timer > 0 ? (
+                                        <span>남은 시간: {formatTimer(timer)}</span>
+                                    ) : (
+                                        <span style={{ color: "crimson" }}>
+                                            유효 시간이 만료되었습니다. 다시 인증을 요청해 주세요.
+                                        </span>
+                                    )}
+                                </div>
+                                {emailErr && (
+                                    <div style={{ marginTop: 6, color: "#ff4d4f", fontSize: 13 }}>
+                                        {emailErr}
+                                    </div>
                                 )}
                             </div>
-                            {emailErr && (
-                                <div style={{ marginTop: 6, color: "#ff4d4f", fontSize: 13 }}>
-                                    {emailErr}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                        )}
 
                     {/* 인증 완료 메시지 */}
                     {isEmailVerified && (
@@ -602,12 +622,21 @@ function JoinFormContent() {
 
 export default function JoinFormPage() {
     return (
-        <Suspense fallback={
-            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
-                <CircularProgress />
-                <Typography sx={{ml: 2}}>페이지를 불러오는 중...</Typography>
-            </Box>
-        }>
+        <Suspense
+            fallback={
+                <Box
+                    sx={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        height: "100vh",
+                    }}
+                >
+                    <CircularProgress />
+                    <Typography sx={{ ml: 2 }}>페이지를 불러오는 중...</Typography>
+                </Box>
+            }
+        >
             <JoinFormContent />
         </Suspense>
     );
