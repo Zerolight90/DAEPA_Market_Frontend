@@ -233,7 +233,7 @@ export default function ReviewsPage() {
         {/* Review Detail Modal */}
         {isModalOpen && selectedReview && (
             <div className={styles.modalOverlay} onClick={closeModal}>
-              <div className={styles.modalContent} onClick={(e) => e.stopPropagation()} style={{ maxWidth: "800px" }}>
+              <div className={styles.reviewModalContent} onClick={(e) => e.stopPropagation()}>
                 <div className={styles.modalHeader}>
                   <h2>거래 후기 상세</h2>
                   <button onClick={closeModal} className={styles.modalCloseBtn}>
@@ -241,125 +241,95 @@ export default function ReviewsPage() {
                   </button>
                 </div>
 
-                <div className={styles.modalBody} style={{ padding: 0 }}>
-                  {/* 상품명, 유저, 작성일 등 */}
-                  <div style={{ padding: "2rem", borderBottom: "1px solid #e2e8f0", background: "#f8fafc" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
-                      <Package size={20} color="#64748b" />
-                      <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: "700", color: "#1e293b" }}>
-                        {selectedReview.product}
-                      </h2>
+                {/* 상품명, 유저, 작성일 등 */}
+                <div className={styles.reviewModalHeaderSection}>
+                  <div className={styles.reviewModalProductHeader}>
+                    <div className={styles.reviewModalProductIcon}>
+                      <Package size={24} />
                     </div>
+                    <h2 className={styles.reviewModalProductTitle}>
+                      {selectedReview.product}
+                    </h2>
+                  </div>
 
-                    <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(3, 1fr)",
-                          gap: "2rem",
-                          paddingTop: "1.5rem",
-                          borderTop: "1px solid #e5e7eb",
-                        }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <User size={18} color="#64748b" />
-                        <div>
-                          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>구매자</div>
-                          <div style={{ fontWeight: 600 }}>{selectedReview.buyer}</div>
-                        </div>
+                  <div className={styles.reviewModalInfoGrid}>
+                    <div className={styles.reviewModalInfoItem}>
+                      <div className={styles.reviewModalInfoIcon}>
+                        <User size={18} />
                       </div>
-
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <User size={18} color="#64748b" />
-                        <div>
-                          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>판매자</div>
-                          <div style={{ fontWeight: 600 }}>{selectedReview.seller}</div>
-                        </div>
-                      </div>
-
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                        <Calendar size={18} color="#64748b" />
-                        <div>
-                          <div style={{ fontSize: "0.75rem", color: "#64748b" }}>작성일</div>
-                          <div style={{ fontWeight: 600 }}>
-                            {new Date(selectedReview.date).toLocaleDateString("ko-KR", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })}
-                          </div>
-                        </div>
+                      <div className={styles.reviewModalInfoContent}>
+                        <div className={styles.reviewModalInfoLabel}>구매자</div>
+                        <div className={styles.reviewModalInfoValue}>{selectedReview.buyer}</div>
                       </div>
                     </div>
 
-                    <div style={{ marginTop: "1rem" }}>
-                  <span
-                      style={{
-                        padding: "0.375rem 0.75rem",
-                        borderRadius: "0.375rem",
-                        fontSize: "0.875rem",
-                        fontWeight: "600",
-                        backgroundColor: selectedReview.type === "sell" ? "#fef3c7" : "#dbeafe",
-                        color: selectedReview.type === "sell" ? "#92400e" : "#1e40af",
-                      }}
-                  >
-                    {selectedReview.type === "sell" ? "판매후기" : "구매후기"}
-                  </span>
+                    <div className={styles.reviewModalInfoItem}>
+                      <div className={styles.reviewModalInfoIcon}>
+                        <User size={18} />
+                      </div>
+                      <div className={styles.reviewModalInfoContent}>
+                        <div className={styles.reviewModalInfoLabel}>판매자</div>
+                        <div className={styles.reviewModalInfoValue}>{selectedReview.seller}</div>
+                      </div>
+                    </div>
+
+                    <div className={styles.reviewModalInfoItem}>
+                      <div className={styles.reviewModalInfoIcon}>
+                        <Calendar size={18} />
+                      </div>
+                      <div className={styles.reviewModalInfoContent}>
+                        <div className={styles.reviewModalInfoLabel}>작성일</div>
+                        <div className={styles.reviewModalInfoValue}>
+                          {new Date(selectedReview.date).toLocaleDateString("ko-KR", {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ padding: "3rem" }}>
-                    <div style={{ marginBottom: "2rem", borderBottom: "1px solid #f1f5f9" }}>
-                      <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.75rem", fontWeight: 600 }}>
-                        별점
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                        {renderStarsLarge(selectedReview.rating)}
-                        <span style={{ fontSize: "1.25rem", fontWeight: 700, color: "#1e293b" }}>
-                      {selectedReview.rating}/5
+                  <div className={styles.reviewModalBadgeContainer}>
+                    <span
+                        className={`${styles.reviewModalBadge} ${
+                          selectedReview.type === "sell" 
+                            ? styles.reviewModalBadgeSell 
+                            : styles.reviewModalBadgeBuy
+                        }`}
+                    >
+                      {selectedReview.type === "sell" ? "판매후기" : "구매후기"}
                     </span>
-                      </div>
-                    </div>
+                  </div>
+                </div>
 
-                    <div>
-                      <div style={{ fontSize: "0.875rem", color: "#64748b", marginBottom: "0.75rem", fontWeight: 600 }}>
-                        후기 내용
+                {/* 별점 및 후기 내용 */}
+                <div className={styles.reviewModalBodySection}>
+                  <div className={styles.reviewModalRatingSection}>
+                    <div className={styles.reviewModalSectionLabel}>별점</div>
+                    <div className={styles.reviewModalRatingDisplay}>
+                      <div className={styles.reviewModalStars}>
+                        {renderStarsLarge(selectedReview.rating)}
                       </div>
-                      <div
-                          style={{
-                            fontSize: "1.0625rem",
-                            lineHeight: "1.8",
-                            color: "#374151",
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                            padding: "1.5rem",
-                            background: "#f9fafb",
-                            borderRadius: "0.5rem",
-                            border: "1px solid #e5e7eb",
-                          }}
-                      >
-                        {selectedReview.comment}
-                      </div>
+                      <span className={styles.reviewModalRatingText}>
+                        {selectedReview.rating}/5
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className={styles.reviewModalCommentSection}>
+                    <div className={styles.reviewModalSectionLabel}>후기 내용</div>
+                    <div className={styles.reviewModalCommentBox}>
+                      {selectedReview.comment}
                     </div>
                   </div>
                 </div>
 
-                <div className={styles.modalFooter}>
+                <div className={styles.reviewModalFooter}>
                   <button onClick={closeModal} className={styles.modalCloseBtn}>닫기</button>
                   <button
                       onClick={() => handleDelete(selectedReview)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.5rem",
-                        padding: "0.75rem 1.5rem",
-                        background: "#ef4444",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "0.5rem",
-                        fontWeight: "600",
-                        cursor: "pointer",
-                        transition: "all 0.2s ease",
-                      }}
+                      className={styles.reviewModalDeleteButton}
                   >
                     <Trash2 size={16} />
                     삭제
