@@ -1,0 +1,143 @@
+.wrap {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 16px 80px;
+    color: #222;
+    box-sizing: border-box;
+}
+
+.header {
+    margin-bottom: 8px;
+}
+
+.title {
+    font-size: 20px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+}
+
+.divider {
+    height: 2px;
+    background: #000; /* 검은 선 */
+    margin-bottom: 20px;
+}
+
+.hero {
+    margin-bottom: 12px;
+}
+
+.subtitle {
+    font-size: 18px;
+    margin: 0 0 12px 0;
+}
+
+.searchBox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f5f5f5;
+    border: 1px solid #e6e6e6;
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.searchIcon {
+    opacity: 0.6;
+    line-height: 1;
+}
+
+.searchInput {
+    flex: 1;
+    border: 0;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+}
+
+.tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0 12px 0;
+}
+
+.tab {
+    border: 1px solid #e6e6e6;
+    background: #fff;
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.active {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+}
+
+.list {
+    display: grid;
+    gap: 8px;
+}
+
+.row {
+    border: 1px solid #eaeaea;
+    border-radius: 12px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.q {
+    width: 100%;
+    text-align: left;
+    border: 0;
+    background: #fff;
+    padding: 14px 16px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    align-items: center;
+    cursor: pointer;
+}
+
+.label {
+    display: block;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 4px;
+}
+
+.qtext {
+    grid-column: 1 / -1;
+    font-size: 14px;
+}
+
+.chev {
+    justify-self: end;
+    transition: transform 0.15s ease;
+}
+
+.rot {
+    transform: rotate(90deg);
+}
+
+.a {
+    padding: 12px 16px 16px;
+    border-top: 1px solid #f0f0f0;
+    color: #444;
+    line-height: 1.55;
+    background: #fafafa;
+    font-size: 14px;
+}
+
+.empty {
+    padding: 36px 8px;
+    color: #777;
+    text-align: center;
+}
+
+@media (hover:hover) {
+    .q:hover { background: #fcfcfc; }
+    .tab:hover { border-color: #cfcfcf; }
+}

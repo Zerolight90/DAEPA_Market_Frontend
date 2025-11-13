@@ -184,13 +184,13 @@ export default function Header() {
                                 >
                                     로그아웃
                                 </button>
-                                <Link href="/help">고객센터</Link>
+                                <Link href="/faq">고객센터</Link>
                             </>
                         ) : (
                             <>
                                 <Link href="/sing/login">로그인</Link>
                                 <Link href="/sing/join/agree">회원가입</Link>
-                                <Link href="/help">고객센터</Link>
+                                <Link href="/faq">고객센터</Link>
                             </>
                         )}
                     </div>
