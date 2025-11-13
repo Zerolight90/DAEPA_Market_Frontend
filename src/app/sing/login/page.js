@@ -8,6 +8,7 @@ import styles from "@/app/sing/login/login.module.css";
 import tokenStore from "@/app/store/TokenStore";
 import naverLogo from "@/app/naver.png";
 import kakaoLogo from "@/app/kakaologin.png"; // ✅ 추가
+import { getApiBaseUrl } from "@/lib/api/client";
 
 export default function Page() {
     const router = useRouter();
@@ -18,17 +19,16 @@ export default function Page() {
 
     const { setToken } = tokenStore();
 
-    // ✅ 백엔드 주소
-    const BACKEND_URL = "http://52.79.241.142:8080";
-
     // ✅ 네이버 로그인 버튼
     const handleNaverLogin = () => {
-        window.location.href = `${BACKEND_URL}/oauth2/authorization/naver`;
+        const backendUrl = getApiBaseUrl();
+        window.location.href = `${backendUrl}/oauth2/authorization/naver`;
     };
 
     // ✅ 카카오 로그인 버튼
     const handleKakaoLogin = () => {
-        window.location.href = `${BACKEND_URL}/oauth2/authorization/kakao`;
+        const backendUrl = getApiBaseUrl();
+        window.location.href = `${backendUrl}/oauth2/authorization/kakao`;
     };
 
     // ✅ 저장된 로그인 옵션 불러오기

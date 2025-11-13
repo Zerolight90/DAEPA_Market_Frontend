@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Search, Plus, Edit, Trash2, Calendar, User, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import styles from "../admin.module.css";
+import { api } from "@/lib/api/client";
 
 export default function NoticePage() {
   const [notices, setNotices] = useState([]);
@@ -15,11 +16,7 @@ export default function NoticePage() {
   useEffect(() => {
     const fetchNotices = async () => {
       try {
-        // const res = await fetch("http://localhost:8080/api/admin/notices");
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices`);
-        if (!res.ok) throw new Error("공지 목록 불러오기 실패");
-
-        const data = await res.json();
+        const data = await api("/admin/notices");
 
         // 백엔드 DTO -> UI 구조로 변환
         const mapped = data.map(n => ({
@@ -380,11 +377,9 @@ export default function NoticePage() {
                           if (!confirm("이 공지사항을 삭제하시겠습니까?")) return;
 
                           try {
-                            const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${notice.id}`, {
+                            await api(`/admin/notices/${notice.id}`, {
                               method: "DELETE",
                             });
-
-                            if (!res.ok) throw new Error("삭제 실패");
 
                             alert("삭제가 완료되었습니다.");
 

@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Sidebar from "@/components/mypage/sidebar";
 import tokenStore from "@/app/store/TokenStore";
 import styles from "./review.module.css";
+import { api } from "@/lib/api/client";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
 const FALLBACK_IMG =
     "https://daepa-s3.s3.ap-northeast-2.amazonaws.com/products/KakaoTalk_20251104_145039505.jpg";
 
@@ -64,29 +64,17 @@ export default function MyReviewsPage() {
         try {
             setter((s) => ({ ...s, loading: true, err: "" }));
 
-            const url =
+            const path =
                 kind === "received"
-                    ? `${API_BASE}/api/review/received?page=${page}&size=${state.size}`
-                    : `${API_BASE}/api/review/written?page=${page}&size=${state.size}`;
+                    ? `/review/received?page=${page}&size=${state.size}`
+                    : `/review/written?page=${page}&size=${state.size}`;
 
-            const res = await fetch(url, {
+            const data = await api(path, {
                 headers: { Authorization: `Bearer ${realToken}` },
                 credentials: "include",
                 cache: "no-store",
             });
 
-            if (!res.ok) {
-                const txt = await res.text();
-                setter((s) => ({
-                    ...s,
-                    err: txt || "불러오기에 실패했습니다.",
-                    loading: false,
-                    initialized: true,
-                }));
-                return;
-            }
-
-            const data = await res.json(); // { content, page, size, totalPages, totalElements }
             setter((s) => ({
                 ...s,
                 items: append ? [...s.items, ...data.content] : data.content,
@@ -98,10 +86,10 @@ export default function MyReviewsPage() {
                 err: "",
                 initialized: true,
             }));
-        } catch {
+        } catch (error) {
             setter((s) => ({
                 ...s,
-                err: "네트워크 오류가 발생했습니다.",
+                err: error.data?.message || error.message || "네트워크 오류가 발생했습니다.",
                 loading: false,
                 initialized: true,
             }));
@@ -150,7 +138,7 @@ export default function MyReviewsPage() {
 
         try {
             setSaving(true);
-            const res = await fetch(`${API_BASE}/api/reviews/${selected.reIdx}`, {
+            await api(`/reviews/${selected.reIdx}`, {
                 method: "PUT",
                 headers: {
                     "Content-Type": "application/json",
@@ -162,11 +150,6 @@ export default function MyReviewsPage() {
                     reContent: editContent,
                 }),
             });
-            if (!res.ok) {
-                const txt = await res.text();
-                alert(txt || "수정에 실패했습니다.");
-                return;
-            }
 
             // 리스트 & 모달 동기화
             const apply = (arr) =>
@@ -183,7 +166,11 @@ export default function MyReviewsPage() {
 
             setEditMode(false);
             alert("수정되었습니다.");
-        } finally {
+        } catch (error) {
+            const txt = error.data?.message || error.message || "수정에 실패했습니다.";
+            alert(txt);
+        }
+        finally {
             setSaving(false);
         }
     }

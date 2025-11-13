@@ -4,6 +4,7 @@
 import { useState } from "react";
 import BaseModal from "@/components/ui/modal/BaseModal";
 import tokenStore from "@/app/store/TokenStore"; // ✅ 토큰 스토어
+import { api } from "@/lib/api/client";
 
 const STATUS_LABELS = {
     1: "사기 의심",
@@ -11,8 +12,6 @@ const STATUS_LABELS = {
     3: "스팸/광고",
     4: "기타",
 };
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
 
 // (옵션) 혹시 스토어가 비어있을 때 쿠키에서 꺼내는 보조 함수
 function getCookie(name) {
@@ -46,7 +45,7 @@ export default function ReportModal({ id, close, productId }) {
 
         try {
             setSubmitting(true);
-            const res = await fetch(`${API_BASE}/api/naga/report`, {
+            await api("/naga/report", {
                 method: "POST",
                 credentials: "include",
                 headers: {
@@ -61,16 +60,12 @@ export default function ReportModal({ id, close, productId }) {
                 }),
             });
 
-            if (!res.ok) {
-                const txt = await res.text().catch(() => "");
-                throw new Error(txt || "신고 접수에 실패했습니다.");
-            }
-
             alert("신고가 접수되었습니다.");
             close();
         } catch (e) {
             console.error(e);
-            alert(e.message || "신고 접수 중 오류가 발생했습니다.");
+            const errorMessage = e.data?.message || e.message || "신고 접수 중 오류가 발생했습니다.";
+            alert(errorMessage);
         } finally {
             setSubmitting(false);
         }

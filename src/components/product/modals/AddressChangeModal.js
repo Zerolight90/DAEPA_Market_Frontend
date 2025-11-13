@@ -3,13 +3,12 @@
 import { useState, useEffect } from "react";
 import BaseModal from "@/components/ui/modal/BaseModal";
 import styles from './AddressChangeModal.module.css';
+import { api } from "@/lib/api/client";
 
 export default function AddressChangeModal({ id, close, onAddressSelect }) {
     const [addresses, setAddresses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
     // 주소 목록을 불러오는 함수
     const fetchAddresses = async () => {
@@ -18,18 +17,12 @@ export default function AddressChangeModal({ id, close, onAddressSelect }) {
         try {
             // localStorage에서 토큰을 가져옵니다. (실제 저장 위치에 맞게 수정 필요)
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${API_BASE_URL}/api/sing/locations`, {
+            const data = await api("/sing/locations", {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
-
-            if (response.ok) {
-                const data = await response.json();
-                setAddresses(data);
-            } else {
-                throw new Error('서버에서 주소 목록을 가져오지 못했습니다.');
-            }
+            setAddresses(data);
         } catch (err) {
             setError("주소 목록을 불러오는 데 실패했습니다.");
             console.error(err);
@@ -53,16 +46,12 @@ export default function AddressChangeModal({ id, close, onAddressSelect }) {
     const handleSetDefault = async (locationId) => {
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${API_BASE_URL}/api/sing/location/${locationId}/update`, {
+            await api(`/sing/location/${locationId}/update`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
             });
-
-            if (!response.ok) {
-                throw new Error('기본 배송지 설정에 실패했습니다.');
-            }
 
             // 성공 시, 주소 목록을 다시 불러와 '대표 배송지' 배지를 업데이트
             await fetchAddresses();

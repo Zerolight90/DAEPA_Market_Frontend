@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/mypage/sidebar';
 import styles from './leave.module.css';
 import TokeStore from "@/app/store/TokenStore";
+import { api } from "@/lib/api/client";
 
 const REASONS = [
     { id: 'low_usage', label: '사용 빈도가 낮고 개인정보 및 보안 우려' },
@@ -55,10 +56,7 @@ export default function LeavePage() {
         };
 
         try {
-            const base =
-                process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8080';
-
-            const res = await fetch(`${base}/api/sing/bye`, {
+            const data = await api("/sing/bye", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -69,22 +67,10 @@ export default function LeavePage() {
                 body: JSON.stringify(payload),
             });
 
-            if (!res.ok) {
-                const txt = await res.text();
-                alert(txt || '탈퇴 처리에 실패했습니다.');
-                return;
-            }
-
             let msg = '회원 탈퇴가 완료되었습니다.';
-            try {
-                const data = await res.json();
-                if (data && (data.message || typeof data === 'string')) {
-                    msg = data.message || data;
-                }
-            } catch (_) {
-                // text 응답이면 무시
+            if (data && (data.message || typeof data === 'string')) {
+                msg = data.message || data;
             }
-
             alert(msg);
 
             // 1) 브라우저 저장 토큰 제거
@@ -101,7 +87,8 @@ export default function LeavePage() {
             router.refresh?.();
         } catch (err) {
             console.error(err);
-            alert('탈퇴 요청 중 오류가 발생했습니다.');
+            const errorMessage = err.data?.message || err.message || '탈퇴 요청 중 오류가 발생했습니다.';
+            alert(errorMessage);
         }
     };
 

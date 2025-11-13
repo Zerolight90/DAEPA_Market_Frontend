@@ -10,6 +10,7 @@ import CardMedia from '@mui/material/CardMedia';
 import Link from 'next/link';
 import { CircularProgress } from "@mui/material";
 import * as PropTypes from "prop-types";
+import { api } from "@/lib/api/client";
 
 function ErrorOutlineIcon(props) {
     return null;
@@ -32,8 +33,6 @@ function PaySecContent() {
     });
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
-
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
     useEffect(() => {
         const amountParam = searchParams.get('amount');
@@ -62,11 +61,7 @@ function PaySecContent() {
 
         const fetchProductDetails = async () => {
             try {
-                const productRes = await fetch(`${API_BASE_URL}/api/products/${itemIdFromOrderId}`);
-                if (!productRes.ok) {
-                    throw new Error('상품 정보를 불러오는 데 실패했습니다.');
-                }
-                const productData = await productRes.json();
+                const productData = await api(`/products/${itemIdFromOrderId}`);
 
                 setPaymentInfo({
                     amount: amountNum,
