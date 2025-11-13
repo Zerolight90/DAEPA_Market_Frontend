@@ -239,7 +239,7 @@ export default function DaepaChargePage() {
             <section className={styles.balanceBox}>
                 <div className={styles.balanceLeft}>
                     <span className={styles.balanceLabel}>보유 중인 대파</span>
-                    <strong className={styles.balanceValue}>{myDaepa}개</strong>
+                    <strong className={styles.balanceValue}>{myDaepa.toLocaleString()}개</strong>
                 </div>
                 <p className={styles.balanceHint}>
                     대파를 충전해서 거래 시 편하게 사용하세요.

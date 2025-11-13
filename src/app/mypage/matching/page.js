@@ -38,6 +38,8 @@ export default function MatchingPage() {
     const [isNotificationLoading, setIsNotificationLoading] = useState(false);
     const [visibleNotificationsCount, setVisibleNotificationsCount] = useState(NOTIFICATIONS_PER_PAGE);
 
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+
     // 내 관심 조건 불러오기
     useEffect(() => {
         const fetchUserPicks = async () => {
@@ -48,7 +50,7 @@ export default function MatchingPage() {
                 return;
             }
             try {
-                const response = await fetch('http://localhost:8080/api/userpicks', {
+                const response = await fetch('${API_BASE_URL}/userpicks', {
                     headers: { 'Authorization': `Bearer ${currentToken}` },
                 });
                 if (!response.ok) throw new Error('데이터를 불러오는 데 실패했습니다.');
@@ -68,7 +70,7 @@ export default function MatchingPage() {
         (async () => {
             try {
                 setLoadingCategories(true);
-                const res = await fetch('http://localhost:8080/api/category/uppers');
+                const res = await fetch('${API_BASE_URL}/category/uppers');
                 const data = await res.json();
                 setUpperCategories(data);
             } catch (e) {
@@ -91,7 +93,7 @@ export default function MatchingPage() {
         (async () => {
             setLoadingMiddle(true);
             try {
-                const res = await fetch(`http://localhost:8080/api/category/uppers/${selectedUpper}/middles`);
+                const res = await fetch(`${API_BASE_URL}/category/uppers/${selectedUpper}/middles`);
                 const data = await res.json();
                 setMiddleCategories(data);
             } catch (e) {
@@ -112,7 +114,7 @@ export default function MatchingPage() {
         (async () => {
             setLoadingLow(true);
             try {
-                const res = await fetch(`http://localhost:8080/api/category/middles/${selectedMiddle}/lows`);
+                const res = await fetch(`${API_BASE_URL}/category/middles/${selectedMiddle}/lows`);
                 const data = await res.json();
                 setLowCategories(data);
             } catch (e) {
@@ -128,7 +130,7 @@ export default function MatchingPage() {
         if (!confirm('해당 항목을 정말 삭제하시겠습니까?')) return;
         const currentToken = token || localStorage.getItem('accessToken');
         try {
-            const res = await fetch(`http://localhost:8080/api/userpicks/${idToDelete}`, {
+            const res = await fetch(`${API_BASE_URL}/userpicks/${idToDelete}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${currentToken}` },
             });
@@ -159,7 +161,7 @@ export default function MatchingPage() {
         };
 
         try {
-            const res = await fetch('http://localhost:8080/api/userpicks/add', {
+            const res = await fetch('${API_BASE_URL}/userpicks/add', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -192,7 +194,7 @@ export default function MatchingPage() {
 
         const currentToken = token || localStorage.getItem('accessToken');
         try {
-            const response = await fetch(`http://localhost:8080/api/userpicks/notifications`, {
+            const response = await fetch(`${API_BASE_URL}/userpicks/notifications`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
