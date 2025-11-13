@@ -25,7 +25,7 @@ export default function PurchaseItem({ deal }) {
         const currentToken = token || localStorage.getItem('accessToken');
 
         try {
-            const res = await fetch(`${API_BASE_URL}/${deal.dIdx}/payCancel`, {
+            const res = await fetch(`${API_BASE_URL}/api/${deal.dIdx}/payCancel`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -61,7 +61,7 @@ function PaySuccessContent() {
 
         const fetchProductDetails = async () => {
             try {
-                const productRes = await fetch(`${API_BASE_URL}/products/${itemIdFromOrderId}`);
+                const productRes = await fetch(`${API_BASE_URL}/api/products/${itemIdFromOrderId}`);
                 if (!productRes.ok) {
                     throw new Error('상품 정보를 불러오는 데 실패했습니다.');
                 }
