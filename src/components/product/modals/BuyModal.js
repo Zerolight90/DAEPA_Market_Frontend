@@ -80,6 +80,10 @@ export default function BuyModal({ id, close, itemId, title, price }) { // image
     }, []); // 컴포넌트 마운트 시 1회만 실행
 
     const purchase = async () => {
+        if (!selectedAddress || !selectedAddress.locKey) {
+            alert("배송지를 선택해주세요.");
+            return;
+        }
         // .env 파일에서 토스 클라이언트 키 받아오기
         const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY);
         // 결제/주문 토스페이먼츠 API 호출
@@ -91,7 +95,7 @@ export default function BuyModal({ id, close, itemId, title, price }) { // image
             // 주문명 동적 생성
             orderName: title || '상품 구매',
             customerName: "id", // TODO: 실제 유저 이름으로 변경 필요
-            successUrl: `http://localhost:8080/api/pay/success`,
+            successUrl: `http://localhost:8080/api/pay/success?locKey=${selectedAddress.locKey}`,
             failUrl: `${window.location.origin}/pay/fail`,
         }).catch(error => {
             if (error.code === 'USER_CANCEL') {
