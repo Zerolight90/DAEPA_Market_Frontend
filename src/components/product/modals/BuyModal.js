@@ -19,6 +19,8 @@ export default function BuyModal({ id, close, itemId, title, price }) { // image
     const [addressLoading, setAddressLoading] = useState(true); // 주소 로딩 상태 추가
     const [productImageUrl, setProductImageUrl] = useState('/images/placeholder.jpg'); // 상품 이미지 URL 상태 추가
 
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+
     // 상품 이미지 정보를 가져오는 useEffect
     useEffect(() => {
         if (!itemId) return; // itemId가 없으면 실행하지 않음
@@ -26,7 +28,7 @@ export default function BuyModal({ id, close, itemId, title, price }) { // image
         const fetchProductImage = async () => {
             try {
                 // 백엔드 API에서 상품 정보를 가져옵니다.
-                const response = await fetch(`http://localhost:8080/api/products/${itemId}`);
+                const response = await fetch(`${API_BASE_URL}/products/${itemId}`);
                 if (!response.ok) {
                     throw new Error('상품 정보를 가져오지 못했습니다.');
                 }
@@ -52,7 +54,7 @@ export default function BuyModal({ id, close, itemId, title, price }) { // image
                 // localStorage에서 토큰을 가져옵니다. (실제 저장 위치에 맞게 수정 필요)
                 const token = localStorage.getItem('accessToken');
 
-                const response = await fetch('/api/sing/locations/default', {
+                const response = await fetch(`${API_BASE_URL}/sing/locations/default`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -95,7 +97,7 @@ export default function BuyModal({ id, close, itemId, title, price }) { // image
             // 주문명 동적 생성
             orderName: title || '상품 구매',
             customerName: "id", // TODO: 실제 유저 이름으로 변경 필요
-            successUrl: `http://localhost:8080/api/pay/success?locKey=${selectedAddress.locKey}`,
+            successUrl: `${API_BASE_URL}/pay/success?locKey=${selectedAddress.locKey}`,
             failUrl: `${window.location.origin}/pay/fail`,
         }).catch(error => {
             if (error.code === 'USER_CANCEL') {

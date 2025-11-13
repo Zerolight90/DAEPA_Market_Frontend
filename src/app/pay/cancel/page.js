@@ -9,6 +9,8 @@ export default function PurchaseItem({ deal }) {
     const [isCanceling, setIsCanceling] = useState(false);
     const [error, setError] = useState(null);
 
+    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+
     // ✅ 테스트 모드: deal이 없으면 가짜 데이터 사용
     deal = { dIdx: 15};
 
@@ -23,7 +25,7 @@ export default function PurchaseItem({ deal }) {
         const currentToken = token || localStorage.getItem('accessToken');
 
         try {
-            const res = await fetch(`http://localhost:8080/api/${deal.dIdx}/payCancel`, {
+            const res = await fetch(`${API_BASE_URL}/${deal.dIdx}/payCancel`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
