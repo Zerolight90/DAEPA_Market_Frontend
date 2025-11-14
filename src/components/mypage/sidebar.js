@@ -13,7 +13,7 @@ export const SIDE_SECTIONS = [
             { href: "/mypage/buy", label: "구매내역" },
             { href: "/mypage/shipping", label: "택배" },
             { href: "/mypage/matching", label: "관심 상품 매칭" },
-            { href: "/mypage/safe_settle", label: "정산내역" },
+            { href: "/mypage/safe_settle", label: "안심결제 정산내역" },
         ],
     },
     {

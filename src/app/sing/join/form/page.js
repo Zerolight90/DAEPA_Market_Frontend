@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import styles from "../join.module.css";
 import axios from "axios";
 import { CircularProgress, Box, Typography } from "@mui/material";
+import { api } from "@/lib/api/client";
 
 function JoinFormContent() {
     const router = useRouter();
