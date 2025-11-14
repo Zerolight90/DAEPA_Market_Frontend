@@ -203,7 +203,7 @@ export default function NoticeDetailPage() {
           fontSize: "1rem", 
           lineHeight: "1.8", 
           color: "#374151",
-          whiteWhite: "pre-wrap",
+          whiteSpace: "pre-wrap",
           wordBreak: "break-word"
         }}>
           {notice.content}
