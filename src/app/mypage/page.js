@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./mypage.module.css";
-import tokenStore from "@/app/store/TokenStore";
+import useTokenStore from "@/app/store/TokenStore";
 import SideNav from "@/components/mypage/sidebar";
 import { api } from "@/lib/api/client";
 
@@ -82,7 +82,8 @@ function formatDateRelative(raw) {
 
 export default function MyPage() {
     const pathname = usePathname();
-    const { accessToken } = tokenStore();
+    const { accessToken } = useTokenStore();
+    const [isHydrated, setIsHydrated] = useState(false);
 
     const [tab, setTab] = useState("all");
     const [sort, setSort] = useState("latest");
@@ -96,156 +97,94 @@ export default function MyPage() {
 
     const [products, setProducts] = useState([]);
     const [productErr, setProductErr] = useState("");
-
-    // ✅ 정산내역 개수
     const [safeCount, setSafeCount] = useState(0);
-
-    // ✅ 대파 페이 잔액
     const [myDaepa, setMyDaepa] = useState(0);
-    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    // ✅ 페이지 로드시 잔액 가져오기 (토큰은 로컬 스토리지에서)
     useEffect(() => {
-        const fetchBalance = async () => {
-            const token = localStorage.getItem("accessToken");
-            if (!token) {
-                setError("로그인이 필요합니다.");
-                setIsLoading(false);
-                return;
-            }
-            try {
-                // `api` 유틸리티를 사용하여 잔액 조회
-                const data = await api("/pay/balance", {
-                    headers: { Authorization: `Bearer ${token}` },
-                });
-                setMyDaepa(data.balance);
-            } catch (err) {
-                console.error("잔액 조회 실패:", err);
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchBalance();
+        // Zustand 스토어가 localStorage로부터 상태를 복원(rehydration)했는지 확인
+        setIsHydrated(true);
     }, []);
 
-    // ✅ 내 정보
+    // ✅ 잔액, 내 정보, 상품 목록, 정산 내역을 한 번에 가져오는 로직
     useEffect(() => {
+        if (!isHydrated) return; // 스토어가 준비될 때까지 대기
+
         if (!accessToken) {
+            // 토큰이 없으면 로그인 필요 상태로 설정
+            setError("로그인이 필요합니다.");
             setMyInfo({
                 nickname: "로그인 필요",
                 trust: 0,
                 avatarUrl: "",
                 uIdx: undefined,
             });
-            return;
-        }
-
-        (async () => {
-            try {
-                const res = await fetch("/api/sing/me", {
-                    method: "GET",
-                    headers: { Authorization: `Bearer ${accessToken}` },
-                    credentials: "include",
-                    cache: "no-store",
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-
-                    const profileUrl =
-                        data.u_profile ?? data.uProfile ?? data.avatarUrl ?? "";
-
-                    const mannerScore =
-                        data.uManner ??
-                        data.u_manner ??
-                        data.manner ??
-                        data.trust ??
-                        0;
-
-                    setMyInfo({
-                        nickname:
-                            data.uName || data.u_nickname || data.uNickname || "사용자",
-                        trust: Number(mannerScore) || 0,
-                        avatarUrl: profileUrl,
-                        uIdx: data.uIdx ?? data.u_idx ?? data.id ?? undefined,
-                    });
-                } else {
-                    setMyInfo({
-                        nickname: "정보 없음",
-                        trust: 0,
-                        avatarUrl: "",
-                        uIdx: undefined,
-                    });
-                }
-            } catch (error) {
-                console.error("❌ /api/sing/me fetch error:", error);
-                setMyInfo({
-                    nickname: "에러 발생",
-                    trust: 0,
-                    avatarUrl: "",
-                    uIdx: undefined,
-                });
-            }
-        })();
-    }, [accessToken]);
-
-    // ✅ 정산내역 개수 불러오기: 내 uIdx가 결정되면 호출
-    useEffect(() => {
-        if (!myInfo.uIdx) return;
-        (async () => {
-            try {
-                const res = await fetch(`/api/deal/safe/count?uIdx=${myInfo.uIdx}`, {
-                    cache: "no-store",
-                    credentials: "include",
-                    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-                });
-                if (!res.ok) throw new Error("불러오기 실패");
-                const data = await res.json();
-                setSafeCount(
-                    typeof data === "number" ? data : data?.count ?? 0
-                );
-            } catch (e) {
-                console.error("정산내역 불러오기 오류", e);
-                setSafeCount(0);
-            }
-        })();
-    }, [myInfo.uIdx, accessToken]);
-
-    // ✅ 내 상품 목록
-    useEffect(() => {
-        if (!accessToken) {
             setProducts([]);
             return;
         }
 
-        (async () => {
+        const fetchAllMyPageData = async () => {
             try {
-                setProductErr("");
-                const res = await fetch("/api/products/mypage", {
+                setError(null);
+                const headers = { Authorization: `Bearer ${accessToken}` };
+
+                // 1. 내 정보 가져오기
+                const meRes = await fetch("/api/sing/me", {
                     method: "GET",
-                    headers: { Authorization: `Bearer ${accessToken}` },
+                    headers,
                     credentials: "include",
                     cache: "no-store",
                 });
+                if (!meRes.ok) throw new Error("내 정보를 불러오지 못했습니다.");
+                const meData = await meRes.json();
+                
+                const profileUrl = meData.u_profile ?? meData.uProfile ?? meData.avatarUrl ?? "";
+                const mannerScore = meData.uManner ?? meData.u_manner ?? meData.manner ?? meData.trust ?? 0;
+                const uIdx = meData.uIdx ?? meData.u_idx ?? meData.id ?? undefined;
 
-                if (!res.ok) {
-                    const txt = await res.text();
-                    setProductErr(txt || "상품 목록을 불러오지 못했습니다.");
-                    setProducts([]);
-                    return;
+                setMyInfo({
+                    nickname: meData.uName || meData.u_nickname || meData.uNickname || "사용자",
+                    trust: Number(mannerScore) || 0,
+                    avatarUrl: profileUrl,
+                    uIdx: uIdx,
+                });
+
+                // 2. 상품 목록 가져오기
+                const productsRes = await fetch("/api/products/mypage", {
+                    method: "GET",
+                    headers,
+                    credentials: "include",
+                    cache: "no-store",
+                });
+                if (!productsRes.ok) throw new Error("상품 목록을 불러오지 못했습니다.");
+                const productsData = await productsRes.json();
+                setProducts(Array.isArray(productsData) ? productsData : []);
+
+                // 3. 잔액 조회
+                const balanceData = await api("/pay/balance", { headers });
+                setMyDaepa(balanceData.balance);
+
+                // 4. 정산 내역 개수 (uIdx가 있어야 호출 가능)
+                if (uIdx) {
+                    const safeCountRes = await fetch(`/api/deal/safe/count?uIdx=${uIdx}`, {
+                        cache: "no-store",
+                        credentials: "include",
+                        headers,
+                    });
+                    if (safeCountRes.ok) {
+                        const safeCountData = await safeCountRes.json();
+                        setSafeCount(typeof safeCountData === "number" ? safeCountData : safeCountData?.count ?? 0);
+                    }
                 }
 
-                const data = await res.json();
-                setProducts(Array.isArray(data) ? data : []);
-            } catch (e) {
-                console.error(e);
-                setProductErr("네트워크 오류가 발생했습니다.");
-                setProducts([]);
+            } catch (err) {
+                console.error("마이페이지 데이터 조회 실패:", err);
+                setError(err.message);
             }
-        })();
-    }, [accessToken]);
+        };
+
+        fetchAllMyPageData();
+    }, [accessToken, isHydrated]);
 
     // ✅ 내 상품만
     const myProductsAll = useMemo(() => {
@@ -316,74 +255,54 @@ export default function MyPage() {
         [safeCount, myDaepa]
     );
 
+    if (!isHydrated) {
+        return <main className={styles.wrap}><div className={styles.loading}>페이지를 불러오는 중입니다...</div></main>;
+    }
+
+    if (error) {
+        return (
+            <main className={styles.wrap}>
+                <div className={styles.empty}>
+                    {error} <Link href="/sing/login">로그인 페이지로 이동</Link>
+                </div>
+            </main>
+        );
+    }
+
     return (
         <main className={styles.wrap}>
             <SideNav currentPath={pathname} />
-
             <section className={styles.content}>
                 <header className={styles.header}>
                     <div className={styles.profile}>
                         <div className={styles.avatar} aria-hidden>
-                            {myInfo.avatarUrl ? (
-                                <img
-                                    src={myInfo.avatarUrl || FALLBACK_IMG}
-                                    alt="프로필 이미지"
-                                />
-                            ) : (
-                                <img src={FALLBACK_IMG} alt="기본 프로필" />
-                            )}
+                            <img src={myInfo.avatarUrl || FALLBACK_IMG} alt={myInfo.avatarUrl ? "프로필 이미지" : "기본 프로필"} />
                         </div>
-
                         <div className={styles.profileMeta}>
                             <div className={styles.nicknameRow}>
                                 <strong className={styles.nickname}>{myInfo.nickname}</strong>
-                                <Link
-                                    href="/mypage/info"
-                                    className={styles.openStore}
-                                    aria-label="가게 소개 작성하기"
-                                    title="가게 소개 작성"
-                                >
+                                <Link href="/mypage/info" className={styles.openStore} aria-label="가게 소개 작성하기" title="가게 소개 작성">
                                     <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden>
-                                        <path
-                                            d="M14 3l7 7-11 11H3v-7L14 3zM16.5 5.5l2 2"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="1.6"
-                                        />
+                                        <path d="M14 3l7 7-11 11H3v-7L14 3zM16.5 5.5l2 2" fill="none" stroke="currentColor" strokeWidth="1.6" />
                                     </svg>
                                 </Link>
                             </div>
-
-                            {/* ✅ 신선도 바 */}
                             <div className={styles.trustRow}>
-                <span className={styles.trustLabel}>
-                  신선도 <b>{trustVal}</b>
-                </span>
+                                <span className={styles.trustLabel}>신선도 <b>{trustVal}</b></span>
                                 <div className={styles.trustBar}>
-                  <span
-                      className={styles.trustGauge}
-                      style={{
-                          width: `${trustPercent}%`,
-                          backgroundColor: trustColor,
-                      }}
-                  />
+                                    <span className={styles.trustGauge} style={{ width: `${trustPercent}%`, backgroundColor: trustColor }} />
                                 </div>
                                 <span className={styles.trustMax}>100</span>
                             </div>
-
-                            <p className={styles.trustDesc}>
-                                앱에서 가게 소개 작성하고 신뢰도를 높여 보세요.
-                            </p>
+                            <p className={styles.trustDesc}>앱에서 가게 소개 작성하고 신뢰도를 높여 보세요.</p>
                         </div>
                     </div>
-
                     <div className={styles.headerRight}>
                         <Link href="/payCharge" className={styles.bannerCard}>
                             <div className={styles.bannerIcon} aria-hidden>💰</div>
                             <div className={styles.bannerText}><strong>대파 페이 충전하기</strong></div>
                             <span className={styles.bannerArrow} aria-hidden>›</span>
                         </Link>
-
                         <ul className={styles.metricRow}>
                             {metrics.map((m) => (
                                 <li key={m.key} className={styles.metricItem}>
@@ -395,38 +314,22 @@ export default function MyPage() {
                     </div>
                 </header>
 
-                {/* 패널 */}
                 <div className={styles.panel}>
                     <div className={styles.panelHead}>
                         <h3 className={styles.panelTitle}>내 상품</h3>
                         <nav className={styles.tabs} aria-label="내 판매 필터">
                             {TABS.map((t) => (
-                                <button
-                                    key={t.key}
-                                    type="button"
-                                    className={`${styles.tab} ${
-                                        tab === t.key ? styles.tabActive : ""
-                                    }`}
-                                    onClick={() => setTab(t.key)}
-                                >
+                                <button key={t.key} type="button" className={`${styles.tab} ${tab === t.key ? styles.tabActive : ""}`} onClick={() => setTab(t.key)}>
                                     {t.label}
                                 </button>
                             ))}
                         </nav>
                     </div>
-
                     <div className={styles.panelSub}>
                         <span className={styles.total}>총 {sortedItems.length}개</span>
                         <div className={styles.sorts}>
                             {SORTS.map((s) => (
-                                <button
-                                    key={s.key}
-                                    type="button"
-                                    className={`${styles.sort} ${
-                                        sort === s.key ? styles.sortActive : ""
-                                    }`}
-                                    onClick={() => setSort(s.key)}
-                                >
+                                <button key={s.key} type="button" className={`${styles.sort} ${sort === s.key ? styles.sortActive : ""}`} onClick={() => setSort(s.key)}>
                                     {s.label}
                                 </button>
                             ))}
@@ -435,24 +338,18 @@ export default function MyPage() {
 
                     {productErr && <div className={styles.empty}>{productErr}</div>}
 
-                    {sortedItems.length === 0 ? (
-                        <div className={styles.empty}>
-                            선택된 조건에 해당하는 항목이 없습니다.
-                        </div>
+                    {sortedItems.length === 0 && !productErr ? (
+                        <div className={styles.empty}>선택된 조건에 해당하는 항목이 없습니다.</div>
                     ) : (
                         <ul className={styles.grid}>
                             {sortedItems.map((it, idx) => {
-                                if (isDeleted(it)) return null;
-
                                 const dealState = getDealState(it);
                                 const isSold = dealState === 1;
                                 const isTrading = dealState === 2;
-
                                 const title = it.pd_title || it.title || "(제목 없음)";
                                 const price = it.pd_price ?? it.price ?? 0;
                                 const when = formatDateRelative(it.pd_create ?? it.createdAt);
                                 const thumb = it.pd_thumb || it.thumbnail || FALLBACK_IMG;
-
                                 const id = it.pd_idx ?? it.pdIdx ?? it.id ?? null;
                                 const href = id ? `/store/${id}` : "#";
 
@@ -460,15 +357,7 @@ export default function MyPage() {
                                     <li key={id ?? idx} className={styles.card}>
                                         <Link href={href} className={styles.cardLink}>
                                             <div className={styles.cardImgWrap}>
-                                                <img
-                                                    src={thumb}
-                                                    alt={title}
-                                                    className={styles.cardImg}
-                                                    style={{
-                                                        filter:
-                                                            isSold || isTrading ? "brightness(0.45)" : "none",
-                                                    }}
-                                                />
+                                                <img src={thumb} alt={title} className={styles.cardImg} style={{ filter: isSold || isTrading ? "brightness(0.45)" : "none" }} />
                                                 {(isSold || isTrading) && (
                                                     <div className={styles.cardOverlay}>
                                                         <div className={styles.cardOverlayCircle}>✓</div>
@@ -478,9 +367,7 @@ export default function MyPage() {
                                             </div>
                                             <div className={styles.cardBody}>
                                                 <strong className={styles.cardTitle}>{title}</strong>
-                                                <span className={styles.cardPrice}>
-                          {Number(price).toLocaleString()}원
-                        </span>
+                                                <span className={styles.cardPrice}>{Number(price).toLocaleString()}원</span>
                                                 <span className={styles.cardMeta}>{when}</span>
                                             </div>
                                         </Link>
