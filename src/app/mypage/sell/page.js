@@ -293,12 +293,22 @@ export default function SellHistoryPage() {
     async function handleRefundClick(dealId, e) {
         if (e) e.stopPropagation();
         if (!dealId) return;
+
+        const cancelReason = prompt('환불 사유를 입력해주세요.', '판매자 요청');
+        if (cancelReason === null) {
+            return;
+        }
+
         setPendingRefundId(dealId);
         try {
             await api(`/${dealId}/payCancel`, {
                 method: 'POST',
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+                headers: {
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+                    'Content-Type': 'application/json',
+                },
                 credentials: 'include',
+                body: JSON.stringify({ cancelReason }),
             });
             alert('환불 처리가 완료되었습니다.');
             await fetchSell();
