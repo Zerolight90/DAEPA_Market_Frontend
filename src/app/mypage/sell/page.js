@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import styles from './sell.module.css';
 import Sidebar from '@/components/mypage/sidebar';
 import tokenStore from '@/app/store/TokenStore';
-import { api } from "@/lib/api/client";
+import { api } from '@/lib/api/client';
 
 const FALLBACK_IMG =
     'https://daepa-s3.s3.ap-northeast-2.amazonaws.com/products/KakaoTalk_20251104_145039505.jpg';
@@ -70,7 +70,7 @@ export default function SellHistoryPage() {
         if (raw == null) return null;
         return safeNum(raw, null);
     }
-    // ck_result: 1=합격, 0=불합격
+    // ck_result: 0=합격, 1=불합격
     function getCkResult(item) {
         const raw = item?.ckResult ?? item?.ck_result ?? item?.CK_RESULT ?? null;
         if (raw == null) return null;
@@ -110,54 +110,46 @@ export default function SellHistoryPage() {
     function calcBaseStep(item) {
         const dStatus = getDStatus(item);
         const dSell = getDSell(item);
-        if (isTruthyOne(dStatus)) return 3;
-        if (isTruthyOne(dSell)) return 2;
-        return 1;
+        if (isTruthyOne(dStatus)) return 3; // 판매완료
+        if (isTruthyOne(dSell)) return 2; // 결제완료
+        return 1; // 판매중
     }
 
+    // dv_status 흐름:
+    // 1 : 배송(1) 시작 (판매자가 '배송 보냄 확인' 클릭 후)
+    // 2 : 대파 도착 & 검수배송완료 (검수 진행 / 결과 대기)
+    // 3 : 검수 합격 후 배송(2) 진행
+    // 5 : 최종 배송 완료 → 후기 가능
     function calcDeliverySteps(item) {
         const steps = {
             step4: false, // 배송 보냄 확인
             step5: false, // 배송(1)
-            step6: false, // 대파 검수중 / 또는 불합격 강조 위치
-            step7: false, // 배송(2) (검수 후)
+            step6: false, // 대파 검수 (진행/완료/불합격)
+            step7: false, // 배송(2) (검수 합격 후)
             step8: false, // 후기 보내기
         };
 
         const baseStep = calcBaseStep(item);
-        if (baseStep < 3) return steps;
+        if (baseStep < 3) return steps; // 판매완료 전에는 배송 스텝 off
 
         const dv = getDv(item);
+        const ckResult = getCkResult(item); // 0=합격, 1=불합격
 
-        switch (dv) {
-            case 1:
-                steps.step4 = true;
-                steps.step5 = true;
-                break;
-            case 2:
-                steps.step4 = true;
-                steps.step5 = true;
-                steps.step6 = true; // 검수 중
-                break;
-            case 3:
-                steps.step4 = true;
-                steps.step5 = true;
-                steps.step6 = true; // 검수 완료
-                steps.step7 = true; // 검수 합격 후 배송(2)
-                break;
-            case 5:
-                steps.step4 = true;
-                steps.step5 = true;
-                steps.step6 = true;
-                steps.step7 = true;
-                steps.step8 = true; // 후기 가능
-                break;
-            default:
-                break;
+        if (dv >= 1) {
+            steps.step4 = true;
+            steps.step5 = true;
         }
-
-        // 검수 불합격이면(step6 빨간표시), 단계 자체는 점등 유지
-        if (getCkResult(item) === 0) steps.step6 = true;
+        if (dv >= 2) {
+            steps.step6 = true; // 대파에서 검수 단계 점등 (합격/불합격 여부는 색으로 표현)
+        }
+        // 검수 합격(ckResult=0) + dv>=3 → 다음 배송 단계
+        if (dv >= 3 && ckResult === 0) {
+            steps.step7 = true;
+        }
+        // dv=5 → 후기단계
+        if (dv === 5) {
+            steps.step8 = true;
+        }
 
         return steps;
     }
@@ -251,6 +243,7 @@ export default function SellHistoryPage() {
     }
 
     // ---------- 액션 ----------
+    // d_status=1(판매완료) + dv_status<1 이고 택배거래일 때만 노출
     async function handleSendClick(dealId, e) {
         if (e) e.stopPropagation();
         if (!dealId) return;
@@ -261,6 +254,7 @@ export default function SellHistoryPage() {
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
             });
+            // 서버에서 dv_status=1로 변경 → 재조회
             await fetchSell();
         } catch (error) {
             const txt = error.data?.message || error.message || '배송 보냄 확인에 실패했습니다.';
@@ -270,6 +264,8 @@ export default function SellHistoryPage() {
         }
     }
 
+    // 검수 불합격(ch_result=1) 상태에서 판매자가 "배송 완료 확인" 눌렀을 때
+    // 서버에서 dv_status=5로 변경된다고 가정
     async function handleDoneClick(dealId, e) {
         if (e) e.stopPropagation();
         if (!dealId) return;
@@ -280,7 +276,7 @@ export default function SellHistoryPage() {
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
             });
-            // dv_status=5로 갱신되면 재조회 → 버튼 사라지고 후기 버튼만 보이도록
+            // dv_status=5로 갱신되면 재조회 → 버튼 사라지고(조건에서 제외), 필요 시 후기 버튼만 보이도록
             await fetchSell();
         } catch (error) {
             const txt = error.data?.message || error.message || '처리 중 오류가 발생했습니다.';
@@ -401,7 +397,9 @@ export default function SellHistoryPage() {
                             className={styles.searchInput}
                             placeholder="상품명을 입력해주세요."
                         />
-                        <span className={styles.searchIcon} aria-hidden>🔍</span>
+                        <span className={styles.searchIcon} aria-hidden>
+                            🔍
+                        </span>
                     </div>
                 </div>
 
@@ -433,40 +431,49 @@ export default function SellHistoryPage() {
                                     : '판매중';
 
                             const currentDv = getDv(item);
-                            const ckResult = getCkResult(item); // 1=합격, 0=불합격
-                            const inspectionFailed = ckResult === 0;
+                            const ckResult = getCkResult(item); // 0=합격, 1=불합격
+                            const inspectionFailed = ckResult === 1;
 
-                            // 버튼 노출 규칙
                             const dealId = getDealId(item);
-                            const showSendBtn = item?.showSendBtn === true;
-
-                            // 합격(ck=1) & dv=3 → 배송완료확인 버튼
-                            // 불합격(ck=0) → '배송완료 확인'과 '환불처리'
-                            const showAfterDeliveryBtn =
-                                isDelivery && ((currentDv === 3 && ckResult === 1) || ckResult === 0);
-
-                            // 후기 버튼: dv=5 && 불합격 아님
-                            const showReviewBtn = isDelivery && currentDv === 5 && ckResult !== 0;
-
                             const thumbSrc =
                                 item?.productThumb || item?.pdThumb || item?.thumbnail || FALLBACK_IMG;
-
                             const cardKey = dealId ?? `i-${idx}`;
+
+                            // d_status=1(판매완료) + dv_status<1 이고 택배거래일 때만 "배송 보냄 확인" 노출
+                            const showSendBtn =
+                                isDelivery && isTruthyOne(dStatus) && currentDv < 1;
+
+                            // 검수 불합격(ch_result=1) + dv_status=2 일 때만
+                            // "배송 완료 확인" & "환불처리" 버튼 노출
+                            const showFailActions =
+                                isDelivery && currentDv === 2 && ckResult === 1;
+
+                            // 후기 버튼: dv_status=5 && 검수 합격(ckResult=0) 일 때만
+                            const showReviewBtn =
+                                isDelivery && currentDv === 5 && ckResult === 0;
 
                             return (
                                 <article key={cardKey} className={styles.block}>
                                     <div className={styles.dateRow}>
-                                        <span>{formatDate(item?.dealEndDate ?? item?.deal_end_date)}</span>
+                                        <span>
+                                            {formatDate(
+                                                item?.dealEndDate ?? item?.deal_end_date
+                                            )}
+                                        </span>
                                         <span className={styles.dot}>|</span>
                                         <span>{tradeText}</span>
                                     </div>
 
                                     <div
-                                        className={`${styles.card} ${inspectionFailed ? styles.cardDanger : ''}`}
+                                        className={`${styles.card} ${
+                                            inspectionFailed ? styles.cardDanger : ''
+                                        }`}
                                         onClick={() => setSelectedDeal(item)}
                                         role="button"
                                         tabIndex={0}
-                                        onKeyDown={(e) => e.key === 'Enter' && setSelectedDeal(item)}
+                                        onKeyDown={(e) =>
+                                            e.key === 'Enter' && setSelectedDeal(item)
+                                        }
                                     >
                                         <p className={styles.status}>{statusText}</p>
 
@@ -474,20 +481,33 @@ export default function SellHistoryPage() {
                                             <div className={styles.thumbBox}>
                                                 <img
                                                     src={thumbSrc}
-                                                    alt={item?.title || item?.pdTitle || '상품 이미지'}
+                                                    alt={
+                                                        item?.title ||
+                                                        item?.pdTitle ||
+                                                        '상품 이미지'
+                                                    }
                                                     className={styles.thumbImg}
                                                     onError={(ev) => {
-                                                        if (ev?.currentTarget) ev.currentTarget.src = FALLBACK_IMG;
+                                                        if (ev?.currentTarget)
+                                                            ev.currentTarget.src =
+                                                                FALLBACK_IMG;
                                                     }}
                                                 />
                                             </div>
 
                                             <div className={styles.prodInfo}>
                                                 <p className={styles.prodTitle}>
-                                                    {item?.title || item?.productTitle || item?.pdTitle || '(제목 없음)'}
+                                                    {item?.title ||
+                                                        item?.productTitle ||
+                                                        item?.pdTitle ||
+                                                        '(제목 없음)'}
                                                 </p>
                                                 <p className={styles.prodPrice}>
-                                                    {fmtPrice(item?.agreedPrice ?? item?.pdPrice)}원
+                                                    {fmtPrice(
+                                                        item?.agreedPrice ??
+                                                        item?.pdPrice
+                                                    )}
+                                                    원
                                                 </p>
                                             </div>
                                         </div>
@@ -496,15 +516,28 @@ export default function SellHistoryPage() {
                                             <Step active={baseStep >= 3} label="판매 완료" />
                                             {isDelivery && (
                                                 <>
-                                                    <SquareStep active={step4} label="배송 보냄 확인" />
+                                                    <SquareStep
+                                                        active={step4}
+                                                        label="배송 보냄 확인"
+                                                    />
                                                     <Step active={step5} label="배송" />
                                                     <Step
                                                         active={step6}
-                                                        label={inspectionFailed ? '검수 불합격' : '대파에서 검수 중'}
+                                                        label={
+                                                            inspectionFailed
+                                                                ? '검수 불합격'
+                                                                : '대파에서 검수 중'
+                                                        }
                                                         danger={inspectionFailed}
                                                     />
-                                                    <Step active={step7 && ckResult === 1} label="배송" />
-                                                    <SquareStep active={step8} label="후기 보내기" />
+                                                    <Step
+                                                        active={step7 && ckResult === 0}
+                                                        label="배송"
+                                                    />
+                                                    <SquareStep
+                                                        active={step8}
+                                                        label="후기 보내기"
+                                                    />
                                                 </>
                                             )}
                                         </div>
@@ -515,20 +548,28 @@ export default function SellHistoryPage() {
                                                     type="button"
                                                     className={styles.grayBtn}
                                                     disabled={pendingSendId === dealId}
-                                                    onClick={(e) => handleSendClick(dealId, e)}
+                                                    onClick={(e) =>
+                                                        handleSendClick(dealId, e)
+                                                    }
                                                 >
-                                                    {pendingSendId === dealId ? '처리 중...' : '배송 보냄 확인'}
+                                                    {pendingSendId === dealId
+                                                        ? '처리 중...'
+                                                        : '배송 보냄 확인'}
                                                 </button>
                                             )}
 
-                                            {showAfterDeliveryBtn && dealId && (
+                                            {showFailActions && dealId && (
                                                 <button
                                                     type="button"
                                                     className={styles.grayBtn}
                                                     disabled={pendingDoneId === dealId}
-                                                    onClick={(e) => handleDoneClick(dealId, e)}
+                                                    onClick={(e) =>
+                                                        handleDoneClick(dealId, e)
+                                                    }
                                                 >
-                                                    {pendingDoneId === dealId ? '처리 중...' : '배송 완료 확인'}
+                                                    {pendingDoneId === dealId
+                                                        ? '처리 중...'
+                                                        : '배송 완료 확인'}
                                                 </button>
                                             )}
 
@@ -545,14 +586,18 @@ export default function SellHistoryPage() {
                                                 </button>
                                             )}
 
-                                            {inspectionFailed && dealId && (
+                                            {showFailActions && dealId && (
                                                 <button
                                                     type="button"
                                                     className={styles.grayBtn}
                                                     disabled={pendingRefundId === dealId}
-                                                    onClick={(e) => handleRefundClick(dealId, e)}
+                                                    onClick={(e) =>
+                                                        handleRefundClick(dealId, e)
+                                                    }
                                                 >
-                                                    {pendingRefundId === dealId ? '처리 중...' : '환불처리'}
+                                                    {pendingRefundId === dealId
+                                                        ? '처리 중...'
+                                                        : '환불처리'}
                                                 </button>
                                             )}
                                         </div>
@@ -562,15 +607,23 @@ export default function SellHistoryPage() {
                         })}
 
                         {filtered.length === 0 && (
-                            <div className={styles.empty}>결제된 판매내역이 없습니다.</div>
+                            <div className={styles.empty}>
+                                결제된 판매내역이 없습니다.
+                            </div>
                         )}
                     </section>
                 )}
             </main>
 
             {selectedDeal && (
-                <div className={styles.modalOverlay} onClick={() => setSelectedDeal(null)}>
-                    <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+                <div
+                    className={styles.modalOverlay}
+                    onClick={() => setSelectedDeal(null)}
+                >
+                    <div
+                        className={styles.modal}
+                        onClick={(e) => e.stopPropagation()}
+                    >
                         <header className={styles.modalHeader}>
                             <h2 className={styles.modalTitle}>판매내역 상세</h2>
                             <button
@@ -584,15 +637,25 @@ export default function SellHistoryPage() {
 
                         <div className={styles.modalBody}>
                             <p className={styles.modalDealNo}>
-                                거래번호 <strong>{selectedDeal?.orderId ?? selectedDeal?.order_id ?? '-'}</strong>
+                                거래번호{' '}
+                                <strong>
+                                    {selectedDeal?.orderId ??
+                                        selectedDeal?.order_id ??
+                                        '-'}
+                                </strong>
                             </p>
                             <p className={styles.modalDate}>
-                                {formatDate(selectedDeal?.dealEndDate ?? selectedDeal?.deal_end_date)}
+                                {formatDate(
+                                    selectedDeal?.dealEndDate ??
+                                    selectedDeal?.deal_end_date
+                                )}
                             </p>
 
                             <div className={styles.modalSection}>
                                 <h3 className={styles.modalSectionTitle}>
-                                    {getCkResult(selectedDeal) === 0 ? '검수 불합격' : '판매완료'}
+                                    {getCkResult(selectedDeal) === 1
+                                        ? '검수 불합격'
+                                        : '판매완료'}
                                 </h3>
                                 <div className={styles.modalProduct}>
                                     <img
@@ -602,10 +665,15 @@ export default function SellHistoryPage() {
                                             selectedDeal?.thumbnail ||
                                             FALLBACK_IMG
                                         }
-                                        alt={selectedDeal?.title || selectedDeal?.pdTitle || '상품 이미지'}
+                                        alt={
+                                            selectedDeal?.title ||
+                                            selectedDeal?.pdTitle ||
+                                            '상품 이미지'
+                                        }
                                         className={styles.modalThumb}
                                         onError={(ev) => {
-                                            if (ev?.currentTarget) ev.currentTarget.src = FALLBACK_IMG;
+                                            if (ev?.currentTarget)
+                                                ev.currentTarget.src = FALLBACK_IMG;
                                         }}
                                     />
                                     <div>
@@ -616,50 +684,99 @@ export default function SellHistoryPage() {
                                                 '(제목 없음)'}
                                         </p>
                                         <p className={styles.modalProdPrice}>
-                                            {fmtPrice(selectedDeal?.agreedPrice ?? selectedDeal?.pdPrice)}원
+                                            {fmtPrice(
+                                                selectedDeal?.agreedPrice ??
+                                                selectedDeal?.pdPrice
+                                            )}
+                                            원
                                         </p>
                                     </div>
                                 </div>
 
-                                {/* 합격이면 후기, 불합격이면 배송완료확인 + 환불처리 */}
-                                {getCkResult(selectedDeal) !== 0 ? (
-                                    getDv(selectedDeal) === 5 && (
-                                        <button
-                                            type="button"
-                                            className={styles.modalActionBtn}
-                                            onClick={() => handleReviewClick(selectedDeal)}
-                                        >
-                                            후기 보내기
-                                        </button>
-                                    )
-                                ) : (
-                                    <div className={styles.actions} style={{ gap: 8 }}>
-                                        {getDealId(selectedDeal) && (
-                                            <>
+                                {/* 합격(0)이면 dv=5에서 후기, 불합격(1)이면 dv=2에서 배송완료확인 + 환불처리 */}
+                                {(() => {
+                                    const selCk = getCkResult(selectedDeal); // 0=합격, 1=불합격
+                                    const selDv = getDv(selectedDeal);
+                                    const selDealId = getDealId(selectedDeal);
+                                    const showSelFailActions =
+                                        selCk === 1 && selDv === 2 && selDealId;
+
+                                    if (selCk === 0) {
+                                        // 검수 합격 → dv_status=5면 후기 보내기
+                                        return (
+                                            selDv === 5 && (
+                                                <button
+                                                    type="button"
+                                                    className={
+                                                        styles.modalActionBtn
+                                                    }
+                                                    onClick={() =>
+                                                        handleReviewClick(
+                                                            selectedDeal
+                                                        )
+                                                    }
+                                                >
+                                                    후기 보내기
+                                                </button>
+                                            )
+                                        );
+                                    }
+
+                                    // 검수 불합격 → 배송 완료 확인 + 환불처리 (각 한 번씩만, 상태로 제어)
+                                    return (
+                                        showSelFailActions && (
+                                            <div
+                                                className={styles.actions}
+                                                style={{ gap: 8 }}
+                                            >
                                                 <button
                                                     type="button"
                                                     className={styles.grayBtn}
-                                                    disabled={pendingDoneId === getDealId(selectedDeal)}
-                                                    onClick={(e) => handleDoneClick(getDealId(selectedDeal), e)}
+                                                    disabled={
+                                                        pendingDoneId ===
+                                                        selDealId
+                                                    }
+                                                    onClick={(e) =>
+                                                        handleDoneClick(
+                                                            selDealId,
+                                                            e
+                                                        )
+                                                    }
                                                 >
-                                                    {pendingDoneId === getDealId(selectedDeal) ? '처리 중...' : '배송 완료 확인'}
+                                                    {pendingDoneId ===
+                                                    selDealId
+                                                        ? '처리 중...'
+                                                        : '배송 완료 확인'}
                                                 </button>
                                                 <button
                                                     type="button"
                                                     className={styles.grayBtn}
-                                                    disabled={pendingRefundId === getDealId(selectedDeal)}
-                                                    onClick={(e) => handleRefundClick(getDealId(selectedDeal), e)}
+                                                    disabled={
+                                                        pendingRefundId ===
+                                                        selDealId
+                                                    }
+                                                    onClick={(e) =>
+                                                        handleRefundClick(
+                                                            selDealId,
+                                                            e
+                                                        )
+                                                    }
                                                 >
-                                                    {pendingRefundId === getDealId(selectedDeal) ? '처리 중...' : '환불처리'}
+                                                    {pendingRefundId ===
+                                                    selDealId
+                                                        ? '처리 중...'
+                                                        : '환불처리'}
                                                 </button>
-                                            </>
-                                        )}
-                                    </div>
-                                )}
+                                            </div>
+                                        )
+                                    );
+                                })()}
                             </div>
 
                             <div className={styles.modalSection}>
-                                <h3 className={styles.modalSectionTitle}>구매자 정보</h3>
+                                <h3 className={styles.modalSectionTitle}>
+                                    구매자 정보
+                                </h3>
                                 <div className={styles.modalInfoRow}>
                                     <span>닉네임</span>
                                     <span>{getBuyerName(selectedDeal)}</span>
@@ -671,14 +788,21 @@ export default function SellHistoryPage() {
                             </div>
 
                             <div className={styles.modalSection}>
-                                <h3 className={styles.modalSectionTitle}>거래정보</h3>
+                                <h3 className={styles.modalSectionTitle}>
+                                    거래정보
+                                </h3>
                                 <div className={styles.modalInfoRow}>
                                     <span>거래방법</span>
                                     <span>{getTradeText(selectedDeal)}</span>
                                 </div>
                                 <div className={styles.modalInfoRow}>
                                     <span>결제일시</span>
-                                    <span>{formatDate(selectedDeal?.dealEndDate ?? selectedDeal?.deal_end_date)}</span>
+                                    <span>
+                                        {formatDate(
+                                            selectedDeal?.dealEndDate ??
+                                            selectedDeal?.deal_end_date
+                                        )}
+                                    </span>
                                 </div>
                             </div>
                         </div>
