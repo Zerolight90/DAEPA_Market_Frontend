@@ -295,8 +295,8 @@ export default function SellHistoryPage() {
         if (!dealId) return;
         setPendingRefundId(dealId);
         try {
-            await api(`/deal/${dealId}/refund`, {
-                method: 'PATCH',
+            await api(`/${dealId}/payCancel`, {
+                method: 'POST',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
             });
