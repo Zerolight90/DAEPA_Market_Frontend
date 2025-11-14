@@ -84,23 +84,29 @@ export default function BuyModal({ id, close, itemId, title, price }) { // image
         // .env 파일에서 토스 클라이언트 키 받아오기
         const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY);
         // 결제/주문 토스페이먼츠 API 호출
+        const orderId = `product-${itemId}-${generateUUID()}`; // orderId를 변수로 저장
+
         tossPayments.requestPayment('카드', {
-            // 상태에서 금액 가져오기
             amount: total,
-            // 거래번호 필요한 값 붙여서 생성
-            orderId: `product-${itemId}-${generateUUID()}`,
-            // 주문명 동적 생성
+            orderId: orderId, // 저장된 변수 사용
             orderName: title || '상품 구매',
-            customerName: "id", // TODO: 실제 유저 이름으로 변경 필요
-            successUrl: `https://daepamarket.shop/api/pay/success?locKey=${selectedAddress.locKey}`,
-            failUrl: `${window.location.origin}/pay/fail`,
+            customerName: "id",
+            // ❗️ successUrl과 failUrl을 직접 사용하지 않고, Promise의 결과로 처리합니다.
+        }).then(data => {
+            // 결제 성공 시, 백엔드에 필요한 모든 정보를 쿼리 파라미터로 붙여 성공 페이지로 이동시킵니다.
+            const { paymentKey, amount } = data;
+            window.location.href =
+                `${window.location.origin}/pay/success?paymentKey=${paymentKey}&orderId=${orderId}&amount=${amount}`;
         }).catch(error => {
             if (error.code === 'USER_CANCEL') {
                 console.log('사용자가 결제를 취소했습니다');
             } else {
-                alert(`결제 요청 중 오류가 발생했습니다: ${error.message}`);
+                // 실패 시 실패 페이지로 이동
+                window.location.href =
+                    `${window.location.origin}/pay/fail?message=${error.message}`;
             }
         });
+
     };
 
     // 대파 페이 결제 모달 열기
