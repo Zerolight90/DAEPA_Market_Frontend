@@ -92,7 +92,7 @@ export default function BuyModal({ id, close, itemId, title, price }) { // image
             // 주문명 동적 생성
             orderName: title || '상품 구매',
             customerName: "id", // TODO: 실제 유저 이름으로 변경 필요
-            successUrl: `${window.location.origin}/pay/success?locKey=${selectedAddress.locKey}`,
+            successUrl: `https://daepamarket.shop/api/pay/success?locKey=${selectedAddress.locKey}`,
             failUrl: `${window.location.origin}/pay/fail`,
         }).catch(error => {
             if (error.code === 'USER_CANCEL') {
