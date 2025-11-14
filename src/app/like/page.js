@@ -5,16 +5,7 @@ import { useRouter } from "next/navigation";
 import ProductsGrid from "@/components/category/ProductsGrid";
 import useTokenStore from "@/app/store/TokenStore";
 import styles from "./like.module.css";
-
-// ✅ 배포/로컬 둘 다 안전하게
-const API_BASE =
-    typeof process !== "undefined" &&
-    process.env &&
-    process.env.NEXT_PUBLIC_API_BASE
-        ? process.env.NEXT_PUBLIC_API_BASE
-        : (typeof window !== "undefined"
-            ? window.location.origin
-            : "http://localhost:8080");
+import { api } from "@/lib/api/client";
 
 // ✅ KST 날짜 포맷
 function formatKST(dateInput) {
@@ -45,24 +36,11 @@ export default function MyLikePage() {
                 const headers = {};
                 if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
 
-                const res = await fetch(`${API_BASE}/api/favorites`, {
+                const data = await api("/favorites", {
                     credentials: "include",
                     headers,
                     cache: "no-store",
                 });
-
-                if (res.status === 401) {
-                    router.push(`/login?next=${encodeURIComponent("/like")}`);
-                    return;
-                }
-
-                if (!res.ok) {
-                    console.error("[GET /api/favorites] HTTP", res.status);
-                    setItems([]);
-                    return;
-                }
-
-                const data = await res.json();
 
                 const mapped = (Array.isArray(data) ? data : []).map((p) => {
                     const id = p.id ?? p.pdIdx ?? p.p_idx;
@@ -106,6 +84,10 @@ export default function MyLikePage() {
 
                 setItems(mapped);
             } catch (e) {
+                if (e.status === 401) {
+                    router.push(`/login?next=${encodeURIComponent("/like")}`);
+                    return;
+                }
                 console.error("[/api/favorites] fetch error:", e);
                 setItems([]);
             } finally {

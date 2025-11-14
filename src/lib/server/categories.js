@@ -1,11 +1,5 @@
 // src/lib/server/categories.js
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
-
-async function j(url) {
-    const res = await fetch(url, { cache: "no-store" });
-    if (!res.ok) throw new Error(`Request failed ${res.status} for ${url}`);
-    return res.json();
-}
+import { api } from "@/lib/api/client";
 
 /** 상위카테고리 이름 → { id, name } */
 export async function fetchUpperMeta(upperName) {
@@ -14,10 +8,8 @@ export async function fetchUpperMeta(upperName) {
 
     // 1) by-name API가 있다면 우선 시도
     try {
-        const meta = await j(
-            `${API_BASE_URL}/api/category/uppers/by-name?name=${encodeURIComponent(
-                upperName
-            )}`
+        const meta = await api(
+            `/category/uppers/by-name?name=${encodeURIComponent(upperName)}`
         );
         if (meta?.upperIdx || meta?.id) {
             return {
@@ -31,7 +23,7 @@ export async function fetchUpperMeta(upperName) {
 
     // 2) 전체 조회 후 매칭
     try {
-        const list = await j(`${API_BASE_URL}/api/category/uppers`);
+        const list = await api("/category/uppers");
         const found =
             Array.isArray(list) &&
             list.find(
@@ -55,7 +47,7 @@ export async function fetchUpperMeta(upperName) {
 
 /** ✅ 전체 상위카테고리 목록 가져오기 */
 export async function fetchUppers() {
-    const data = await j(`${API_BASE_URL}/api/category/uppers`);
+    const data = await api("/category/uppers");
     return (Array.isArray(data) ? data : []).map((u) => ({
         id: u.upperIdx ?? u.id,
         name: u.upperCt ?? u.name,
@@ -68,7 +60,7 @@ export async function fetchUppers() {
 export async function fetchMiddles(upperId) {
     // 🛑 여기서 막는다: id 없으면 요청 안 함
     if (!upperId) return [];
-    const data = await j(`${API_BASE_URL}/api/category/uppers/${upperId}/middles`);
+    const data = await api(`/category/uppers/${upperId}/middles`);
     return (Array.isArray(data) ? data : []).map((m) => ({
         id: m.middleIdx ?? m.id,
         name: m.middleCt ?? m.name,
@@ -80,7 +72,7 @@ export async function fetchMiddles(upperId) {
 export async function fetchLows(middleId) {
     // 🛑 여기도 막는다
     if (!middleId) return [];
-    const data = await j(`${API_BASE_URL}/api/category/middles/${middleId}/lows`);
+    const data = await api(`/category/middles/${middleId}/lows`);
     return (Array.isArray(data) ? data : []).map((l) => ({
         id: l.lowIdx ?? l.id,
         name: l.lowCt ?? l.name,

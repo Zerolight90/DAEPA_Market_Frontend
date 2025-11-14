@@ -1,7 +1,6 @@
 //src/lib/server/products.js
 import "server-only";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
+import { api } from "@/lib/api/client";
 
 /**
  * 상품 목록 조회
@@ -44,34 +43,27 @@ export async function fetchProducts({
         qs.set("excludeSold", "true");
     }
 
-    let url;
+    let path;
 
     if (lowId || middleId || upperId) {
         if (upperId) qs.set("upperId", String(upperId));
         if (middleId) qs.set("mid", String(middleId)); // 컨트롤러에서 name="mid" 로 받으니까 그대로
         if (lowId) qs.set("low", String(lowId));
 
-        url = new URL("/api/products", API_BASE_URL);
-        url.search = qs.toString();
+        path = "/products";
     } else {
         if (!category) return { items: [], page, size, total: 0 };
 
         qs.set("big", category);
-        url = new URL("/api/products/by-name", API_BASE_URL);
-        url.search = qs.toString();
+        path = "/products/by-name";
     }
 
-    const res = await fetch(url.toString(), {
+    const fullPath = `${path}?${qs.toString()}`;
+
+    const pageJson = await api(fullPath, {
         cache: "no-store",
         headers: { Accept: "application/json" },
     });
-
-    if (!res.ok) {
-        const msg = await res.text().catch(() => res.statusText);
-        throw new Error(`[products] ${res.status} ${msg}`);
-    }
-
-    const pageJson = await res.json();
 
     const items = Array.isArray(pageJson?.content)
         ? pageJson.content

@@ -5,9 +5,7 @@ import { useState } from "react";
 import tokenStore from "@/app/store/TokenStore";
 import Sidebar from "@/components/mypage/sidebar";
 import styles from "./review.module.css";
-
-const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+import { api } from "@/lib/api/client";
 
 export default function BuyerWriteReviewPage() {
     const params = useParams();
@@ -52,8 +50,8 @@ export default function BuyerWriteReviewPage() {
             setSubmitting(true);
 
             // 1) 중복 여부 먼저 확인
-            const existsRes = await fetch(
-                `${API_BASE}/api/review/exists?dealId=${dealId}&reType=BUYER`,
+            const { exists } = await api(
+                `/review/exists?dealId=${dealId}&reType=BUYER`,
                 {
                     headers: {
                         Authorization: `Bearer ${realToken}`,
@@ -61,17 +59,13 @@ export default function BuyerWriteReviewPage() {
                     credentials: "include",
                 }
             );
-
-            if (existsRes.ok) {
-                const { exists } = await existsRes.json();
-                if (exists) {
-                    alert("이미 작성한 리뷰입니다.");
-                    return;
-                }
+            if (exists) {
+                alert("이미 작성한 리뷰입니다.");
+                return;
             }
 
             // 2) 실제 작성
-            const res = await fetch(`${API_BASE}/api/reviews`, {
+            await api("/reviews", {
                 method: "POST",
                 credentials: "include",
                 headers: {
@@ -86,15 +80,14 @@ export default function BuyerWriteReviewPage() {
                 }),
             });
 
-            if (!res.ok) {
-                const txt = await res.text();
-                alert(txt || "리뷰 저장에 실패했습니다.");
-                return;
-            }
-
             alert("후기가 등록되었습니다.");
             router.back();
-        } finally {
+        } catch (error) {
+            console.error("리뷰 저장 실패:", error);
+            const errorMessage = error.data?.message || error.message || "리뷰 저장에 실패했습니다.";
+            alert(errorMessage);
+        }
+        finally {
             setSubmitting(false);
         }
     }

@@ -15,10 +15,8 @@ export default function ReviewDetailPage() {
   useEffect(() => {
     const fetchReview = async () => {
       try {
-        // TODO: 실제 API 연결 시 주석 해제
-        // const res = await fetch(`http://localhost:8080/api/admin/reviews/${params.id}`);
-        // if (!res.ok) throw new Error("후기 불러오기 실패");
-        // const data = await res.json();
+        // TODO: 실제 API 연결 필요
+        // const data = await api(`/admin/reviews/${params.id}`);
         // setReview(data);
 
         // 임시 더미 데이터
@@ -81,11 +79,8 @@ export default function ReviewDetailPage() {
     if (!confirm("이 후기를 삭제하시겠습니까?")) return;
 
     try {
-      // TODO: 실제 API 연결 시 주석 해제
-      // const res = await fetch(`http://localhost:8080/api/admin/reviews/${params.id}`, {
-      //   method: "DELETE"
-      // });
-      // if (!res.ok) throw new Error("후기 삭제 실패");
+      // TODO: 실제 API 연결 필요
+      // await api(`/admin/reviews/${params.id}`, { method: "DELETE" });
       
       alert("후기가 삭제되었습니다.");
       router.push("/admin/reviews");

@@ -1,4 +1,3 @@
-// src/app/mypage/buy/page.js
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -6,13 +5,7 @@ import { useRouter } from 'next/navigation';
 import styles from './buy.module.css';
 import Sidebar from '@/components/mypage/sidebar';
 import tokenStore from '@/app/store/TokenStore';
-
-const BACKEND_BASE =
-    typeof process !== 'undefined' &&
-    process.env &&
-    process.env.NEXT_PUBLIC_API_BASE
-        ? process.env.NEXT_PUBLIC_API_BASE
-        : 'http://localhost:8080';
+import { api } from "@/lib/api/client";
 
 const FALLBACK_IMG =
     'https://daepa-s3.s3.ap-northeast-2.amazonaws.com/products/KakaoTalk_20251104_145039505.jpg';
@@ -94,13 +87,14 @@ export default function BuyHistoryPage() {
         const ac = new AbortController();
         (async () => {
             try {
-                const res = await fetch('/api/users/me', {
+                const data = await api('/users/me', {
                     headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                     credentials: 'include',
-                    signal: ac.signal,
+                    // AbortSignal은 현재 api 유틸리티에서 직접 지원하지 않으므로,
+                    // 필요 시 추가 구현이 필요합니다. 우선은 제외합니다.
+                    // signal: ac.signal,
                     cache: 'no-store',
                 });
-                const data = res.ok ? await res.json() : null;
                 if (!mountedRef.current) return;
                 setMe(data);
             } catch {
@@ -113,36 +107,24 @@ export default function BuyHistoryPage() {
 
     // ---------- 구매내역 ----------
     async function fetchDeals() {
-        const ac = new AbortController();
         try {
             setLoading(true);
             setErr('');
-            const res = await fetch('/api/deal/myBuy', {
+            const data = await api('/deal/myBuy', {
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
                 cache: 'no-store',
-                signal: ac.signal,
             });
-
-            if (!res.ok) {
-                const txt = await res.text().catch(() => '');
-                if (!mountedRef.current) return;
-                setErr(txt || '구매내역을 불러오지 못했습니다.');
-                setList([]);
-                return;
-            }
-
-            const data = await res.json().catch(() => []);
             if (!mountedRef.current) return;
             setList(Array.isArray(data) ? data : []);
-        } catch {
+        } catch (error) {
             if (!mountedRef.current) return;
-            setErr('네트워크 오류가 발생했습니다.');
+            const errorMessage = error.data?.message || error.message || '구매내역을 불러오지 못했습니다.';
+            setErr(errorMessage);
             setList([]);
         } finally {
             if (mountedRef.current) setLoading(false);
         }
-        return () => ac.abort();
     }
 
     useEffect(() => {
@@ -259,19 +241,15 @@ export default function BuyHistoryPage() {
         if (e) e.stopPropagation();
         if (!dealId) return;
         try {
-            const res = await fetch(`${BACKEND_BASE}/api/delivery/${dealId}/sent`, {
+            await api(`/delivery/${dealId}/sent`, {
                 method: 'PATCH',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
             });
-            if (!res.ok) {
-                const txt = await res.text().catch(() => '');
-                alert('배송 보냄 확인 실패\n' + txt);
-                return;
-            }
             await fetchDeals();
-        } catch {
-            alert('네트워크 오류가 발생했습니다.');
+        } catch (error) {
+            const txt = error.data?.message || error.message || '배송 보냄 확인 실패';
+            alert('배송 보냄 확인 실패\n' + txt);
         }
     }
 
@@ -280,19 +258,15 @@ export default function BuyHistoryPage() {
         if (!dealId) return;
         setPendingDoneId(dealId);
         try {
-            const res = await fetch(`${BACKEND_BASE}/api/delivery/${dealId}/done`, {
+            await api(`/delivery/${dealId}/done`, {
                 method: 'PATCH',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
             });
-            if (!res.ok) {
-                const txt = await res.text().catch(() => '');
-                alert('처리 중 오류가 발생했습니다.\n' + txt);
-                return;
-            }
             await fetchDeals(); // dv=5 반영 → 버튼 OFF, 후기 ON
-        } catch {
-            alert('네트워크 오류가 발생했습니다.');
+        } catch (error) {
+            const txt = error.data?.message || error.message || '처리 중 오류가 발생했습니다.';
+            alert('처리 중 오류가 발생했습니다.\n' + txt);
         } finally {
             setPendingDoneId((prev) => (prev === dealId ? null : prev));
         }
@@ -302,19 +276,15 @@ export default function BuyHistoryPage() {
         if (e) e.stopPropagation();
         if (!dealId) return;
         try {
-            const res = await fetch(`/api/deal/${dealId}/confirm`, {
+            await api(`/deal/${dealId}/confirm`, {
                 method: 'POST',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
                 credentials: 'include',
             });
-            if (!res.ok) {
-                const txt = await res.text().catch(() => '');
-                alert(txt || '구매확정에 실패했습니다.');
-                return;
-            }
             await fetchDeals();
-        } catch {
-            alert('네트워크 오류가 발생했습니다.');
+        } catch (error) {
+            const txt = error.data?.message || error.message || '구매확정에 실패했습니다.';
+            alert(txt);
         }
     }
 
@@ -325,16 +295,13 @@ export default function BuyHistoryPage() {
             return;
         }
         try {
-            const res = await fetch(`/api/review/exists?dealId=${dealId}&reType=BUYER`, {
+            const data = await api(`/review/exists?dealId=${dealId}&reType=BUYER`, {
                 credentials: 'include',
                 headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
             });
-            if (res.ok) {
-                const data = await res.json().catch(() => ({}));
-                if (data?.exists) {
-                    alert('이미 작성한 리뷰입니다.');
-                    return;
-                }
+            if (data?.exists) {
+                alert('이미 작성한 리뷰입니다.');
+                return;
             }
         } catch {
             // 조회 실패해도 작성 화면 이동은 허용

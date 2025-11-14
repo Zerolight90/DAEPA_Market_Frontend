@@ -6,8 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import SellerProfilePanel from "@/components/product/SellerProfilePanel";
 import useSellerHintStore from "@/store/SellerHintStore";
 import styles from "./reviews.module.css";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8080";
+import { api } from "@/lib/api/client";
 
 const initListState = {
     items: [],
@@ -54,19 +53,8 @@ export default function SellerReceivedReviewsPage() {
     async function fetchReviews(targetId, page = 0, append = false) {
         try {
             setList((s) => ({ ...s, loading: true, err: "" }));
-            const url = `${API_BASE}/api/review/user/${targetId}?page=${page}&size=${list.size}`;
-            const res = await fetch(url, { credentials: "include", cache: "no-store" });
-            if (!res.ok) {
-                const txt = await res.text();
-                setList((s) => ({
-                    ...s,
-                    err: txt || "불러오기에 실패했습니다.",
-                    loading: false,
-                    initialized: true,
-                }));
-                return;
-            }
-            const data = await res.json();
+            const path = `/review/user/${targetId}?page=${page}&size=${list.size}`;
+            const data = await api(path, { credentials: "include", cache: "no-store" });
             setList((s) => ({
                 ...s,
                 items: append ? [...s.items, ...data.content] : data.content,
@@ -78,10 +66,10 @@ export default function SellerReceivedReviewsPage() {
                 err: "",
                 initialized: true,
             }));
-        } catch {
+        } catch (error) {
             setList((s) => ({
                 ...s,
-                err: "네트워크 오류가 발생했습니다.",
+                err: error.data?.message || error.message || "네트워크 오류가 발생했습니다.",
                 loading: false,
                 initialized: true,
             }));
@@ -91,12 +79,10 @@ export default function SellerReceivedReviewsPage() {
     // 프로필 헤더(서버로 보정)
     async function fetchSellerHeader(targetId) {
         try {
-            const res = await fetch(`${API_BASE}/api/users/${targetId}`, {
+            const u = await api(`/users/${targetId}`, {
                 credentials: "include",
                 cache: "no-store",
             });
-            if (!res.ok) return;
-            const u = await res.json();
             setSeller((prev) => ({
                 id: u.uIdx ?? targetId,
                 nickname: u.unickname ?? u.uname ?? prev?.nickname ?? "판매자",

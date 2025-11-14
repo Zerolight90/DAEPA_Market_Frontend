@@ -7,6 +7,7 @@ import PayWithPointModal from "./PayWithPointModal";
 import { loadTossPayments } from '@tosspayments/payment-sdk';
 import styles from './BuyModal.module.css';
 import AddressChangeModal from "@/components/product/modals/AddressChangeModal";
+import { api } from "@/lib/api/client";
 
 // 안심 결제가 아닌 일반 결제 진행하는 모달
 export default function BuyModal({ id, close, itemId, title, price }) { // imageUrl prop 제거
@@ -17,8 +18,6 @@ export default function BuyModal({ id, close, itemId, title, price }) { // image
     const [selectedAddress, setSelectedAddress] = useState(null);
     const [addressLoading, setAddressLoading] = useState(true); // 주소 로딩 상태 추가
     const [productImageUrl, setProductImageUrl] = useState('/images/placeholder.jpg'); // 상품 이미지 URL 상태 추가
-
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
     function generateUUID() {
            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -34,11 +33,7 @@ export default function BuyModal({ id, close, itemId, title, price }) { // image
         const fetchProductImage = async () => {
             try {
                 // 백엔드 API에서 상품 정보를 가져옵니다.
-                const response = await fetch(`${API_BASE_URL}/api/products/${itemId}`);
-                if (!response.ok) {
-                    throw new Error('상품 정보를 가져오지 못했습니다.');
-                }
-                const data = await response.json();
+                const data = await api(`/products/${itemId}`);
                 // pdThumb 필드가 있는지 확인하고 상태를 업데이트합니다.
                 if (data && data.pdThumb) {
                     setProductImageUrl(data.pdThumb);
@@ -60,26 +55,20 @@ export default function BuyModal({ id, close, itemId, title, price }) { // image
                 // localStorage에서 토큰을 가져옵니다. (실제 저장 위치에 맞게 수정 필요)
                 const token = localStorage.getItem('accessToken');
 
-                const response = await fetch(`${API_BASE_URL}/api/sing/locations/default`, {
+                const data = await api(`/sing/locations/default`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
+                // api 유틸리티는 204 No Content일 때 null을 반환
+                setSelectedAddress(data);
 
-                if (response.ok) {
-                    if (response.status === 204) { // 204 No Content: 기본 배송지가 없는 경우
-                        console.log("기본 배송지가 없습니다.");
-                        setSelectedAddress(null);
-                    } else {
-                        const data = await response.json();
-                        setSelectedAddress(data);
-                    }
-                } else {
-                    throw new Error('서버에서 배송지 정보를 가져오지 못했습니다.');
-                }
             } catch (error) {
-                console.error("기본 배송지를 불러오는 데 실패했습니다.", error);
-                setSelectedAddress(null); // 에러 발생 시 주소 정보 초기화
+                // 204(기본 배송지 없음) 외의 에러 처리
+                if (error.status !== 204) {
+                    console.error("기본 배송지를 불러오는 데 실패했습니다.", error);
+                }
+                setSelectedAddress(null); // 에러 발생 시 또는 배송지 없을 시 주소 정보 초기화
             } finally {
                 setAddressLoading(false); // 로딩 상태 종료
             }

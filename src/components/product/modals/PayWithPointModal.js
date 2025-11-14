@@ -3,14 +3,13 @@
 import { useState, useEffect } from "react"; // ✅ useEffect 추가
 import BaseModal from "@/components/ui/modal/BaseModal";
 import tokenStore from "@/app/store/TokenStore"; // ✅ 토큰 스토어 임포트
+import { api } from "@/lib/api/client";
 
 export default function PayWithPointModal({ id, close, itemId, title, qty, total }) {
     const [currentBalance, setCurrentBalance] = useState(null); // ✅ 현재 잔액 상태
     const [isLoading, setIsLoading] = useState(true); // ✅ 로딩 상태
     const [error, setError] = useState(null); // ✅ 에러 상태
     const { token } = tokenStore(); // 토큰 가져오기
-
-    const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
 
     // ✅ 컴포넌트 로드 시 현재 페이 잔액 가져오기 (백엔드 API 필요)
     useEffect(() => {
@@ -24,13 +23,9 @@ export default function PayWithPointModal({ id, close, itemId, title, qty, total
 
             try {
                 // ✅ 백엔드의 페이 잔액 조회 API 호출 (경로 예시)
-                const res = await fetch(`${API_BASE_URL}/api/pay/balance`, {
+                const data = await api("/pay/balance", {
                     headers: { 'Authorization': `Bearer ${currentToken}` },
                 });
-                if (!res.ok) {
-                    throw new Error("잔액 조회에 실패했습니다.");
-                }
-                const data = await res.json(); // 예: { balance: 50000 }
                 setCurrentBalance(data.balance);
             } catch (err) {
                 console.error("잔액 조회 오류:", err);
@@ -61,7 +56,7 @@ export default function PayWithPointModal({ id, close, itemId, title, qty, total
         try {
             // 3. ✅ 백엔드 페이 결제 API 호출 (경로 예시)
             const currentToken = token || localStorage.getItem('accessToken');
-            const res = await fetch(`${API_BASE_URL}/api/pay/purchase-with-points`, {
+            const result = await api("/pay/purchase-with-points", {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -74,15 +69,7 @@ export default function PayWithPointModal({ id, close, itemId, title, qty, total
                 }),
             });
 
-            if (!res.ok) {
-                // 백엔드 에러 메시지 처리
-                let errorData;
-                try { errorData = await res.json(); } catch(_) {}
-                throw new Error(errorData?.error || `페이 결제 중 오류 발생 (${res.status})`);
-            }
-
             // 4. 결제 성공 처리
-            const result = await res.json(); // 성공 응답 (예: { message: '결제 완료', remainingBalance: 49000 })
             alert(`결제가 완료되었습니다.\n남은 잔액: ${result.remainingBalance?.toLocaleString() || '?'} P`);
             close(); // 성공 시 모달 닫기
             // 필요시 구매 완료 페이지로 이동 등 추가 작업
@@ -90,10 +77,12 @@ export default function PayWithPointModal({ id, close, itemId, title, qty, total
 
         } catch (err) {
             console.error("페이 결제 오류:", err);
-            alert(`오류: ${err.message}`);
+            const errorMessage = err.data?.error || err.message || `페이 결제 중 오류 발생`;
+            alert(`오류: ${errorMessage}`);
             // 실패 시 모달을 닫거나 다른 처리
         }
     };
+
 
     return (
         <BaseModal id={id} close={close} title="대파 페이로 결제">
