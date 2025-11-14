@@ -6,19 +6,10 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import CardMedia from '@mui/material/CardMedia';
-import Link from 'next/link';
 import { CircularProgress } from "@mui/material";
-import * as PropTypes from "prop-types";
 import { api } from "@/lib/api/client";
-
-function ErrorOutlineIcon(props) {
-    return null;
-}
-ErrorOutlineIcon.propTypes = {
-    color: PropTypes.string,
-    sx: PropTypes.shape({ fontSize: PropTypes.number })
-};
 
 function PaySuccessContent() {
     const searchParams = useSearchParams();
@@ -34,59 +25,58 @@ function PaySuccessContent() {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        const amountParam = searchParams.get('amount');
-        const orderIdParam = searchParams.get('orderId');
-        let itemIdFromOrderId = null;
+        const paymentKey = searchParams.get('paymentKey');
+        const orderId = searchParams.get('orderId');
+        const amount = searchParams.get('amount');
 
-        if (orderIdParam) {
-            const parts = orderIdParam.split('-');
-            if (parts.length >= 2 && parts[0] === 'product') {
-                itemIdFromOrderId = parts[1];
-            }
-        }
-
-        if (!amountParam || !orderIdParam || !itemIdFromOrderId) {
-            setError("잘못된 결제 정보입니다.");
+        if (!paymentKey || !orderId || !amount) {
+            setError("결제 정보가 올바르지 않습니다. (paymentKey, orderId, amount 확인 필요)");
             setIsLoading(false);
             return;
         }
 
-        const amountNum = parseInt(amountParam);
-        if (isNaN(amountNum)) {
-            setError("금액 정보가 올바르지 않습니다.");
-            setIsLoading(false);
-            return;
-        }
-
-        const fetchProductDetails = async () => {
+        const confirmPayment = async () => {
             try {
+                // 1. 백엔드에 결제 승인 요청을 보냅니다.
+                await api('/pay/confirm', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        paymentKey,
+                        orderId,
+                        amount: parseInt(amount),
+                    }),
+                });
+
+                // 2. 결제 승인이 성공하면 상품 정보를 가져옵니다.
+                const parts = orderId.split('-');
+                const itemIdFromOrderId = (parts.length >= 2 && parts[0] === 'product') ? parts[1] : null;
+
+                if (!itemIdFromOrderId) {
+                    throw new Error("주문 ID 형식이 올바르지 않습니다.");
+                }
+
                 const productData = await api(`/products/${itemIdFromOrderId}`);
 
                 setPaymentInfo({
-                    amount: amountNum,
-                    orderId: orderIdParam,
+                    amount: parseInt(amount),
+                    orderId,
                     productName: productData.pdTitle || `상품 ${itemIdFromOrderId}`,
                     imageUrl: productData.pdThumb || '/default-product.jpg',
                     transactionDate: new Date(),
                 });
 
             } catch (err) {
-                console.error("상품 정보 로딩 실패:", err);
-                setError(err.message);
-                setPaymentInfo(prev => ({
-                    ...prev,
-                    amount: amountNum,
-                    orderId: orderIdParam,
-                    productName: `상품 ${itemIdFromOrderId || '정보'} (정보 로드 실패)`,
-                    imageUrl: '/default-product.jpg',
-                    transactionDate: new Date(),
-                }));
+                console.error("결제 처리 또는 상품 정보 로딩 실패:", err);
+                setError(err.message || "결제 처리 중 오류가 발생했습니다.");
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchProductDetails();
+        confirmPayment();
 
     }, [searchParams]);
 
@@ -109,13 +99,13 @@ function PaySuccessContent() {
             {isLoading ? (
                 <>
                     <CircularProgress />
-                    <Typography>결제 정보 확인 중...</Typography>
+                    <Typography>결제 정보 확인 및 처리 중...</Typography>
                 </>
             ) : error ? (
                 <>
                     <ErrorOutlineIcon color="error" sx={{ fontSize: 50 }} />
                     <Typography variant="h5" component="h1" gutterBottom>
-                        오류 발생
+                        결제 처리 실패
                     </Typography>
                     <Typography variant="body1" color="error">
                         {error}
@@ -161,12 +151,14 @@ function PaySuccessContent() {
 
 export default function PaySuccessPage() {
     return (
-        <Suspense fallback={
-            <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
-                <CircularProgress />
-                <Typography sx={{ml: 2}}>페이지를 불러오는 중...</Typography>
-            </Box>
-        }>
+        <Suspense
+            fallback={
+                <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+                    <CircularProgress />
+                    <Typography sx={{ ml: 2 }}>페이지를 불러오는 중...</Typography>
+                </Box>
+            }
+        >
             <PaySuccessContent />
         </Suspense>
     );
