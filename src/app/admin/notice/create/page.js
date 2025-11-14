@@ -91,7 +91,6 @@ export default function CreateNoticePage() {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices`, {
             method: "POST",
             body: formDataToSend, // FormData 객체를 body로 전송
-            credentials: "include",
             // Content-Type 헤더는 브라우저가 FormData를 보낼 때 자동으로 설정하므로 명시하지 않음
         });
 
