@@ -2,13 +2,11 @@
 
 import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import api from "@/lib/api"; // 전역 axios 인스턴스 사용
 import styles from "./info.module.css";
-import tokenStore from "@/app/store/TokenStore";
 
 function EditProfileContent() {
     const router = useRouter();
-    const { accessToken } = tokenStore();
 
     const [original, setOriginal] = useState(null);
     const [vo, setVO] = useState({
@@ -36,18 +34,9 @@ function EditProfileContent() {
 
     // ✅ 내 정보 불러오기
     useEffect(() => {
-        if (!accessToken) {
-            setErr("로그인이 필요합니다.");
-            setLoading(false);
-            return;
-        }
-
         (async () => {
             try {
-                const res = await axios.get("/api/sing/me", {
-                    headers: { Authorization: `Bearer ${accessToken}` },
-                    withCredentials: true,
-                });
+                const res = await api.get("/sing/me");
                 const data = res.data;
 
                 const hasLocations =
@@ -74,10 +63,7 @@ function EditProfileContent() {
                 // 부족하면 /api/users/me 에서 한 번 더 채움
                 if (!next.u_birth || !next.u_gender) {
                     try {
-                        const res2 = await axios.get("/api/users/me", {
-                            headers: { Authorization: `Bearer ${accessToken}` },
-                            withCredentials: true,
-                        });
+                        const res2 = await api.get("/users/me");
                         const data2 = res2.data;
                         next.u_birth =
                             data2.u_birth || data2.uBirth || next.u_birth || "";
@@ -104,9 +90,13 @@ function EditProfileContent() {
                 console.error(e);
                 setErr("회원 정보를 불러오지 못했습니다.");
                 setLoading(false);
+                if (e.response?.status === 401) {
+                    alert("로그인이 필요합니다.");
+                    router.push("/login"); // 로그인 페이지로 리다이렉트
+                }
             }
         })();
-    }, [accessToken]);
+    }, []);
 
     // ✅ 주소 스크립트 로드
     useEffect(() => {
@@ -159,7 +149,7 @@ function EditProfileContent() {
     const onBlurNickname = async () => {
         if (!vo.u_nickname) return;
         try {
-            const res = await axios.get("/api/sing/join/check_nickname", {
+            const res = await api.get("/sing/join/check_nickname", {
                 params: { u_nickname: vo.u_nickname },
             });
             if (res.data === true) {
@@ -167,18 +157,21 @@ function EditProfileContent() {
             } else {
                 setNickMsg({ text: "사용 가능한 별명입니다.", color: "green" });
             }
-        } catch {
+        } catch (error) {
             setNickMsg({
                 text: "별명 중복 확인 중 오류가 발생했습니다.",
                 color: "crimson",
             });
+            if (error.response?.status === 401) {
+                alert("로그인이 필요합니다.");
+                router.push("/login");
+            }
         }
     };
 
     // ✅ 저장 (수정버튼 클릭 시)
     const onSave = async (e) => {
         e.preventDefault();
-        if (!accessToken) return alert("로그인이 필요합니다.");
 
         if (vo.new_password && vo.new_password !== vo.new_password2) {
             alert("새 비밀번호가 서로 다릅니다.");
@@ -205,42 +198,34 @@ function EditProfileContent() {
                 fd.append("file", profileFile);
 
                 // 🔥 여기서 Content-Type 안 넣는다. axios가 알아서 넣음
-                const uploadRes = await axios.post("/api/sing/upload-profile", fd, {
-                    headers: {
-                        Authorization: `Bearer ${accessToken}`,
-                    },
-                    withCredentials: true,
-                });
+                const uploadRes = await api.post("/sing/upload-profile", fd);
 
                 // 백엔드가 record UploadRes(String url) 로 주니까 이거 그대로 씀
                 profileUrl = uploadRes.data?.url || "";
             }
 
             // 2) 실제 회원 정보 수정 호출
-            await axios.post(
-                "/api/sing/update",
-                {
-                    newPassword: vo.new_password || "",
-                    newPasswordConfirm: vo.new_password2 || "",
-                    nickname: vo.u_nickname || "",
-                    gender: vo.u_gender || "",
-                    birth: birthForSend || "",
-                    zip: vo.u_address || "",
-                    address: vo.u_location || "",
-                    addressDetail: vo.u_location_detail || "",
-                    profile: profileUrl || "", // ✅ 여기가 u_profile 에 들어갈 값
-                },
-                {
-                    headers: { Authorization: `Bearer ${accessToken}` },
-                    withCredentials: true,
-                }
-            );
+            await api.post("/sing/update", {
+                newPassword: vo.new_password || "",
+                newPasswordConfirm: vo.new_password2 || "",
+                nickname: vo.u_nickname || "",
+                gender: vo.u_gender || "",
+                birth: birthForSend || "",
+                zip: vo.u_address || "",
+                address: vo.u_location || "",
+                addressDetail: vo.u_location_detail || "",
+                profile: profileUrl || "", // ✅ 여기가 u_profile 에 들어갈 값
+            });
 
             alert("회원정보가 수정되었습니다.");
             router.push("/mypage");
         } catch (error) {
             console.error(error);
-            alert(error?.response?.data || "회원정보 수정 중 오류가 발생했습니다.");
+            alert(error?.response?.data?.message || error.message || "회원정보 수정 중 오류가 발생했습니다.");
+            if (error.response?.status === 401) {
+                alert("로그인이 필요합니다.");
+                router.push("/login");
+            }
         }
     };
 
@@ -330,7 +315,7 @@ function EditProfileContent() {
                         name="new_password"
                         className={styles.input}
                         placeholder="영문/숫자/특수문자 8~20자"
-                        pattern={String.raw`^[\x21-\x7E]{8,20}$`}
+                        pattern={String.raw`^[\x21-\x7E]{8,20}}
                         value={vo.new_password}
                         onChange={onChangeVO}
                     />
@@ -340,7 +325,7 @@ function EditProfileContent() {
                     <input
                         type="password"
                         name="new_password2"
-                        pattern={String.raw`^[\x21-\x7E]{8,20}$`}
+                        pattern={String.raw`^[\x21-\x7E]{8,20}}
                         className={styles.input}
                         value={vo.new_password2}
                         onChange={onChangeVO}

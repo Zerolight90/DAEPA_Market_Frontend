@@ -4,8 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './buy.module.css';
 import Sidebar from '@/components/mypage/sidebar';
-import tokenStore from '@/app/store/TokenStore';
-import { api } from '@/lib/api/client';
+import api from '@/lib/api'; // 전역 axios 인스턴스 사용
 
 const FALLBACK_IMG =
     'https://daepa-s3.s3.ap-northeast-2.amazonaws.com/products/KakaoTalk_20251104_145039505.jpg';
@@ -29,7 +28,6 @@ function isTruthyOne(v) {
 
 export default function BuyHistoryPage() {
     const router = useRouter();
-    const { accessToken } = tokenStore();
 
     const [list, setList] = useState([]);
     const [keyword, setKeyword] = useState('');
@@ -92,56 +90,55 @@ export default function BuyHistoryPage() {
 
     // ---------- 내 정보 ----------
     useEffect(() => {
-        if (!accessToken) {
-            setMe(null);
-            return;
-        }
         const ac = new AbortController();
         (async () => {
             try {
-                const data = await api('/users/me', {
-                    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-                    credentials: 'include',
-                    cache: 'no-store',
+                const { data } = await api.get('/users/me', {
+                    signal: ac.signal,
                 });
                 if (!mountedRef.current) return;
                 setMe(data);
-            } catch {
+            } catch (error) {
                 if (!mountedRef.current) return;
-                setMe(null);
+                if (error.name !== 'CanceledError') {
+                    setMe(null);
+                    // 401 (Unauthorized) 에러 처리
+                    if (error.response?.status === 401) {
+                        // 로그인 페이지로 리다이렉트 또는 로그인 모달 표시
+                        console.log("로그인이 필요합니다.");
+                    }
+                }
             }
         })();
         return () => ac.abort();
-    }, [accessToken]);
+    }, []);
 
     // ---------- 구매내역 ----------
     async function fetchDeals() {
         try {
             setLoading(true);
             setErr('');
-            const data = await api('/deal/myBuy', {
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-                credentials: 'include',
-                cache: 'no-store',
-            });
+            const { data } = await api.get('/deal/myBuy');
             if (!mountedRef.current) return;
             setList(Array.isArray(data) ? data : []);
         } catch (error) {
             if (!mountedRef.current) return;
             const errorMessage =
-                error.data?.message || error.message || '구매내역을 불러오지 못했습니다.';
+                error.response?.data?.message || error.message || '구매내역을 불러오지 못했습니다.';
             setErr(errorMessage);
             setList([]);
+            // 401 (Unauthorized) 에러 처리
+            if (error.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         } finally {
             if (mountedRef.current) setLoading(false);
         }
     }
 
     useEffect(() => {
-        if (!accessToken) return;
         fetchDeals();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [accessToken]);
+    }, []);
 
     // ---------- 단계 계산 ----------
     // d_status = 1 → "구매 완료" 초록불
@@ -275,16 +272,15 @@ export default function BuyHistoryPage() {
         if (!dealId) return;
         setPendingDoneId(dealId);
         try {
-            await api(`/delivery/${dealId}/done`, {
-                method: 'PATCH',
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-                credentials: 'include',
-            });
+            await api.patch(`/delivery/${dealId}/done`);
             // dv_status=5 반영 → "물건 도착 확인" 버튼 OFF, 후기 버튼 ON
             await fetchDeals();
         } catch (error) {
-            const txt = error.data?.message || error.message || '처리 중 오류가 발생했습니다.';
+            const txt = error.response?.data?.message || error.message || '처리 중 오류가 발생했습니다.';
             alert('처리 중 오류가 발생했습니다.\n' + txt);
+            if (error.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         } finally {
             setPendingDoneId((prev) => (prev === dealId ? null : prev));
         }
@@ -295,16 +291,15 @@ export default function BuyHistoryPage() {
         if (e) e.stopPropagation();
         if (!dealId) return;
         try {
-            await api(`/deal/${dealId}/confirm`, {
-                method: 'POST',
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-                credentials: 'include',
-            });
+            await api.post(`/deal/${dealId}/confirm`);
             await fetchDeals();
         } catch (error) {
             const txt =
-                error.data?.message || error.message || '구매확정에 실패했습니다.';
+                error.response?.data?.message || error.message || '구매확정에 실패했습니다.';
             alert(txt);
+            if (error.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         }
     }
 
@@ -316,16 +311,16 @@ export default function BuyHistoryPage() {
             return;
         }
         try {
-            const data = await api(`/review/exists?dealId=${dealId}&reType=BUYER`, {
-                credentials: 'include',
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-            });
+            const { data } = await api.get(`/review/exists?dealId=${dealId}&reType=BUYER`);
             if (data?.exists) {
                 alert('이미 작성한 리뷰입니다.');
                 return;
             }
-        } catch {
+        } catch (error) {
             // 조회 실패해도 작성 화면 이동은 허용
+            if (error.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         }
         const sellerIdx =
             deal?.sellerIdx ?? deal?.seller_idx ?? deal?.sellerId ?? deal?.seller_id ?? null;
