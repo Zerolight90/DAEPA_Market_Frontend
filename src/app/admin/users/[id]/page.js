@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react"; // use 제거
 import {
   ArrowLeft,
   Edit,
@@ -17,9 +17,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import styles from "../../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function UserDetailPage({ params }) {
-  const { id } = use(params);
+  const { id } = params; // use(params) 대신 직접 params 사용
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState("sell");
   const [reviews, setReviews] = useState({ sell: [], buy: [] });
@@ -159,18 +160,12 @@ export default function UserDetailPage({ params }) {
     const clamped = Math.min(100, Math.max(0, Math.round(target)));
     setPendingManner(clamped);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users/${id}/manner`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ umanner: clamped })
-      });
-
-      if (!res.ok) throw new Error("신선도 변경 실패");
+      await api.patch(`/admin/users/${id}/manner`, { umanner: clamped }); // axios.patch 사용
 
       setUser(prev => ({ ...prev, umanner: clamped }));
     } catch (err) {
       console.error(err);
-      alert("신선도 변경 중 오류가 발생했습니다.");
+      alert("신선도 변경 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
       setPendingManner(user?.umanner ?? clamped);
     }
   };
@@ -180,9 +175,8 @@ export default function UserDetailPage({ params }) {
       setIsLoading(true);
       try {
         // 사용자 상세 정보
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users/${id}`);
-        if (!res.ok) throw new Error("사용자 정보를 불러오지 못했습니다.");
-        const data = await res.json();
+        const response = await api.get(`/admin/users/${id}`); // axios.get 사용
+        const data = response.data;
         setUser(data);
         setPendingManner(data.umanner ?? 0);
 
@@ -196,6 +190,7 @@ export default function UserDetailPage({ params }) {
         setReviews({ sell: sellReviews, buy: buyReviews });
       } catch (err) {
         console.error("데이터 조회 실패:", err);
+        alert("사용자 정보를 불러오는 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
       } finally {
         setIsLoading(false);
       }

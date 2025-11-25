@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Search, Plus, Edit, Trash2, Calendar, User, Filter, ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import styles from "../admin.module.css";
-import { api } from "@/lib/api/client";
+import api from "@/lib/api"; // 새로운 axios 인스턴스를 가져옵니다.
 
 export default function NoticePage() {
   const [notices, setNotices] = useState([]);
@@ -16,7 +16,9 @@ export default function NoticePage() {
   useEffect(() => {
     const fetchNotices = async () => {
       try {
-        const data = await api("/admin/notices");
+        // axios 인스턴스를 사용하여 API 호출
+        const response = await api.get("/admin/notices");
+        const data = response.data; // axios는 응답 데이터를 .data 속성에 담습니다.
 
         // 백엔드 DTO -> UI 구조로 변환
         const mapped = data.map(n => ({
@@ -377,9 +379,8 @@ export default function NoticePage() {
                           if (!confirm("이 공지사항을 삭제하시겠습니까?")) return;
 
                           try {
-                            await api(`/admin/notices/${notice.id}`, {
-                              method: "DELETE",
-                            });
+                            // axios 인스턴스를 사용하여 DELETE 요청
+                            await api.delete(`/admin/notices/${notice.id}`);
 
                             alert("삭제가 완료되었습니다.");
 

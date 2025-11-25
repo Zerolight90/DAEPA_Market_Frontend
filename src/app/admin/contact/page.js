@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Search, Eye, User, Calendar } from "lucide-react";
 import Link from "next/link";
 import styles from "../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function ContactPage() {
   const [inquiries, setInquiries] = useState([]);
@@ -16,10 +17,9 @@ export default function ContactPage() {
   const columnTemplate = "140px 180px 160px 1.2fr 2fr 140px 180px 140px";
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact`)
-        .then(res => res.json())
-        .then(data => setInquiries(data))
-        .catch(err => console.error(err));
+    api.get("/admin/contact") // axios.get 사용
+        .then(response => setInquiries(response.data)) // axios는 응답 데이터를 .data 속성에 담습니다.
+        .catch(err => console.error("문의 목록 조회 실패:", err));
   }, []);
 
   const filteredInquiries = inquiries.filter(inquiry => {

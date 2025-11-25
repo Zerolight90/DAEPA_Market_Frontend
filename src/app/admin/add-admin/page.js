@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowLeft, Save, Eye, EyeOff, UserPlus } from "lucide-react";
 import Link from "next/link";
 import styles from "../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function AddAdminPage() {
   const [formData, setFormData] = useState({
@@ -47,30 +48,21 @@ export default function AddAdminPage() {
     setIsSubmitting(true);
 
       try {
-          const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/add-admin`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "Accept": "application/json" },
-              body: JSON.stringify({
-                  adId: formData.adminId,
-                  adPw: formData.password,
-                  adName: formData.name,
-                  adNick: formData.nickname,
-                  adBirth: formData.birthDate,
-                  adStatus: formData.isActive ? 1 : 0,
-              }),
+          // axios 인스턴스를 사용하여 API 호출
+          const response = await api.post("/admin/add-admin", {
+              adId: formData.adminId,
+              adPw: formData.password,
+              adName: formData.name,
+              adNick: formData.nickname,
+              adBirth: formData.birthDate,
+              adStatus: formData.isActive ? 1 : 0,
           });
 
-          const message = await res.text();
-
-          if (res.ok) {
-              alert("새 관리자가 성공적으로 추가되었습니다!");
-              window.location.href = "/admin";
-          } else {
-              alert("관리자 추가 실패: " + message);
-          }
+          alert("새 관리자가 성공적으로 추가되었습니다!");
+          window.location.href = "/admin";
       } catch (error) {
           console.error("관리자 추가 실패:", error);
-          alert("서버 오류가 발생했습니다.");
+          alert("관리자 추가 실패: " + (error.response?.data?.message || error.message));
       } finally {
           setIsSubmitting(false);
       }

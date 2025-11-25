@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Search, Star, Trash2, Eye, X, Package, Calendar, User } from "lucide-react";
 import styles from "../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState([]);
@@ -13,10 +14,8 @@ export default function ReviewsPage() {
   useEffect(() => {
     const fetchReviews = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/reviews`);
-        if (!res.ok) throw new Error("리뷰 목록 로딩 실패");
-
-        const data = await res.json();
+        const response = await api.get("/admin/reviews"); // axios.get 사용
+        const data = response.data;
 
         setReviews(
             data.map((r) => {
@@ -44,7 +43,7 @@ export default function ReviewsPage() {
         );
       } catch (err) {
         console.error("리뷰 불러오기 오류:", err);
-        alert("리뷰 데이터를 불러오는 중 오류가 발생했습니다.");
+        alert("리뷰 데이터를 불러오는 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
       }
     };
 
@@ -78,11 +77,7 @@ export default function ReviewsPage() {
       const realId = review.realId ?? Number(String(review.id).replace(/[^\d]/g, ""));
       const typePrefix = review.type?.toLowerCase() === "sell" ? "S" : "B";
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/reviews/${typePrefix}-${realId}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) throw new Error("후기 삭제 실패");
+      await api.delete(`/admin/reviews/${typePrefix}-${realId}`); // axios.delete 사용
 
       setReviews((prev) => prev.filter((r) => r.id !== review.id));
 
@@ -94,7 +89,7 @@ export default function ReviewsPage() {
       alert("후기가 삭제되었습니다.");
     } catch (err) {
       console.error(err);
-      alert("후기 삭제 중 오류가 발생했습니다.");
+      alert("후기 삭제 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
     }
   };
 

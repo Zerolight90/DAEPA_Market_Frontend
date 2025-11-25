@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Save, RefreshCw, Shield, Bell, Globe, Database, Key, Users } from "lucide-react";
 import styles from "../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -41,10 +42,16 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setIsSaving(true);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    alert("설정이 저장되었습니다!");
+    try {
+      // 실제 API 호출: PUT 요청으로 전체 설정을 업데이트한다고 가정
+      await api.put("/admin/settings", settings);
+      alert("설정이 저장되었습니다!");
+    } catch (error) {
+      console.error("설정 저장 실패:", error);
+      alert("설정 저장에 실패했습니다: " + (error.response?.data?.message || error.message));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const tabs = [

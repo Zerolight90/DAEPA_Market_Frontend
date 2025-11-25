@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Eye, EyeOff, LogIn, Shield } from "lucide-react";
 import Link from "next/link";
 import styles from "./login.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function AdminLoginPage() {
   const [formData, setFormData] = useState({
@@ -38,19 +39,8 @@ export default function AdminLoginPage() {
     setError("");
 
     try {
-      const res = await fetch(`/api/admin/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (!res.ok) {
-        setError("관리자 ID 또는 비밀번호가 올바르지 않습니다.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      const data = await res.json();
+      const response = await api.post(`/admin/login`, formData); // axios.post 사용
+      const data = response.data;
 
       // 로그인 정보 저장 (관리자 PK, 닉네임)
       sessionStorage.setItem("adminIdx", data.adIdx);
@@ -59,9 +49,9 @@ export default function AdminLoginPage() {
       // 로그인 성공 후 페이지 이동
       window.location.href = "/admin";
 
-    } catch (error) {
-      console.error("로그인 실패:", error);
-      setError("로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+    } catch (err) {
+      console.error("로그인 실패:", err);
+      setError(err.response?.data?.message || "로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
       setIsSubmitting(false);
     }
   };

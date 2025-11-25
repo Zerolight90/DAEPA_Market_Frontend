@@ -15,9 +15,9 @@ import {
   Trash2
 } from "lucide-react";
 import styles from "../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || ""; // For image resolution fallback
-const BANNER_ENDPOINT = "/api/admin/banners";
+const BANNER_ENDPOINT = "/admin/banners"; // /api 접두사는 axios 인스턴스에 설정되어 있습니다.
 
 const resolveImageUrl = (url) => {
   if (!url) return null;
@@ -42,16 +42,17 @@ const formatDateTime = (value) => {
   return date.toLocaleString("ko-KR");
 };
 
-async function readError(response) {
-  try {
-    const data = await response.json();
-    if (typeof data === "string") return data;
-    if (data?.message) return data.message;
-    return JSON.stringify(data);
-  } catch {
-    return response.statusText || "요청 처리에 실패했습니다.";
-  }
-}
+// readError 함수는 axios 에러 처리 방식과 다르므로 더 이상 필요 없습니다.
+// async function readError(response) {
+//   try {
+//     const data = await response.json();
+//     if (typeof data === "string") return data;
+//     if (data?.message) return data.message;
+//     return JSON.stringify(data);
+//   } catch {
+//     return response.statusText || "요청 처리에 실패했습니다.";
+//   }
+// }
 
 export default function BannerManagementPage() {
   const [banners, setBanners] = useState([]);
@@ -70,14 +71,10 @@ export default function BannerManagementPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(BANNER_ENDPOINT, { cache: "no-store" });
-      if (!res.ok) {
-        throw new Error(await readError(res));
-      }
-      const data = await res.json();
-      setBanners(Array.isArray(data) ? data : []);
+      const response = await api.get(BANNER_ENDPOINT); // axios.get 사용
+      setBanners(Array.isArray(response.data) ? response.data : []); // axios는 응답 데이터를 .data 속성에 담습니다.
     } catch (err) {
-      setError(err.message ?? "배너 목록을 불러오는 중 문제가 발생했습니다.");
+      setError(err.response?.data?.message ?? "배너 목록을 불러오는 중 문제가 발생했습니다.");
       setBanners([]);
     } finally {
       setIsLoading(false);
@@ -194,19 +191,17 @@ export default function BannerManagementPage() {
       const url = editingBanner ? `${BANNER_ENDPOINT}/${editingBanner.id}` : BANNER_ENDPOINT;
       const method = editingBanner ? "PUT" : "POST";
 
-      const res = await fetch(url, {
-        method,
-        body: formData
-      });
-
-      if (!res.ok) {
-        throw new Error(await readError(res));
+      // axios 인스턴스를 사용하여 API 호출
+      if (method === "POST") {
+        await api.post(url, formData);
+      } else { // PUT
+        await api.put(url, formData);
       }
 
       await loadBanners();
       closeModal();
     } catch (err) {
-      setFormError(err.message ?? "배너 저장 중 오류가 발생했습니다.");
+      setFormError(err.response?.data?.message ?? "배너 저장 중 오류가 발생했습니다.");
     } finally {
       setIsSubmitting(false);
     }
@@ -215,13 +210,10 @@ export default function BannerManagementPage() {
   const handleToggle = async (bannerId) => {
     setBusyId(bannerId);
     try {
-      const res = await fetch(`${BANNER_ENDPOINT}/${bannerId}/toggle`, { method: "PATCH" });
-      if (!res.ok) {
-        throw new Error(await readError(res));
-      }
+      await api.patch(`${BANNER_ENDPOINT}/${bannerId}/toggle`); // axios.patch 사용
       await loadBanners();
     } catch (err) {
-      alert(err.message ?? "배너 상태 변경 중 오류가 발생했습니다.");
+      alert(err.response?.data?.message ?? "배너 상태 변경 중 오류가 발생했습니다.");
     } finally {
       setBusyId(null);
     }
@@ -231,13 +223,10 @@ export default function BannerManagementPage() {
     if (!confirm("선택한 배너를 삭제하시겠습니까?")) return;
     setBusyId(bannerId);
     try {
-      const res = await fetch(`${BANNER_ENDPOINT}/${bannerId}`, { method: "DELETE" });
-      if (!res.ok) {
-        throw new Error(await readError(res));
-      }
+      await api.delete(`${BANNER_ENDPOINT}/${bannerId}`); // axios.delete 사용
       await loadBanners();
     } catch (err) {
-      alert(err.message ?? "배너 삭제 중 오류가 발생했습니다.");
+      alert(err.response?.data?.message ?? "배너 삭제 중 오류가 발생했습니다.");
     } finally {
       setBusyId(null);
     }
@@ -260,17 +249,10 @@ export default function BannerManagementPage() {
 
     setBusyId(bannerId);
     try {
-      const res = await fetch(`${BANNER_ENDPOINT}/order`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      if (!res.ok) {
-        throw new Error(await readError(res));
-      }
+      await api.patch(`${BANNER_ENDPOINT}/order`, payload); // axios.patch 사용
       await loadBanners();
     } catch (err) {
-      alert(err.message ?? "배너 순서 변경 중 오류가 발생했습니다.");
+      alert(err.response?.data?.message ?? "배너 순서 변경 중 오류가 발생했습니다.");
     } finally {
       setBusyId(null);
     }
@@ -385,7 +367,7 @@ export default function BannerManagementPage() {
                     disabled={busyId === banner.id}
                   >
                     {busyId === banner.id ? (
-                      <Loader2 size={16} className={styles.spinning} />
+                      <Loader2 className={styles.spinning} size={16} />
                     ) : banner.active ? (
                       <>
                         <Eye size={16} />

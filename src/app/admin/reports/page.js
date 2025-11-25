@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search, Calendar, User as UserIcon, CheckCircle } from "lucide-react";
 import styles from "../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function ReportsPage() {
   const [reports, setReports] = useState([]);
@@ -28,10 +29,8 @@ export default function ReportsPage() {
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/reports`);
-        if (!res.ok) throw new Error("신고 목록을 불러오지 못했습니다.");
-        const data = await res.json();
-        setReports(data);
+        const response = await api.get("/admin/reports"); // axios.get 사용
+        setReports(response.data);
       } catch (err) {
         console.warn("신고 API 호출 실패, 더미 데이터를 사용합니다.", err);
         setReports(createDummyReports());
@@ -86,25 +85,19 @@ export default function ReportsPage() {
   const handleAction = async (reportId, action, formData = {}) => {
     setActionLoading(`${reportId}-${action}`);
     try {
-      const base = `${process.env.NEXT_PUBLIC_API_BASE}/api/admin/reports/${reportId}`;
       const endpoint =
-          action === "suspend"     ? `${base}/suspend` :
-              action === "ban"         ? `${base}/ban` :
-                  action === "activate"    ? `${base}/activate` :
-                      action === "manner-down" ? `${base}/manner-down` :
-                          `${base}/${action}`;
+          action === "suspend"     ? `/admin/reports/${reportId}/suspend` :
+              action === "ban"         ? `/admin/reports/${reportId}/ban` :
+                  action === "activate"    ? `/admin/reports/${reportId}/activate` :
+                      action === "manner-down" ? `/admin/reports/${reportId}/manner-down` :
+                          `/admin/reports/${reportId}/${action}`; // 기본값
 
       const body =
           action === "suspend" ? { suspendDate: formData.suspendDate, reason: formData.reason, duration: formData.duration } :
               action === "ban"     ? { reason: formData.reason } :
                   undefined;
 
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: body ? { "Content-Type": "application/json" } : undefined,
-        body: body ? JSON.stringify(body) : undefined
-      });
-      if (!res.ok) throw new Error("요청을 처리하지 못했습니다.");
+      await api.post(endpoint, body); // axios.post 사용
 
       let message = "";
       if (action === "suspend")      message = "계정을 정지하고 신선도 -10 적용했습니다.";
@@ -115,10 +108,10 @@ export default function ReportsPage() {
       alert(message);
       closeModal();
 
-      const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/reports`);
-      if (refreshRes.ok) setReports(await refreshRes.json());
+      const refreshResponse = await api.get("/admin/reports"); // axios.get 사용
+      setReports(refreshResponse.data);
     } catch (err) {
-      alert(err.message || "조치 중 오류가 발생했습니다.");
+      alert(err.response?.data?.message || "조치 중 오류가 발생했습니다.");
     } finally {
       setActionLoading(null);
     }

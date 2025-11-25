@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ProductsGrid from "@/components/category/ProductsGrid";
-import useTokenStore from "@/app/store/TokenStore";
+// import useTokenStore from "@/app/store/TokenStore"; // 더 이상 필요 없음
+import api from "@/lib/api"; // 새로운 axios 인스턴스를 가져옵니다.
 import styles from "./like.module.css";
-import { api } from "@/lib/api/client";
+import { CircularProgress, Box, Typography } from "@mui/material"; // Suspense fallback을 위해 추가
 
 // ✅ KST 날짜 포맷
 function formatKST(dateInput) {
@@ -24,23 +25,19 @@ function formatKST(dateInput) {
     });
 }
 
-export default function MyLikePage() {
+function MyLikePageContent() { // Suspense를 위해 컴포넌트 분리
     const router = useRouter();
-    const accessToken = useTokenStore((s) => s.accessToken);
+    // const accessToken = useTokenStore((s) => s.accessToken); // 더 이상 필요 없음
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        (async () => {
+        const fetchFavorites = async () => {
             try {
-                const headers = {};
-                if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-
-                const data = await api("/favorites", {
-                    credentials: "include",
-                    headers,
-                    cache: "no-store",
-                });
+                // axios 인스턴스를 사용하여 API 호출
+                // 브라우저가 HttpOnly 쿠키를 자동으로 전송하므로 Authorization 헤더는 필요 없습니다.
+                const response = await api.get("/favorites");
+                const data = response.data; // axios는 응답 데이터를 .data 속성에 담습니다.
 
                 const mapped = (Array.isArray(data) ? data : []).map((p) => {
                     const id = p.id ?? p.pdIdx ?? p.p_idx;
@@ -84,17 +81,21 @@ export default function MyLikePage() {
 
                 setItems(mapped);
             } catch (e) {
-                if (e.status === 401) {
-                    router.push(`/login?next=${encodeURIComponent("/like")}`);
+                // axios 에러 객체는 e.response에 상세 정보를 담고 있습니다.
+                if (e.response?.status === 401) {
+                    alert("로그인이 필요합니다.");
+                    router.push(`/sing/login?next=${encodeURIComponent("/like")}`);
                     return;
                 }
-                console.error("[/api/favorites] fetch error:", e);
+                console.error("[/api/favorites] fetch error:", e.response?.data?.message || e.message);
                 setItems([]);
             } finally {
                 setLoading(false);
             }
-        })();
-    }, [router, accessToken]);
+        };
+
+        fetchFavorites();
+    }, [router]); // accessToken 의존성 제거
 
     return (
         <main className={styles.container}>
@@ -123,5 +124,27 @@ export default function MyLikePage() {
                 <ProductsGrid items={items} />
             )}
         </main>
+    );
+}
+
+export default function MyLikePage() {
+    return (
+        <Suspense
+            fallback={
+                <Box
+                    sx={{
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                        height: "100vh",
+                    }}
+                >
+                    <CircularProgress />
+                    <Typography sx={{ ml: 2 }}>찜한 상품을 불러오는 중...</Typography>
+                </Box>
+            }
+        >
+            <MyLikePageContent />
+        </Suspense>
     );
 }

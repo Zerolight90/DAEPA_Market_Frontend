@@ -12,7 +12,7 @@ import {
   ChevronsRight
 } from "lucide-react";
 import styles from "../admin.module.css";
-
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 const PAGE_SIZE = 15; // 5 columns * 3 rows
 
@@ -54,11 +54,8 @@ export default function AdminProductsPage() {
           page: String(Math.max(currentPage - 1, 0)),
           size: String(PAGE_SIZE)
         });
-        const response = await fetch(`/api/admin/products?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error(`상품 목록을 불러오는 중 오류가 발생했습니다. (status ${response.status})`);
-        }
-        const data = await response.json();
+        const response = await api.get(`/admin/products?${params.toString()}`); // axios.get 사용
+        const data = response.data;
         if (!ignore) {
           setProducts(Array.isArray(data.content) ? data.content : []);
           setTotalPages(data.totalPages ?? 0);
@@ -67,7 +64,7 @@ export default function AdminProductsPage() {
       } catch (err) {
         console.error(err);
         if (!ignore) {
-          setError(err.message ?? "상품 목록을 불러오는 중 오류가 발생했습니다.");
+          setError(err.response?.data?.message ?? "상품 목록을 불러오는 중 오류가 발생했습니다.");
           setProducts([]);
         }
       } finally {
@@ -123,17 +120,12 @@ export default function AdminProductsPage() {
 
     setIsMutating(true);
     try {
-      const res = await fetch(`/api/admin/products/${product.id}`, {
-        method: "DELETE"
-      });
-      if (!res.ok && res.status !== 204) {
-        throw new Error("상품 삭제에 실패했습니다.");
-      }
+      await api.delete(`/admin/products/${product.id}`); // axios.delete 사용
       setReloadKey((prev) => prev + 1);
       alert("상품이 삭제 처리되었습니다.");
     } catch (err) {
       console.error(err);
-      alert(err.message ?? "상품 삭제 중 오류가 발생했습니다.");
+      alert(err.response?.data?.message ?? "상품 삭제 중 오류가 발생했습니다.");
     } finally {
       setIsMutating(false);
     }

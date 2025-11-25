@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { ArrowLeft, Save, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import styles from "../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function AdminProfilePage() {
   const [formData, setFormData] = useState({
@@ -27,9 +28,9 @@ export default function AdminProfilePage() {
           return;
       }
 
-      fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/me?adIdx=${adIdx}`)
-          .then((res) => res.json())
-          .then((data) => {
+      api.get(`/admin/me?adIdx=${adIdx}`) // axios.get 사용
+          .then((response) => {
+              const data = response.data;
               setFormData((prev) => ({
                   ...prev,
                   nickname: data.adNick,
@@ -62,20 +63,14 @@ export default function AdminProfilePage() {
 
     try {
         const adIdx = sessionStorage.getItem("adminIdx");
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/me`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                adIdx: adIdx,
-                adNick: formData.nickname,
-                adName: formData.name,
-                adBirth: formData.birthDate,
-                adPw: formData.password || null  // 빈 경우 null 로 전송
-            }),
+        const response = await api.put(`/admin/me`, { // axios.put 사용
+            adIdx: adIdx,
+            adNick: formData.nickname,
+            adName: formData.name,
+            adBirth: formData.birthDate,
+            adPw: formData.password || null  // 빈 경우 null 로 전송
         });
-
-        if (!res.ok) throw new Error("수정 실패");
-        const data = await res.json();
+        const data = response.data;
 
         // 1) sessionStorage 닉네임 갱신
         sessionStorage.setItem("adminNick", data.adNick);
@@ -86,7 +81,7 @@ export default function AdminProfilePage() {
 
     } catch (error) {
       console.error("정보 수정 실패:", error);
-      alert("정보 수정에 실패했습니다.");
+      alert("정보 수정에 실패했습니다: " + (error.response?.data?.message || error.message));
     } finally {
       setIsSubmitting(false);
     }

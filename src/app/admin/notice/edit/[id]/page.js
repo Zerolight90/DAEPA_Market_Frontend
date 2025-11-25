@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, Save, X, Trash2 } from "lucide-react";
 import { useParams, useRouter } from "next/navigation";
 import styles from "../../../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function EditNoticePage() {
   // 폼 입력 데이터(제목, 카테고리, 내용)를 관리하는 상태
@@ -34,10 +35,8 @@ export default function EditNoticePage() {
   useEffect(() => {
     const fetchNotice = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${params.id}`);
-        if (!res.ok) throw new Error("공지사항 불러오기 실패");
-
-        const data = await res.json();
+        const response = await api.get(`/admin/notices/${params.id}`); // axios.get 사용
+        const data = response.data;
         
         // 백엔드 데이터(snake_case)를 프론트엔드 상태(camelCase)에 맞게 매핑
         const mappedNotice = {
@@ -55,7 +54,7 @@ export default function EditNoticePage() {
         }
       } catch (err) {
         console.error(err);
-        alert("공지사항을 불러오는 중 오류가 발생했습니다.");
+        alert("공지사항을 불러오는 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
         router.push("/admin/notice");
       } finally {
         setLoading(false);
@@ -113,7 +112,7 @@ export default function EditNoticePage() {
         // 1. 전송할 JSON 데이터(`req` 파트) 기본 구조 생성
         const noticeUpdateData = {
             nSubject: formData.title,
-            nContent: formData.content,
+            nContent: formData.content, // formData.ncontent -> formData.content
             nCategory: categoryMap[formData.category] || 0,
             nFix: formData.nFix ? 1 : 0,
             nImg: existingImageUrl // 기본적으로 기존 이미지 URL을 유지하도록 설정
@@ -136,24 +135,15 @@ export default function EditNoticePage() {
             formDataToSend.append('file', file);
         }
 
-        // 4. 서버에 PUT 요청
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${params.id}`, {
-            method: "PUT",
-            body: formDataToSend,
-        });
-
-        if (!res.ok) {
-            const errorText = await res.text();
-            console.error("Server response:", errorText);
-            throw new Error("수정 실패. 서버 응답을 확인하세요.");
-        }
+        // axios 인스턴스를 사용하여 서버에 PUT 요청
+        await api.put(`/admin/notices/${params.id}`, formDataToSend);
 
         alert("공지사항이 성공적으로 수정되었습니다!");
         router.push(`/admin/notice`);
 
     } catch (error) {
         console.error("공지사항 수정 실패:", error);
-        alert("공지사항 수정에 실패했습니다.");
+        alert("공지사항 수정에 실패했습니다: " + (error.response?.data?.message || error.message));
     } finally {
         setIsSubmitting(false);
     }

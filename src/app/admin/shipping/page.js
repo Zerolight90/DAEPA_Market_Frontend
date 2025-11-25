@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Search, Truck, Package, MapPin, Calendar, User, Eye } from "lucide-react";
 import styles from "../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function ShippingPage() {
   const [shippings, setShippings] = useState([]);
@@ -14,9 +15,8 @@ export default function ShippingPage() {
   useEffect(() => {
     const fetchDeliveries = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/deliveries`);
-        if (!res.ok) throw new Error("배송 목록을 불러오지 못했습니다.");
-        const data = await res.json();
+        const response = await api.get("/admin/deliveries"); // axios.get 사용
+        const data = response.data;
         setShippings(data.map(item => ({
           id: item.dvIdx,
           dIdx: item.dIdx,
@@ -31,6 +31,7 @@ export default function ShippingPage() {
         })));
       } catch (err) {
         console.error("배송 목록 조회 실패:", err);
+        alert("배송 목록을 불러오는 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
         setShippings([]);
       }
     };
@@ -135,39 +136,29 @@ export default function ShippingPage() {
     if (!selectedShipping) return;
     
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/deliveries/${selectedShipping.id}/status`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ status: newStatus })
-      });
-
-      if (!res.ok) throw new Error("배송 상태 변경에 실패했습니다.");
+      await api.patch(`/admin/deliveries/${selectedShipping.id}/status`, { status: newStatus }); // axios.patch 사용
 
       // 목록 다시 불러오기
-      const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/deliveries`);
-      if (refreshRes.ok) {
-        const refreshData = await refreshRes.json();
-        setShippings(refreshData.map(item => ({
-          id: item.dvIdx,
-          dIdx: item.dIdx,
-          product: item.productName || "-",
-          buyer: item.buyerName || "-",
-          seller: item.sellerName || "-",
-          address: item.address || "-",
-          addressDetail: item.addressDetail || "",
-          status: item.dvStatus,
-          tradeType: item.tradeType || "-",
-          dealDate: item.dealDate || ""
-        })));
-      }
+      const refreshResponse = await api.get("/admin/deliveries"); // axios.get 사용
+      const refreshData = refreshResponse.data;
+      setShippings(refreshData.map(item => ({
+        id: item.dvIdx,
+        dIdx: item.dIdx,
+        product: item.productName || "-",
+        buyer: item.buyerName || "-",
+        seller: item.sellerName || "-",
+        address: item.address || "-",
+        addressDetail: item.addressDetail || "",
+        status: item.dvStatus,
+        tradeType: item.tradeType || "-",
+        dealDate: item.dealDate || ""
+      })));
 
       alert("배송 상태가 변경되었습니다.");
       closeModal();
     } catch (err) {
       console.error(err);
-      alert(err.message || "배송 상태 변경에 실패했습니다.");
+      alert(err.response?.data?.message || "배송 상태 변경에 실패했습니다.");
     }
   };
 

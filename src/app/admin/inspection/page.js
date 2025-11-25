@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Search, Eye, CheckCircle, XCircle, X, Package, User, Edit } from "lucide-react";
 import styles from "../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function InspectionPage() {
   const [inspections, setInspections] = useState([]);
@@ -15,9 +16,8 @@ export default function InspectionPage() {
   useEffect(() => {
     const fetchInspections = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/checks`);
-        if (!res.ok) throw new Error("검수 목록을 불러오지 못했습니다.");
-        const data = await res.json();
+        const response = await api.get("/admin/checks"); // axios.get 사용
+        const data = response.data;
         setInspections(data.map(item => ({
           id: item.ckIdx,
           product: item.productName || "-",
@@ -29,6 +29,7 @@ export default function InspectionPage() {
         })));
       } catch (err) {
         console.error("검수 목록 조회 실패:", err);
+        alert("검수 목록을 불러오는 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
         setInspections([]);
       }
     };
@@ -181,39 +182,27 @@ export default function InspectionPage() {
       if (newStatus === "passed" || newStatus === "failed") {
         const resultValue = newStatus === "passed" ? 0 : 1;
         
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/checks/${selectedInspection.id}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ result: resultValue })
+        const response = await api.patch(`/admin/checks/${selectedInspection.id}`, { // axios.patch 사용
+          result: resultValue
         });
 
-        if (!res.ok) {
-          const errorText = await res.text();
-          throw new Error(errorText || "검수 결과 등록에 실패했습니다.");
-        }
-
         // 목록 다시 불러오기
-        const refreshRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/checks`);
-        if (refreshRes.ok) {
-          const refreshData = await refreshRes.json();
-          const updatedInspections = refreshData.map(item => ({
-            id: item.ckIdx,
-            product: item.productName || "-",
-            seller: item.sellerName || "-",
-            status: item.ckStatus === 1 ? "completed" : "processing",
-            result: item.ckResult === 0 ? "passed" : item.ckResult === 1 ? "failed" : null,
-            tradeType: item.tradeType || "-",
-            dvStatus: item.dvStatus
-          }));
-          setInspections(updatedInspections);
-          
-          // 선택된 검수 항목도 업데이트
-          const updatedSelected = updatedInspections.find(item => item.id === selectedInspection.id);
-          if (updatedSelected) {
-            setSelectedInspection(updatedSelected);
-          }
+        const refreshResponse = await api.get("/admin/checks"); // axios.get 사용
+        const updatedInspections = refreshResponse.data.map(item => ({
+          id: item.ckIdx,
+          product: item.productName || "-",
+          seller: item.sellerName || "-",
+          status: item.ckStatus === 1 ? "completed" : "processing",
+          result: item.ckResult === 0 ? "passed" : item.ckResult === 1 ? "failed" : null,
+          tradeType: item.tradeType || "-",
+          dvStatus: item.dvStatus
+        }));
+        setInspections(updatedInspections);
+        
+        // 선택된 검수 항목도 업데이트
+        const updatedSelected = updatedInspections.find(item => item.id === selectedInspection.id);
+        if (updatedSelected) {
+          setSelectedInspection(updatedSelected);
         }
 
         alert(selectedInspection.status === "completed" && selectedInspection.result 
@@ -223,7 +212,7 @@ export default function InspectionPage() {
       }
     } catch (err) {
       console.error(err);
-      alert(err.message || "상태 변경에 실패했습니다.");
+      alert(err.response?.data?.message || "상태 변경에 실패했습니다.");
     }
   };
 

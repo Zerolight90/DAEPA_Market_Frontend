@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ArrowLeft, Save, X } from "lucide-react";
 import Link from "next/link";
 import styles from "../../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function CreateNoticePage() {
   // 폼 입력 데이터(제목, 카테고리, 내용)를 관리하는 상태
@@ -87,25 +88,15 @@ export default function CreateNoticePage() {
             formDataToSend.append('file', file);
         }
 
-        // 3. fetch API를 사용하여 서버에 POST 요청
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices`, {
-            method: "POST",
-            body: formDataToSend, // FormData 객체를 body로 전송
-            // Content-Type 헤더는 브라우저가 FormData를 보낼 때 자동으로 설정하므로 명시하지 않음
-        });
-
-        if (!res.ok) {
-            const errorText = await res.text();
-            console.error("Server response:", errorText);
-            throw new Error("공지 등록 실패. 서버 응답을 확인하세요.");
-        }
+        // axios 인스턴스를 사용하여 서버에 POST 요청
+        await api.post("/admin/notices", formDataToSend);
 
         alert("공지사항이 등록되었습니다.");
         window.location.href = "/admin/notice";
 
     } catch (err) {
         console.error(err);
-        alert(err.message || "공지사항 등록 중 오류가 발생했습니다.");
+        alert(err.response?.data?.message || "공지사항 등록 중 오류가 발생했습니다.");
     } finally {
         setIsSubmitting(false);
     }

@@ -5,6 +5,7 @@ import { ArrowLeft, Edit, Trash2, Calendar, User } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import styles from "../../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function NoticeDetailPage() {
   const params = useParams();
@@ -16,9 +17,8 @@ export default function NoticeDetailPage() {
 
     const fetchNotice = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${id}`);
-        if (!res.ok) throw new Error("공지사항을 불러오지 못했습니다.");
-        const data = await res.json();
+        const response = await api.get(`/admin/notices/${id}`); // axios.get 사용
+        const data = response.data;
 
         // 백엔드 DTO -> UI 구조로 변환
         setNotice({
@@ -32,7 +32,7 @@ export default function NoticeDetailPage() {
         });
       } catch (err) {
         console.error(err);
-        alert("공지사항을 가져오는 중 오류가 발생했습니다.");
+        alert("공지사항을 가져오는 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
       }
     };
 
@@ -68,17 +68,13 @@ export default function NoticeDetailPage() {
     if (!confirm("이 공지사항을 삭제하시겠습니까?")) return;
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/notices/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) throw new Error("삭제 실패");
+      await api.delete(`/admin/notices/${id}`); // axios.delete 사용
 
       alert("삭제가 완료되었습니다.");
       window.location.href = "/admin/notice";
     } catch (err) {
       console.error(err);
-      alert("삭제 중 오류가 발생했습니다.");
+      alert("삭제 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
     }
   };
 

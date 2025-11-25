@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import styles from "./admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -44,7 +45,7 @@ export default function AdminDashboard() {
     "#fbbf24", // amber-400
     "#8b5cf6", // violet-500
     "#ec4899", // pink-500
-    "#22d3ee", // cyan-400
+    "#22d399", // cyan-400
     "#047857", // emerald-700
     "#ff7f11", // custom orange
     "#7c3aed"  // purple-600
@@ -55,139 +56,108 @@ export default function AdminDashboard() {
     const fetchData = async () => {
       try {
         // 대시보드 통계 조회
-        const statsRes = await fetch(`/api/admin/analytics/stats`);
-        if (statsRes.ok) {
-          const statsData = await statsRes.json();
-          setStats({
-            totalUsers: statsData.totalUsers || 0,
-            totalTransactions: statsData.monthlyTransactions || 0,
-            monthlyRevenue: statsData.monthlyRevenue || 0,
-            reportsAndInquiries: statsData.pendingReports || 0
-          });
-        } else {
-          console.error("대시보드 통계 조회 실패:", statsRes.status);
-        }
+        const statsResponse = await api.get(`/admin/analytics/stats`);
+        const statsData = statsResponse.data;
+        setStats({
+          totalUsers: statsData.totalUsers || 0,
+          totalTransactions: statsData.monthlyTransactions || 0,
+          monthlyRevenue: statsData.monthlyRevenue || 0,
+          reportsAndInquiries: statsData.pendingReports || 0
+        });
 
         // 일간 거래 추이 조회
-        const transactionRes = await fetch(`/api/admin/analytics/daily-transactions`);
-        if (transactionRes.ok) {
-          const transactionData = await transactionRes.json();
-          setDailyTransactions(transactionData.map(item => ({
-            date: item.date,
-            value: item.value || 0,
-            totalAmount: item.totalAmount || 0,
-            sellerCount: item.sellerCount || 0
-          })));
-        } else {
-          // API 실패 시 빈 데이터로 초기화
-          const today = new Date();
-          const weekStart = new Date(today);
-          weekStart.setDate(today.getDate() - today.getDay()); // 이번 주 일요일
-          
-          const emptyData = [];
-          for (let i = 0; i < 7; i++) {
-            const date = new Date(weekStart);
-            date.setDate(weekStart.getDate() + i);
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          emptyData.push({ date: `${month}/${day}`, value: 0, totalAmount: 0, sellerCount: 0 });
-        }
-        setDailyTransactions(emptyData);
-        }
+        const transactionResponse = await api.get(`/admin/analytics/daily-transactions`);
+        const transactionData = transactionResponse.data;
+        setDailyTransactions(transactionData.map(item => ({
+          date: item.date,
+          value: item.value || 0,
+          totalAmount: item.totalAmount || 0,
+          sellerCount: item.sellerCount || 0
+        })));
 
         // 최근 등록 상품 조회
-        const productsRes = await fetch(`/api/admin/analytics/recent-products?limit=5`);
-        if (productsRes.ok) {
-          const productsData = await productsRes.json();
-          setRecentProducts(productsData.map(item => {
-            // 날짜 포맷팅 (상대 시간)
-            const formatDate = (dateString) => {
-              if (!dateString) return "-";
-              const date = new Date(dateString);
-              const now = new Date();
-              const diffMs = now - date;
-              const diffMins = Math.floor(diffMs / 60000);
-              const diffHours = Math.floor(diffMs / 3600000);
-              const diffDays = Math.floor(diffMs / 86400000);
-              
-              if (diffMins < 1) return "방금 전";
-              if (diffMins < 60) return `${diffMins}분 전`;
-              if (diffHours < 24) return `${diffHours}시간 전`;
-              if (diffDays < 7) return `${diffDays}일 전`;
-              return date.toLocaleDateString("ko-KR");
-            };
+        const productsResponse = await api.get(`/admin/analytics/recent-products?limit=5`);
+        const productsData = productsResponse.data;
+        setRecentProducts(productsData.map(item => {
+          // 날짜 포맷팅 (상대 시간)
+          const formatDate = (dateString) => {
+            if (!dateString) return "-";
+            const date = new Date(dateString);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
             
-            return {
-              id: item.id,
-              name: item.name,
-              seller: item.seller,
-              price: item.price || 0,
-              category: item.category || "기타",
-              date: formatDate(item.createdAt)
-            };
-          }));
-        } else {
-          console.error("최근 등록 상품 조회 실패:", productsRes.status);
-          setRecentProducts([]);
-        }
+            if (diffMins < 1) return "방금 전";
+            if (diffMins < 60) return `${diffMins}분 전`;
+            if (diffHours < 24) return `${diffHours}시간 전`;
+            if (diffDays < 7) return `${diffDays}일 전`;
+            return date.toLocaleDateString("ko-KR");
+          };
+          
+          return {
+            id: item.id,
+            name: item.name,
+            seller: item.seller,
+            price: item.price || 0,
+            category: item.category || "기타",
+            date: formatDate(item.createdAt)
+          };
+        }));
 
         // 카테고리 비율 조회
-        const categoryRes = await fetch("/api/admin/analytics/category-ratio");
-        if (categoryRes.ok) {
-          const categoryRaw = await categoryRes.json();
-          const categoriesOrder = [
-            "전자제품",
-            "패션/의류",
-            "생활/가전",
-            "도서/음반",
-            "스포츠/레저",
-            "자동차",
-            "반려동물",
-            "기타"
-          ];
+        const categoryResponse = await api.get("/admin/analytics/category-ratio");
+        const categoryRaw = categoryResponse.data;
+        const categoriesOrder = [
+          "전자제품",
+          "패션/의류",
+          "생활/가전",
+          "도서/음반",
+          "스포츠/레저",
+          "자동차",
+          "반려동물",
+          "기타"
+        ];
 
-          const extraColorQueue = [...EXTRA_CATEGORY_COLORS];
-          const nextExtraColor = () => {
-            if (extraColorQueue.length > 0) {
-              return extraColorQueue.shift();
-            }
-            const hue = Math.floor(Math.random() * 360);
-            return `hsl(${hue}, 70%, 55%)`;
+        const extraColorQueue = [...EXTRA_CATEGORY_COLORS];
+        const nextExtraColor = () => {
+          if (extraColorQueue.length > 0) {
+            return extraColorQueue.shift();
+          }
+          const hue = Math.floor(Math.random() * 360);
+          return `hsl(${hue}, 70%, 55%)`;
+        };
+
+        const colorMap = new Map();
+        categoriesOrder.forEach((name) => {
+          colorMap.set(name, CATEGORY_COLORS[name] || nextExtraColor());
+        });
+        categoryRaw.forEach((item) => {
+          if (!colorMap.has(item.category)) {
+            colorMap.set(item.category, nextExtraColor());
+          }
+        });
+
+        const mapped = categoriesOrder.map((name) => {
+          const found = categoryRaw.find((item) => item.category === name);
+          const count = found ? (found.count || 0) : 0;
+          return {
+            name,
+            value: count,
+            color: colorMap.get(name)
           };
+        });
 
-          const colorMap = new Map();
-          categoriesOrder.forEach((name) => {
-            colorMap.set(name, CATEGORY_COLORS[name] || nextExtraColor());
-          });
-          categoryRaw.forEach((item) => {
-            if (!colorMap.has(item.category)) {
-              colorMap.set(item.category, nextExtraColor());
-            }
-          });
+        const extraCategories = categoryRaw
+          .filter((item) => !categoriesOrder.includes(item.category))
+          .map((item) => ({
+            name: item.category,
+            value: item.count || 0,
+            color: colorMap.get(item.category)
+          }));
 
-          const mapped = categoriesOrder.map((name) => {
-            const found = categoryRaw.find((item) => item.category === name);
-            const count = found ? (found.count || 0) : 0;
-            return {
-              name,
-              value: count,
-              color: colorMap.get(name)
-            };
-          });
-
-          const extraCategories = categoryRaw
-            .filter((item) => !categoriesOrder.includes(item.category))
-            .map((item) => ({
-              name: item.category,
-              value: item.count || 0,
-              color: colorMap.get(item.category)
-            }));
-
-          setCategoryData([...mapped, ...extraCategories]);
-        } else {
-          console.error("카테고리 비율 조회 실패:", categoryRes.status);
-          setCategoryData([]);
-        }
+        setCategoryData([...mapped, ...extraCategories]);
       } catch (err) {
         console.error("데이터 조회 실패:", err);
         // 에러 시 빈 데이터로 초기화

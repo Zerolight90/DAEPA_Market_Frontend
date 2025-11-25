@@ -5,6 +5,7 @@ import { ArrowLeft, Star, Calendar, User, Package, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import styles from "../../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function ReviewDetailPage() {
   const [review, setReview] = useState(null);
@@ -15,55 +16,13 @@ export default function ReviewDetailPage() {
   useEffect(() => {
     const fetchReview = async () => {
       try {
-        // TODO: 실제 API 연결 필요
-        // const data = await api(`/admin/reviews/${params.id}`);
-        // setReview(data);
-
-        // 임시 더미 데이터
-        const mockReviews = [
-          {
-            id: 1,
-            product: "아이폰 15 Pro 256GB",
-            buyer: "김철수",
-            seller: "이영희",
-            rating: 5,
-            comment: "정말 좋은 상품이었습니다. 빠른 배송과 정확한 설명에 만족합니다. 상품 상태도 설명과 동일했고, 포장도 매우 신경써서 잘 되어있었습니다. 다음에도 이 판매자와 거래하고 싶네요!",
-            date: "2024-01-15",
-            status: "approved",
-            helpful: 12
-          },
-          {
-            id: 2,
-            product: "나이키 에어맥스 270",
-            buyer: "박민수",
-            seller: "정수진",
-            rating: 4,
-            comment: "상품 상태가 설명과 조금 달랐지만 전반적으로 만족합니다. 배송도 빠르고 소통도 원활했습니다.",
-            date: "2024-01-20",
-            status: "pending",
-            helpful: 8
-          },
-          {
-            id: 3,
-            product: "맥북 프로 14인치 M2",
-            buyer: "최영수",
-            seller: "김철수",
-            rating: 1,
-            comment: "상품이 설명과 완전히 달랐습니다. 환불 요청합니다. 배송도 늦었고, 상품 상태가 매우 나쁩니다.",
-            date: "2024-01-18",
-            status: "reported",
-            helpful: 3
-          }
-        ];
-
-        const foundReview = mockReviews.find(r => r.id === Number(params.id));
-        if (!foundReview) {
-          throw new Error("후기를 찾을 수 없습니다.");
-        }
-        setReview(foundReview);
+        // 실제 API 연결
+        const response = await api.get(`/admin/reviews/${params.id}`); // axios.get 사용
+        const data = response.data;
+        setReview(data);
       } catch (err) {
         console.error(err);
-        alert("후기를 불러오는 중 오류가 발생했습니다.");
+        alert("후기를 불러오는 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
         router.push("/admin/reviews");
       } finally {
         setLoading(false);
@@ -79,14 +38,14 @@ export default function ReviewDetailPage() {
     if (!confirm("이 후기를 삭제하시겠습니까?")) return;
 
     try {
-      // TODO: 실제 API 연결 필요
-      // await api(`/admin/reviews/${params.id}`, { method: "DELETE" });
+      // 실제 API 연결
+      await api.delete(`/admin/reviews/${params.id}`); // axios.delete 사용
       
       alert("후기가 삭제되었습니다.");
       router.push("/admin/reviews");
     } catch (err) {
       console.error(err);
-      alert("후기 삭제 중 오류가 발생했습니다.");
+      alert("후기 삭제 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
     }
   };
 

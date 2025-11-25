@@ -2,11 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import styles from './address.module.css';
-import tokenStore from '@/app/store/TokenStore';
+// import tokenStore from '@/app/store/TokenStore'; // 더 이상 필요 없음
 import Sidebar from '@/components/mypage/sidebar';
+import api from '@/lib/api'; // axios 인스턴스 가져오기
 
 export default function AddressPage() {
-    const { accessToken } = tokenStore();
+    // const { accessToken } = tokenStore(); // 더 이상 필요 없음
 
     const [me, setMe] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -62,30 +63,20 @@ export default function AddressPage() {
         (async () => {
             try {
                 setLoading(true);
-                const res = await fetch('/api/sing/me', {
-                    method: 'GET',
-                    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-                    credentials: 'include',
-                    cache: 'no-store',
-                });
+                // axios 인스턴스를 사용하여 API 호출
+                const response = await api.get('/sing/me');
 
-                if (!res.ok) {
-                    const text = await res.text();
-                    setErr(text || '불러오기 실패');
-                    setMe(null);
-                    return;
-                }
-
-                const data = await res.json();
+                const data = response.data; // axios는 응답 데이터를 .data 속성에 담습니다.
                 setMe(data);
             } catch (e) {
-                setErr('네트워크 오류');
+                console.error("Failed to fetch user info:", e);
+                setErr(e.response?.data?.message || '네트워크 오류');
                 setMe(null);
             } finally {
                 setLoading(false);
             }
         })();
-    }, [accessToken]);
+    }, []); // accessToken 의존성 제거
 
     // 서버 주소 → 화면용
     const addrList = useMemo(() => {
@@ -164,32 +155,19 @@ export default function AddressPage() {
         }
 
         const payload = {
-            title: form.title,
-            name: form.name,
-            phone: form.phone,
-            region: form.region,
-            addr2: form.addr2,
-            zipcode: form.zipcode,
-            primary: form.primary,
+            locTitle: form.title, // 백엔드 DTO에 맞게 필드명 변경
+            locName: form.name,
+            locNum: form.phone,
+            locAddress: form.region,
+            locDetail: form.addr2,
+            locCode: form.zipcode,
+            locDefault: form.primary,
         };
 
         try {
-            const res = await fetch('/api/sing/location', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-                },
-                credentials: 'include',
-                body: JSON.stringify(payload),
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                alert(data?.message || '주소 저장에 실패했습니다.');
-                return;
-            }
+            // axios 인스턴스를 사용하여 POST 요청
+            const response = await api.post('/sing/location', payload);
+            const data = response.data;
 
             alert(data.message || '주소가 저장되었습니다.');
             // {message, locations} 내려오므로 그대로 반영
@@ -205,7 +183,7 @@ export default function AddressPage() {
             setOpen(false);
         } catch (err) {
             console.error(err);
-            alert('주소 저장 중 오류가 발생했습니다.');
+            alert(err.response?.data?.message || '주소 저장 중 오류가 발생했습니다.');
         }
     };
 
@@ -218,20 +196,9 @@ export default function AddressPage() {
         if (!confirm('이 배송지를 삭제하시겠습니까?')) return;
 
         try {
-            const res = await fetch(`/api/sing/location/${locKey}`, {
-                method: 'DELETE',
-                headers: {
-                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-                },
-                credentials: 'include',
-            });
-
-            const data = await res.json().catch(() => ({}));
-
-            if (!res.ok) {
-                alert(data?.message || '삭제에 실패했습니다.');
-                return;
-            }
+            // axios 인스턴스를 사용하여 DELETE 요청
+            const response = await api.delete(`/sing/location/${locKey}`);
+            const data = response.data;
 
             alert(data?.message || '배송지가 삭제되었습니다.');
 
@@ -246,7 +213,7 @@ export default function AddressPage() {
             );
         } catch (err) {
             console.error(err);
-            alert('삭제 중 오류가 발생했습니다.');
+            alert(err.response?.data?.message || '삭제 중 오류가 발생했습니다.');
         }
     };
 
@@ -257,20 +224,9 @@ export default function AddressPage() {
             return;
         }
         try {
-            const res = await fetch(`/api/sing/location/${locKey}/update`, {
-                method: 'PUT',
-                headers: {
-                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-                },
-                credentials: 'include',
-            });
-
-            const data = await res.json();
-
-            if (!res.ok) {
-                alert(data?.message || '대표 배송지 설정에 실패했습니다.');
-                return;
-            }
+            // axios 인스턴스를 사용하여 PUT 요청
+            const response = await api.put(`/sing/location/${locKey}/update`);
+            const data = response.data;
 
             // 서비스가 {message, locations}로 주게 해놨으니까 그대로 반영
             alert(data.message || '대표 배송지가 변경되었습니다.');
@@ -286,7 +242,7 @@ export default function AddressPage() {
             setEditTarget(null);
         } catch (err) {
             console.error(err);
-            alert('대표 배송지 변경 중 오류가 발생했습니다.');
+            alert(err.response?.data?.message || '대표 배송지 변경 중 오류가 발생했습니다.');
         }
     };
 

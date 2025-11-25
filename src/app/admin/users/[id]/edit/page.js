@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react"; // use 제거
 import { ArrowLeft, Save, X, User } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import styles from "../../../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 const NUMERIC_FIELDS = ["ustatus", "uwarn", "umanner"];
 
 export default function EditUserPage({ params }) {
-  const { id } = use(params);
+  const { id } = params; // use(params) 대신 직접 params 사용
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
@@ -28,9 +29,8 @@ export default function EditUserPage({ params }) {
   useEffect(() => {
     const fetchUser = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users/${id}`);
-        if (!res.ok) throw new Error("사용자 정보를 불러오지 못했습니다.");
-        const data = await res.json();
+        const response = await api.get(`/admin/users/${id}`); // axios.get 사용
+        const data = response.data;
         setUser(data);
         setFormData({
           uid: data.uid,
@@ -44,6 +44,7 @@ export default function EditUserPage({ params }) {
         });
       } catch (err) {
         console.error("사용자 정보 조회 실패:", err);
+        alert("사용자 정보를 불러오는 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
       } finally {
         setIsLoading(false);
       }
@@ -88,19 +89,13 @@ export default function EditUserPage({ params }) {
         umanner: umannerValue
       };
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) throw new Error("사용자 정보 수정에 실패했습니다.");
+      await api.patch(`/admin/users/${id}`, payload); // axios.patch 사용
 
       alert("사용자 정보가 성공적으로 수정되었습니다.");
       router.push(`/admin/users/${id}`);
     } catch (err) {
       console.error("수정 실패:", err);
-      alert(err.message || "사용자 정보 수정 중 오류가 발생했습니다.");
+      alert("사용자 정보 수정 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
     } finally {
       setIsSubmitting(false);
     }

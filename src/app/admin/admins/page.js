@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Search } from "lucide-react";
 import styles from "../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 const statusBadge = (status) => {
   switch (status) {
@@ -37,14 +38,12 @@ export default function AdminManagePage() {
   useEffect(() => {
     const fetchAdmins = async () => {
       try {
-        const res = await fetch("/api/admin/admins");
-        if (!res.ok) throw new Error("관리자 목록을 불러오지 못했습니다.");
-        const data = await res.json();
-        setAdmins(Array.isArray(data) ? data : []);
+        const response = await api.get("/admin/admins"); // axios 인스턴스를 사용하여 API 호출
+        setAdmins(Array.isArray(response.data) ? response.data : []); // axios는 응답 데이터를 .data 속성에 담습니다.
         setError(null);
       } catch (err) {
         console.error(err);
-        setError("관리자 목록을 불러오는 중 문제가 발생했습니다.");
+        setError("관리자 목록을 불러오는 중 문제가 발생했습니다: " + (err.response?.data?.message || err.message));
         setAdmins([]);
       } finally {
         setLoading(false);

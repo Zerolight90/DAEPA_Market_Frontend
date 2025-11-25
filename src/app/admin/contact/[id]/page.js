@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Send, CheckCircle, Clock, User, Calendar, Tag, MessageSquare } from "lucide-react";
 import Link from "next/link";
 import styles from "../../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function ContactDetailPage({ params }) {
-  const { id } = use(params);
+  const { id } = params;
   const [inquiry, setInquiry] = useState(null);
   const [reply, setReply] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -16,21 +17,19 @@ export default function ContactDetailPage({ params }) {
     const fetchInquiry = async () => {
       try {
         // 1. 상세 정보 조회
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${id}`);
-        if (!res.ok) throw new Error("문의 상세 정보를 불러오지 못했습니다.");
-        const data = await res.json();
+        const response = await api.get(`/admin/contact/${id}`); // axios.get 사용
+        const data = response.data;
         setInquiry(data);
 
         // 2. 해당 사용자의 다른 문의 목록 조회
-        const listRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact`);
-        if (listRes.ok) {
-          const listData = await listRes.json();
-          setOtherInquiries(
-              listData.filter(item => item.name === data.name && item.id !== data.id)
-          );
-        }
+        const listResponse = await api.get("/admin/contact"); // axios.get 사용
+        const listData = listResponse.data;
+        setOtherInquiries(
+            listData.filter(item => item.name === data.name && item.id !== data.id)
+        );
       } catch (err) {
         console.error("데이터 조회 실패:", err);
+        alert("문의 상세 정보를 불러오는 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
       }
     };
 
@@ -87,26 +86,18 @@ export default function ContactDetailPage({ params }) {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${id}/reply`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reply })
-      });
-
-      if (!res.ok) throw new Error("답변 등록에 실패했습니다.");
+      await api.post(`/admin/contact/${id}/reply`, { reply }); // axios.post 사용
 
       // 답변 등록 후 상세 정보 다시 불러오기
-      const detailRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${id}`);
-      if (detailRes.ok) {
-        const updatedData = await detailRes.json();
-        setInquiry(updatedData);
-      }
+      const detailResponse = await api.get(`/admin/contact/${id}`); // axios.get 사용
+      const updatedData = detailResponse.data;
+      setInquiry(updatedData);
 
       alert("답변이 등록되었습니다.");
       setReply("");
     } catch (err) {
       console.error("답변 등록 실패:", err);
-      alert("답변 등록 중 오류가 발생했습니다.");
+      alert("답변 등록 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
     } finally {
       setIsSubmitting(false);
     }
@@ -116,22 +107,15 @@ export default function ContactDetailPage({ params }) {
     if (!confirm(`상태를 '${newStatus === "pending" ? "답변 대기" : "답변 완료"}'로 변경하시겠습니까?`)) return;
 
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus })
-      });
+      await api.patch(`/admin/contact/${id}/status`, { status: newStatus }); // axios.patch 사용
 
-      if (!res.ok) throw new Error("상태 변경 실패");
-
-      const detailRes = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/contact/${id}`);
-      if (detailRes.ok) {
-        const updatedData = await detailRes.json();
-        setInquiry(updatedData);
-      }
+      const detailResponse = await api.get(`/admin/contact/${id}`); // axios.get 사용
+      const updatedData = detailResponse.data;
+      setInquiry(updatedData);
+      alert("상태가 변경되었습니다.");
     } catch (err) {
       console.error("상태 변경 실패:", err);
-      alert("상태 변경 중 오류가 발생했습니다.");
+      alert("상태 변경 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
     }
   };
 

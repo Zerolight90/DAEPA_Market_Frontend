@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from "lucide-react";
 import styles from "../admin.module.css";
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -15,11 +16,11 @@ export default function UsersPage() {
   useEffect(() => {
     async function fetchUsers() {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/admin/users`);
-        const data = await res.json();
-        setUsers(data);
+        const response = await api.get("/admin/users"); // axios.get 사용
+        setUsers(response.data);
       } catch (err) {
         console.error("회원 목록 조회 실패:", err);
+        alert("회원 목록을 불러오는 중 오류가 발생했습니다: " + (err.response?.data?.message || err.message));
       }
     }
     fetchUsers();
