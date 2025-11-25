@@ -1,12 +1,10 @@
 'use client'
 
-import tokenStore from "@/app/store/TokenStore";
 import {useState} from "react";
-import { api } from "@/lib/api/client";
+import api from "@/lib/api"; // 전역 axios 인스턴스 사용
 
 // 구매 내역 목록의 개별 아이템 컴포넌트 (가정)
 export default function PurchaseItem({ deal }) {
-    const { token } = tokenStore();
     const [isCanceling, setIsCanceling] = useState(false);
     const [error, setError] = useState(null);
 
@@ -21,17 +19,9 @@ export default function PurchaseItem({ deal }) {
 
         setIsCanceling(true);
         setError(null);
-        const currentToken = token || localStorage.getItem('accessToken');
 
         try {
-            await api(`/${deal.dIdx}/payCancel`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentToken}`
-                },
-                body: JSON.stringify({ cancelReason: "고객 변심" }) // 취소 사유 전달
-            });
+            await api.post(`/${deal.dIdx}/payCancel`, { cancelReason: "고객 변심" }); // 취소 사유 전달
 
             alert("결제가 성공적으로 취소되었습니다.");
             // TODO: UI를 '취소됨' 상태로 변경 (예: 부모 컴포넌트에 상태 업데이트 요청)
@@ -39,9 +29,12 @@ export default function PurchaseItem({ deal }) {
 
         } catch (err) {
             console.error("취소 오류:", err);
-            const errorMessage = err.data?.message || err.message || "취소 요청에 실패했습니다.";
+            const errorMessage = err.response?.data?.message || err.message || "취소 요청에 실패했습니다.";
             setError(errorMessage);
             alert(`오류: ${errorMessage}`);
+            if (err.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         } finally {
             setIsCanceling(false);
         }

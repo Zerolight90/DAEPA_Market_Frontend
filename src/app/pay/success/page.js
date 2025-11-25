@@ -9,7 +9,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import CardMedia from '@mui/material/CardMedia';
 import { CircularProgress } from "@mui/material";
-import { api } from "@/lib/api/client";
+import api from "@/lib/api"; // 전역 axios 인스턴스 사용
 
 function PaySuccessContent() {
     const searchParams = useSearchParams();
@@ -38,16 +38,10 @@ function PaySuccessContent() {
         const confirmPayment = async () => {
             try {
                 // 1. 백엔드에 결제 승인 요청을 보냅니다.
-                await api('/pay/confirm', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        paymentKey,
-                        orderId,
-                        amount: parseInt(amount),
-                    }),
+                await api.post('/pay/confirm', {
+                    paymentKey,
+                    orderId,
+                    amount: parseInt(amount),
                 });
 
                 // 2. 결제 승인이 성공하면 상품 정보를 가져옵니다.
@@ -58,7 +52,7 @@ function PaySuccessContent() {
                     throw new Error("주문 ID 형식이 올바르지 않습니다.");
                 }
 
-                const productData = await api(`/products/${itemIdFromOrderId}`);
+                const { data: productData } = await api.get(`/products/${itemIdFromOrderId}`);
 
                 setPaymentInfo({
                     amount: parseInt(amount),
@@ -70,7 +64,10 @@ function PaySuccessContent() {
 
             } catch (err) {
                 console.error("결제 처리 또는 상품 정보 로딩 실패:", err);
-                setError(err.message || "결제 처리 중 오류가 발생했습니다.");
+                setError(err.response?.data?.message || err.message || "결제 처리 중 오류가 발생했습니다.");
+                if (err.response?.status === 401) {
+                    console.log("로그인이 필요합니다.");
+                }
             } finally {
                 setIsLoading(false);
             }

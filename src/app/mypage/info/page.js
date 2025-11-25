@@ -315,7 +315,7 @@ function EditProfileContent() {
                         name="new_password"
                         className={styles.input}
                         placeholder="영문/숫자/특수문자 8~20자"
-                        pattern={String.raw`^[\x21-\x7E]{8,20}}
+                        pattern={String.raw`^[\x21-\x7E]{8,20}$`}
                         value={vo.new_password}
                         onChange={onChangeVO}
                     />
@@ -325,7 +325,7 @@ function EditProfileContent() {
                     <input
                         type="password"
                         name="new_password2"
-                        pattern={String.raw`^[\x21-\x7E]{8,20}}
+                        pattern={String.raw`^[\x21-\x7E]{8,20}$`}
                         className={styles.input}
                         value={vo.new_password2}
                         onChange={onChangeVO}

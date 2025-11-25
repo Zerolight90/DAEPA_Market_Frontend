@@ -10,7 +10,7 @@ import CardMedia from '@mui/material/CardMedia';
 import Link from 'next/link';
 import { CircularProgress } from "@mui/material";
 import * as PropTypes from "prop-types";
-import { api } from "@/lib/api/client";
+import api from "@/lib/api"; // 전역 axios 인스턴스 사용
 
 function ErrorOutlineIcon(props) {
     return null;
@@ -60,7 +60,7 @@ function SecPaySuccessContent() {
 
         const fetchProductDetails = async () => {
             try {
-                const productData = await api(`/products/${itemIdFromOrderId}`);
+                const { data: productData } = await api.get(`/products/${itemIdFromOrderId}`);
 
                 setPaymentInfo({
                     amount: amountNum,
@@ -72,7 +72,7 @@ function SecPaySuccessContent() {
 
             } catch (err) {
                 console.error("상품 정보 로딩 실패:", err);
-                setError(err.message);
+                setError(err.response?.data?.message || err.message);
                 setPaymentInfo(prev => ({
                     ...prev,
                     amount: amountNum,
@@ -81,6 +81,9 @@ function SecPaySuccessContent() {
                     imageUrl: '/default-product.jpg',
                     transactionDate: new Date(),
                 }));
+                if (err.response?.status === 401) {
+                    console.log("로그인이 필요합니다.");
+                }
             } finally {
                 setIsLoading(false);
             }
