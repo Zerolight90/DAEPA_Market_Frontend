@@ -2,12 +2,11 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import tokenStore from "@/app/store/TokenStore";
-import { api } from "@/lib/api/client";
+import api from "@/lib/api"; // 중앙 axios 인스턴스를 사용합니다.
 
 export default function useFavorite(productId) {
-    // 1) 여기서 토큰 뽑아옴
-    const accessToken = tokenStore((state) => state.accessToken);
+    // ❗ 더 이상 accessToken을 직접 관리할 필요가 없습니다.
+    // const accessToken = tokenStore((state) => state.accessToken);
 
     const [favorited, setFavorited] = useState(false);
     const [count, setCount] = useState(0);
@@ -15,7 +14,7 @@ export default function useFavorite(productId) {
 
     // 초기 조회
     useEffect(() => {
-        let off = false;
+        let isMounted = true; // 컴포넌트 마운트 상태 추적
         if (productId == null) {
             setFavorited(false);
             setCount(0);
@@ -23,90 +22,77 @@ export default function useFavorite(productId) {
             return;
         }
 
-        (async () => {
+        const fetchStatus = async () => {
             try {
-                const headers = {};
-                if (accessToken) {
-                    headers.Authorization = `Bearer ${accessToken}`;
-                }
-                const data = await api(`/favorites/${productId}`, {
-                    credentials: "include",
-                    cache: "no-store",
-                    headers,
-                });
-
-                if (!off) {
-                    setFavorited(!!data.favorited);
-                    setCount(Number(data.count || 0));
+                // ❗ axios 인스턴스로 교체. withCredentials: true가 적용되어 쿠키가 자동으로 전송됩니다.
+                // ❗ Authorization 헤더를 수동으로 추가할 필요가 없습니다.
+                const response = await api.get(`/favorites/${productId}`);
+                
+                if (isMounted) {
+                    setFavorited(!!response.data.favorited);
+                    setCount(Number(response.data.count || 0));
                 }
             } catch (e) {
-                // api 유틸리티가 에러를 던지므로 catch 블록에서 처리
-                console.error("찜 정보 조회 실패:", e);
+                // 401 (Unauthorized) 같은 에러는 axios 인스턴스에서 처리하거나 여기서 개별 처리 가능
+                // 이 경우, 로그인하지 않은 사용자로 간주하고 상태를 초기화합니다.
+                if (isMounted) {
+                    setFavorited(false);
+                    // setCount(0); // 카운트는 유지할 수도 있습니다. 정책에 따라 결정.
+                }
+                console.error("찜 정보 조회 실패:", e.response?.data?.message || e.message);
             }
             finally {
-                if (!off) setLoading(false);
+                if (isMounted) setLoading(false);
             }
-        })();
+        };
+        
+        fetchStatus();
 
         return () => {
-            off = true;
+            isMounted = false;
         };
-    }, [productId, accessToken]);
+    }, [productId]); // accessToken 의존성 제거
 
     // 토글
     const toggle = useCallback(async () => {
         if (productId == null) return { ok: false };
         if (loading) return { ok: false };
 
-        // 지금 토큰이 있는지 먼저 확인 👇
-        console.log("❤️ toggle favorite, token = ", accessToken);
+        // ❗ 더 이상 토큰을 직접 확인할 필요가 없습니다. 요청이 실패하면 catch 블록에서 처리합니다.
 
         setLoading(true);
         const prevFav = favorited;
         const prevCnt = count;
+        // Optimistic UI 업데이트
         const optimisticFav = !prevFav;
         const optimisticCnt = prevCnt + (optimisticFav ? 1 : -1);
         setFavorited(optimisticFav);
         setCount(Math.max(0, optimisticCnt));
 
         try {
-            const headers = {
-                "Content-Type": "application/json",
-            };
-            if (accessToken) {
-                headers.Authorization = `Bearer ${accessToken}`;
-            }
+            // ❗ axios 인스턴스로 교체. 헤더 설정 불필요.
+            const response = await api.post(`/favorites/${productId}/toggle`);
 
-            const data = await api(
-                `/favorites/${productId}/toggle`,
-                {
-                    method: "POST",
-                    credentials: "include",
-                    headers,
-                }
-            );
-
-            setFavorited(!!data.favorited);
-            setCount(Number(data.count || 0));
+            // 서버의 최종 응답으로 상태를 다시 동기화
+            setFavorited(!!response.data.favorited);
+            setCount(Number(response.data.count || 0));
             return { ok: true };
         } catch (e) {
-            // api 유틸리티는 401과 같은 HTTP 에러도 throw하므로 여기서 잡습니다.
-            // 실제 에러 응답을 파싱하여 로그인 필요 여부를 판단할 수도 있습니다.
-            // 예: if (e.message.includes("401")) { ... }
-            console.error("찜 토글 실패:", e);
+            console.error("찜 토글 실패:", e.response?.data?.message || e.message);
             
+            // 실패 시 원래 상태로 롤백
             setFavorited(prevFav);
             setCount(prevCnt);
             
-            // 401 에러 메시지를 확인하여 로그인 필요 여부 반환
-            if (e.message && e.message.includes("401")) {
+            // 401 에러가 발생하면 로그인 필요 상태를 반환
+            if (e.response?.status === 401) {
                 return { ok: false, needLogin: true };
             }
             return { ok: false };
         } finally {
             setLoading(false);
         }
-    }, [productId, favorited, count, loading, accessToken]);
+    }, [productId, favorited, count, loading]);
 
     return { favorited, count, loading, toggle };
 }

@@ -3,32 +3,38 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation"; // useSearchParams 추가
 import styles from "@/app/sing/login/login.module.css";
-import tokenStore from "@/app/store/TokenStore";
+// import tokenStore from "@/app/store/TokenStore"; // 더 이상 필요 없음
+import api from "@/lib/api"; // axios 인스턴스 가져오기
 import naverLogo from "@/app/naver.png";
-import kakaoLogo from "@/app/kakaologin.png"; // ✅ 추가
+import kakaoLogo from "@/app/kakaologin.png";
 import { getApiBaseUrl } from "@/lib/api/client";
 
 export default function Page() {
     const router = useRouter();
+    const searchParams = useSearchParams(); // next 파라미터 읽기 위해 추가
     const [uid, setUid] = useState("");
     const [upw, setUpw] = useState("");
     const [rememberId, setRememberId] = useState(false);
     const [autoLogin, setAutoLogin] = useState(false);
 
-    const { setToken } = tokenStore();
+    // const { setToken } = tokenStore(); // 더 이상 필요 없음
 
     // ✅ 네이버 로그인 버튼
     const handleNaverLogin = () => {
         const backendUrl = getApiBaseUrl();
-        window.location.href = `${backendUrl}/api/oauth2/authorization/naver`;
+        const next = searchParams.get("next") || "/"; // 리다이렉트할 경로
+        const naverAuthUrl = `${backendUrl}/api/oauth2/authorization/naver?redirect_uri=${encodeURIComponent(frontUrl + "/oauth/success?next=" + next)}`;
+        window.location.href = naverAuthUrl;
     };
 
     // ✅ 카카오 로그인 버튼
     const handleKakaoLogin = () => {
         const backendUrl = getApiBaseUrl();
-        window.location.href = `${backendUrl}/api/oauth2/authorization/kakao`;
+        const next = searchParams.get("next") || "/"; // 리다이렉트할 경로
+        const kakaoAuthUrl = `${backendUrl}/api/oauth2/authorization/kakao?redirect_uri=${encodeURIComponent(frontUrl + "/oauth/success?next=" + next)}`;
+        window.location.href = kakaoAuthUrl;
     };
 
     // ✅ 저장된 로그인 옵션 불러오기
@@ -60,31 +66,24 @@ export default function Page() {
         } catch {}
 
         try {
-            const res = await fetch("/api/sing/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ u_id: uid, u_pw: upw }),
+            // axios 인스턴스로 로그인 요청
+            const response = await api.post("/sing/login", {
+                u_id: uid,
+                u_pw: upw,
             });
 
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                alert(data.message || '로그인 실패');
-                return;
-            }
-
-            const data = await res.json();
-
-            if (data.accessToken) {
-                localStorage.setItem("accessToken", data.accessToken);
-                setToken(data.accessToken);
-            }
+            // 백엔드에서 로그인 성공 시 HttpOnly 쿠키를 설정해주므로,
+            // 프론트에서는 별도로 토큰을 저장할 필요가 없습니다.
 
             // alert("로그인 성공");
-            router.push("/");
+            const next = searchParams.get("next") || "/"; // 리다이렉트할 경로가 있으면 그곳으로, 없으면 홈으로
+            router.replace(next); // 이전 히스토리를 남기지 않고 이동
+            router.refresh(); // 페이지를 새로고침하여 헤더 등 상태를 업데이트
         } catch (err) {
             console.error(err);
-            alert("로그인 중 오류가 발생했습니다.");
+            // axios는 에러 발생 시 response 객체를 error.response에 담아줍니다.
+            const message = err.response?.data?.message || "로그인 중 오류가 발생했습니다.";
+            alert(message);
         }
     };
 

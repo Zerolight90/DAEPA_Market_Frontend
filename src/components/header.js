@@ -17,7 +17,8 @@ import ChatIcon from "@mui/icons-material/Chat";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 
-import TokeStore from "@/app/store/TokenStore"; // 너의 스토어 이름 그대로 유지
+// 새로 만든 axios 인스턴스를 가져옵니다.
+import api from "@/lib/api";
 import styles from "./css/header.module.css";
 
 // 여러 형태로 올 수 있는 이름을 하나로 골라주는 함수
@@ -46,8 +47,6 @@ export default function Header() {
     const [chatUnread, setChatUnread] = useState(0);
     const [searchKeyword, setSearchKeyword] = useState("");
     const fetchingRef = useRef(false);
-    const timerRef = useRef(null);
-    const { accessToken, setToken, clearToken } = TokeStore();
 
     useEffect(() => {
         const kw = searchParams?.get("keyword") ?? "";
@@ -64,67 +63,49 @@ export default function Header() {
         router.push(params.toString() ? `/all?${params.toString()}` : "/all");
     };
 
-    // localStorage → zustand 복원
+    // 페이지 로드 시 또는 경로 변경 시 사용자 정보 가져오기
+    // 쿠키는 브라우저가 자동으로 관리하므로, '/api/users/me' 호출만으로 인증 상태를 확인할 수 있습니다.
     useEffect(() => {
-        if (typeof window === "undefined") return;
-        const saved = localStorage.getItem("accessToken");
-        if (saved && !accessToken) {
-            setToken(saved);
-        }
-    }, [accessToken, setToken]);
+        if (fetchingRef.current) return;
+        fetchingRef.current = true;
 
-    // 토큰 있으면 내 정보 가져오기 (리라이트 경유)
-    useEffect(() => {
-        if (!accessToken) {
-            setMe(null);
-            return;
-        }
-
-        (async () => {
+        const fetchUser = async () => {
             try {
-                const headers = accessToken
-                    ? { Authorization: `Bearer ${accessToken}` }
-                    : {};
-
-                const res = await fetch("/api/users/me", {
-                    credentials: "include",
-                    headers,
-                });
-
-                if (res.ok) {
-                    setMe(await res.json());
+                // axios 인스턴스를 사용하여 API 호출 (withCredentials: true가 적용됨)
+                const res = await api.get("/users/me");
+                if (res.status === 200) {
+                    setMe(res.data);
                 } else {
-                    // ❗ 유효하지 않은 토큰이면 즉시 삭제
-                    clearToken();
-                    if (typeof window !== "undefined") {
-                        localStorage.removeItem("accessToken");
-                    }
+                    // 응답이 성공이 아니면(401 등) 사용자 상태를 null로 설정
                     setMe(null);
                 }
             } catch (e) {
-                console.error("me fetch error", e);
+                // console.error("me fetch error", e);
+                // 에러 발생 시 (예: 401 Unauthorized) 사용자 상태를 null로 설정
                 setMe(null);
+            } finally {
+                fetchingRef.current = false;
             }
-        })();
-    }, [accessToken, clearToken]);
+        };
+
+        fetchUser();
+    }, [router]); // pathname이 변경될 때마다 사용자 정보를 다시 확인할 수 있습니다.
 
     // 로그아웃
     const onLogout = async () => {
         if (!confirm("로그아웃 하시겠습니까?")) return;
         try {
-            const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
-            await fetch("/api/sing/logout", {
-                method: "POST",
-                headers,
-                credentials: "include",
-            });
+            // axios 인스턴스를 사용하여 로그아웃 요청
+            // 브라우저가 자동으로 인증 쿠키를 포함하여 전송합니다.
+            await api.post("/sing/logout");
+        } catch (error) {
+            console.error("Logout failed:", error);
         } finally {
-            clearToken();
-            if (typeof window !== "undefined") {
-                localStorage.removeItem("accessToken");
-            }
+            // 성공 여부와 관계없이 클라이언트 측 상태를 초기화하고 홈으로 이동
             setMe(null);
             router.push("/");
+            // 페이지를 새로고침하여 서버에서 만료된 쿠키 상태를 완전히 반영
+            router.refresh();
         }
     };
 
