@@ -4,13 +4,11 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "./oauth.module.css";
-import tokenStore from "@/app/store/TokenStore";
-import { api } from "@/lib/api/client";
+import api from "@/lib/api"; // 전역 axios 인스턴스 사용
 
 export default function OAuthClient() {
     const router = useRouter();
     const sp = useSearchParams();
-    const { setToken } = tokenStore();
 
     const provider = sp.get("provider") || "naver";
     const accessTokenFromQuery = sp.get("accessToken");
@@ -41,32 +39,22 @@ export default function OAuthClient() {
     const [marketingChecked, setMarketingChecked] = useState(false);
     const [allChecked, setAllChecked] = useState(false);
 
-    // 1) 토큰 저장
+    // 1) 토큰 저장 (axios 인터셉터에서 처리될 것으로 예상)
     useEffect(() => {
         if (accessTokenFromQuery) {
             localStorage.setItem("accessToken", accessTokenFromQuery);
-            setToken(accessTokenFromQuery);
+            // setToken(accessTokenFromQuery); // setToken은 더 이상 필요 없을 수 있음
         }
         if (refreshTokenFromQuery) {
             localStorage.setItem("refreshToken", refreshTokenFromQuery);
         }
-    }, [accessTokenFromQuery, refreshTokenFromQuery, setToken]);
+    }, [accessTokenFromQuery, refreshTokenFromQuery]);
 
     // 2) 내 정보 조회
     useEffect(() => {
         (async () => {
-            const atk = accessTokenFromQuery || localStorage.getItem("accessToken");
-            if (!atk) {
-                alert("로그인이 필요합니다.");
-                router.replace("/sing/login");
-                return;
-            }
-
             try {
-                const data = await api("/users/me", {
-                    headers: { Authorization: `Bearer ${atk}` },
-                    credentials: "include",
-                });
+                const { data } = await api.get("/users/me");
 
                 // u_status === 1 이면 추가 정보 필요 없음 → 홈
                 if (data.u_status === 1 && !forceShow) {
@@ -85,11 +73,13 @@ export default function OAuthClient() {
                 setZipcode(data.u_address || "");
             } catch (err) {
                 console.error(err);
+                alert("로그인이 필요합니다.");
+                router.replace("/sing/login");
             } finally {
                 setLoading(false);
             }
         })();
-    }, [accessTokenFromQuery, forceShow, router]);
+    }, [forceShow, router]);
 
     // 3) 주소 스크립트
     useEffect(() => {
@@ -129,7 +119,7 @@ export default function OAuthClient() {
 
         const timer = setTimeout(async () => {
             try {
-                const exists = await api(
+                const { data: exists } = await api.get(
                     `/sing/join/check_nickname?u_nickname=${encodeURIComponent(nickname)}`
                 );
                 if (exists) {
@@ -137,13 +127,17 @@ export default function OAuthClient() {
                 } else {
                     setNicknameMsg({ text: "사용 가능한 별명입니다.", color: "green" });
                 }
-            } catch {
+            } catch (err) {
                 setNicknameMsg({ text: "확인 중 오류 발생", color: "red" });
+                if (err.response?.status === 401) {
+                    alert("로그인이 필요합니다.");
+                    router.replace("/sing/login");
+                }
             }
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [nickname]);
+    }, [nickname, router]);
 
     // 5) 전화번호 자동 중복검사
     useEffect(() => {
@@ -155,7 +149,7 @@ export default function OAuthClient() {
         const timer = setTimeout(async () => {
             try {
                 const cleanPhone = phone.replace(/[^0-9]/g, "");
-                const exists = await api(
+                const { data: exists } = await api.get(
                     `/sing/join/check_phone?u_phone=${encodeURIComponent(cleanPhone)}`
                 );
                 if (exists) {
@@ -163,13 +157,17 @@ export default function OAuthClient() {
                 } else {
                     setPhoneMsg({ text: "사용 가능한 전화번호입니다.", color: "green" });
                 }
-            } catch {
+            } catch (err) {
                 setPhoneMsg({ text: "확인 중 오류 발생", color: "red" });
+                if (err.response?.status === 401) {
+                    alert("로그인이 필요합니다.");
+                    router.replace("/sing/login");
+                }
             }
         }, 500);
 
         return () => clearTimeout(timer);
-    }, [phone]);
+    }, [phone, router]);
 
     const handleAllAgree = (e) => {
         const checked = e.target.checked;
@@ -191,34 +189,30 @@ export default function OAuthClient() {
             return;
         }
 
-        const atk = accessTokenFromQuery || localStorage.getItem("accessToken");
-
         try {
-            await api("/users/oauth-complete", {
-                method: "POST",
-                headers: {
-                    Authorization: atk ? `Bearer ${atk}` : "",
-                },
-                body: {
-                    email,
-                    uname,
-                    nickname,
-                    phone,
-                    gender,
-                    birth,
-                    location,
-                    address: zipcode,
-                    addressDetail,
-                    provider,
-                    agree: marketingChecked ? "1" : "0",
-                },
+            await api.post("/users/oauth-complete", {
+                email,
+                uname,
+                nickname,
+                phone,
+                gender,
+                birth,
+                location,
+                address: zipcode,
+                addressDetail,
+                provider,
+                agree: marketingChecked ? "1" : "0",
             });
 
             alert("정보가 저장되었습니다.");
             router.replace("/");
         } catch (err) {
             console.error(err);
-            alert("회원정보 저장 중 오류가 발생했습니다.");
+            alert(err.response?.data?.message || err.message || "회원정보 저장 중 오류가 발생했습니다.");
+            if (err.response?.status === 401) {
+                alert("로그인이 필요합니다.");
+                router.replace("/sing/login");
+            }
         }
     };
 

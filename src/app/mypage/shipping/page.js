@@ -3,11 +3,9 @@
 import { useEffect, useState, useMemo } from 'react';
 import styles from './shipping.module.css';
 import Sidebar from '@/components/mypage/sidebar';
-import tokenStore from '@/app/store/TokenStore';
+import api from '@/lib/api'; // 전역 axios 인스턴스 사용
 
 export default function ShippingPage() {
-    const { accessToken } = tokenStore();
-
     // sent: 보낸 택배, received: 받은 택배
     const [mode, setMode] = useState('sent');
     const [items, setItems] = useState([]);
@@ -25,28 +23,13 @@ export default function ShippingPage() {
             // 모드별 엔드포인트
             const url =
                 mode === 'sent'
-                    ? '/api/delivery/sent'
-                    : '/api/delivery/received';
+                    ? '/delivery/sent'
+                    : '/delivery/received';
 
             try {
-                const res = await fetch(url, {
-                    headers: accessToken
-                        ? { Authorization: 'Bearer ' + accessToken }
-                        : {},
-                    credentials: 'include',
-                    cache: 'no-store',
-                });
+                const res = await api.get(url);
 
-                if (!res.ok) {
-                    const txt = await res.text();
-                    if (alive) {
-                        setErr(txt || '목록을 불러오지 못했습니다.');
-                        setItems([]);
-                    }
-                    return;
-                }
-
-                const data = await res.json();
+                const data = res.data;
 
                 // 공통 normalize
                 const normalized = Array.isArray(data)
@@ -80,8 +63,11 @@ export default function ShippingPage() {
                 }
             } catch (e) {
                 if (alive) {
-                    setErr('네트워크 오류가 발생했습니다.');
+                    setErr(e.response?.data?.message || e.message || '네트워크 오류가 발생했습니다.');
                     setItems([]);
+                    if (e.response?.status === 401) {
+                        console.log("로그인이 필요합니다.");
+                    }
                 }
             } finally {
                 if (alive) setLoading(false);
@@ -91,7 +77,7 @@ export default function ShippingPage() {
         return () => {
             alive = false;
         };
-    }, [mode, accessToken]);
+    }, [mode]);
 
     const empty = useMemo(
         function () {

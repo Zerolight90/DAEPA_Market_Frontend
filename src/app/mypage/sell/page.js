@@ -5,8 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import styles from './sell.module.css';
 import Sidebar from '@/components/mypage/sidebar';
-import tokenStore from '@/app/store/TokenStore';
-import { api } from '@/lib/api/client';
+import api from '@/lib/api'; // 전역 axios 인스턴스 사용
 
 const FALLBACK_IMG =
     'https://daepa-s3.s3.ap-northeast-2.amazonaws.com/products/KakaoTalk_20251104_145039505.jpg';
@@ -30,7 +29,6 @@ function isTruthyOne(v) {
 
 export default function SellHistoryPage() {
     const router = useRouter();
-    const { accessToken } = tokenStore();
 
     const [list, setList] = useState([]);
     const [keyword, setKeyword] = useState('');
@@ -82,29 +80,26 @@ export default function SellHistoryPage() {
         try {
             setLoading(true);
             setErr('');
-            const data = await api('/deal/mySell', {
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-                credentials: 'include',
-                cache: 'no-store',
-            });
+            const { data } = await api.get('/deal/mySell');
 
             if (!mountedRef.current) return;
             setList(Array.isArray(data) ? data : []);
         } catch (e) {
             if (!mountedRef.current) return;
-            const errorMessage = e.data?.message || e.message || '판매내역을 불러오지 못했습니다.';
+            const errorMessage = e.response?.data?.message || e.message || '판매내역을 불러오지 못했습니다.';
             setErr(errorMessage);
             setList([]);
+            if (e.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         } finally {
             if (mountedRef.current) setLoading(false);
         }
     }
 
     useEffect(() => {
-        if (!accessToken) return;
         fetchSell();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [accessToken]);
+    }, []);
 
     // ---------- 단계 계산 ----------
     function calcBaseStep(item) {
@@ -249,16 +244,15 @@ export default function SellHistoryPage() {
         if (!dealId) return;
         setPendingSendId(dealId);
         try {
-            await api(`/delivery/${dealId}/sent`, {
-                method: 'PATCH',
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-                credentials: 'include',
-            });
+            await api.patch(`/delivery/${dealId}/sent`);
             // 서버에서 dv_status=1로 변경 → 재조회
             await fetchSell();
         } catch (error) {
-            const txt = error.data?.message || error.message || '배송 보냄 확인에 실패했습니다.';
+            const txt = error.response?.data?.message || error.message || '배송 보냄 확인에 실패했습니다.';
             alert('배송 보냄 확인에 실패했습니다.\n' + txt);
+            if (error.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         } finally {
             setPendingSendId((prev) => (prev === dealId ? null : prev));
         }
@@ -271,16 +265,15 @@ export default function SellHistoryPage() {
         if (!dealId) return;
         setPendingDoneId(dealId);
         try {
-            await api(`/delivery/${dealId}/done`, {
-                method: 'PATCH',
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-                credentials: 'include',
-            });
+            await api.patch(`/delivery/${dealId}/done`);
             // dv_status=5로 갱신되면 재조회 → 버튼 사라지고(조건에서 제외), 필요 시 후기 버튼만 보이도록
             await fetchSell();
         } catch (error) {
-            const txt = error.data?.message || error.message || '처리 중 오류가 발생했습니다.';
+            const txt = error.response?.data?.message || error.message || '처리 중 오류가 발생했습니다.';
             alert('처리 중 오류가 발생했습니다.\n' + txt);
+            if (error.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         } finally {
             setPendingDoneId((prev) => (prev === dealId ? null : prev));
         }
@@ -297,20 +290,15 @@ export default function SellHistoryPage() {
 
         setPendingRefundId(dealId);
         try {
-            await api(`/${dealId}/payCancel`, {
-                method: 'POST',
-                headers: {
-                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
-                    'Content-Type': 'application/json',
-                },
-                credentials: 'include',
-                body: JSON.stringify({ cancelReason }),
-            });
+            await api.post(`/${dealId}/payCancel`, { cancelReason });
             alert('환불 처리가 완료되었습니다.');
             await fetchSell();
         } catch (error) {
-            const txt = error.data?.message || error.message || '환불 처리 중 오류가 발생했습니다.';
+            const txt = error.response?.data?.message || error.message || '환불 처리 중 오류가 발생했습니다.';
             alert('환불 처리 중 오류가 발생했습니다.\n' + txt);
+            if (error.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         } finally {
             setPendingRefundId((prev) => (prev === dealId ? null : prev));
         }
@@ -324,16 +312,16 @@ export default function SellHistoryPage() {
         }
 
         try {
-            const data = await api(`/review/exists?dealId=${dealId}&reType=SELLER`, {
-                credentials: 'include',
-                headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-            });
+            const { data } = await api.get(`/review/exists?dealId=${dealId}&reType=SELLER`);
             if (data?.exists) {
                 alert('이미 작성한 리뷰입니다.');
                 return;
             }
-        } catch {
+        } catch (error) {
             // 조회 실패해도 이동은 허용 가능
+            if (error.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         }
 
         const buyerIdx =
