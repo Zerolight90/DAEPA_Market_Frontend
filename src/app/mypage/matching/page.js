@@ -3,15 +3,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import styles from "./matching.module.css"; // ✅ 새 CSS 모듈 임포트
-import tokenStore from "@/app/store/TokenStore";
 import Sidebar from "@/components/mypage/sidebar";
-import { api } from "@/lib/api/client";
+import api from "@/lib/api"; // 전역 axios 인스턴스 사용
 
 const NOTIFICATIONS_PER_PAGE = 5;
 
 export default function MatchingPage() {
-    const { token } = tokenStore();
-
     // 카테고리 상태
     const [upperCategories, setUpperCategories] = useState([]);
     const [middleCategories, setMiddleCategories] = useState([]);
@@ -42,32 +39,27 @@ export default function MatchingPage() {
     // 내 관심 조건 불러오기
     useEffect(() => {
         const fetchUserPicks = async () => {
-            const currentToken = token || localStorage.getItem('accessToken');
-            if (!currentToken) {
-                setError("로그인이 필요합니다.");
-                setIsLoading(false);
-                return;
-            }
             try {
-                const data = await api("/userpicks", {
-                    headers: { 'Authorization': `Bearer ${currentToken}` },
-                });
+                const { data } = await api.get("/userpicks");
                 setUserPicks(data);
             } catch (err) {
-                setError(err.message);
+                setError(err.response?.data?.message || err.message);
+                if (err.response?.status === 401) {
+                    console.log("로그인이 필요합니다.");
+                }
             } finally {
                 setIsLoading(false);
             }
         };
         fetchUserPicks();
-    }, [token]);
+    }, []);
 
     // 상위 카테고리 로드
     useEffect(() => {
         (async () => {
             try {
                 setLoadingCategories(true);
-                const data = await api("/category/uppers");
+                const { data } = await api.get("/category/uppers");
                 setUpperCategories(data);
             } catch (e) {
                 console.error("상위 카테고리 로딩 실패:", e);
@@ -89,7 +81,7 @@ export default function MatchingPage() {
         (async () => {
             setLoadingMiddle(true);
             try {
-                const data = await api(`/category/uppers/${selectedUpper}/middles`);
+                const { data } = await api.get(`/category/uppers/${selectedUpper}/middles`);
                 setMiddleCategories(data);
             } catch (e) {
                 console.error("중위 카테고리 로딩 실패:", e);
@@ -109,7 +101,7 @@ export default function MatchingPage() {
         (async () => {
             setLoadingLow(true);
             try {
-                const data = await api(`/category/middles/${selectedMiddle}/lows`);
+                const { data } = await api.get(`/category/middles/${selectedMiddle}/lows`);
                 setLowCategories(data);
             } catch (e) {
                 console.error("하위 카테고리 로딩 실패:", e);
@@ -122,21 +114,19 @@ export default function MatchingPage() {
     // 삭제
     const handleDelete = async (idToDelete) => {
         if (!confirm('해당 항목을 정말 삭제하시겠습니까?')) return;
-        const currentToken = token || localStorage.getItem('accessToken');
         try {
-            await api(`/userpicks/${idToDelete}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${currentToken}` },
-            });
+            await api.delete(`/userpicks/${idToDelete}`);
             setUserPicks(prev => prev.filter(p => p.upIdx !== idToDelete));
         } catch (err) {
-            alert(err.message);
+            alert(err.response?.data?.message || err.message);
+            if (err.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         }
     };
 
     // 추가
     const handleAddPick = async () => {
-        const currentToken = token || localStorage.getItem('accessToken');
         if (!selectedUpper || !selectedMiddle || !selectedLow || !minPrice || !maxPrice) {
             alert('모든 값을 입력해주세요.');
             return;
@@ -154,14 +144,7 @@ export default function MatchingPage() {
         };
 
         try {
-            const added = await api('/userpicks/add', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentToken}`
-                },
-                body: newPickData,
-            });
+            const { data: added } = await api.post('/userpicks/add', newPickData);
             setUserPicks(prev => [...prev, added]);
             // 입력 필드 초기화
             setSelectedUpper('');
@@ -171,7 +154,10 @@ export default function MatchingPage() {
             setMaxPrice('');
             alert('성공적으로 추가되었습니다.');
         } catch (err) {
-            alert(err.message);
+            alert(err.response?.data?.message || err.message);
+            if (err.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         }
     };
 
@@ -183,21 +169,16 @@ export default function MatchingPage() {
         setNotifications([]);
         setVisibleNotificationsCount(NOTIFICATIONS_PER_PAGE);
 
-        const currentToken = token || localStorage.getItem('accessToken');
         try {
-            const data = await api("/userpicks/notifications", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentToken}`,
-                },
-                body: pick,
-            });
+            const { data } = await api.post("/userpicks/notifications", pick);
             setNotifications(data);
         } catch (error) {
             console.error('Error fetching notifications:', error);
-            alert(error.message);
+            alert(error.response?.data?.message || error.message);
             setNotifications([]);
+            if (error.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         } finally {
             setIsNotificationLoading(false);
         }
@@ -207,16 +188,15 @@ export default function MatchingPage() {
 
     // 알림 삭제
     const handleDeleteNotification = async (productIdToDelete) => {
-        const currentToken = token || localStorage.getItem('accessToken');
         try {
-            await api(`/alarm/delete/${productIdToDelete}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${currentToken}` },
-            });
+            await api.delete(`/alarm/delete/${productIdToDelete}`);
             setNotifications(prev => prev.filter(n => n.productId !== productIdToDelete));
         } catch (error) {
             console.error('Error deleting notification:', error);
-            alert(error.message);
+            alert(error.response?.data?.message || error.message);
+            if (error.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         }
     };
 

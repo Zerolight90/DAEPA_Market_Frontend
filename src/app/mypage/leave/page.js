@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/mypage/sidebar';
 import styles from './leave.module.css';
-import TokeStore from "@/app/store/TokenStore";
-import { api } from "@/lib/api/client";
+import api from "@/lib/api"; // 전역 axios 인스턴스 사용
 
 const REASONS = [
     { id: 'low_usage', label: '사용 빈도가 낮고 개인정보 및 보안 우려' },
@@ -18,7 +17,6 @@ const REASONS = [
 
 export default function LeavePage() {
     const router = useRouter();
-    const { clearToken } = TokeStore(); // ✅ zustand에서 clearToken 가져옴
 
     const [checked, setChecked] = useState([]);
     const [etcText, setEtcText] = useState('');
@@ -43,11 +41,6 @@ export default function LeavePage() {
         e.preventDefault();
         if (!canSubmit) return;
 
-        const atk =
-            typeof window !== 'undefined'
-                ? localStorage.getItem('accessToken')
-                : null;
-
         const payload = {
             reasons: checked,
             ...(checked.includes('etc') && etcText.trim().length > 0
@@ -56,16 +49,7 @@ export default function LeavePage() {
         };
 
         try {
-            const data = await api("/sing/bye", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(atk ? { Authorization: `Bearer ${atk}` } : {}),
-                },
-                // 🔥 쿠키 삭제(Set-Cookie) 받으려면 필수
-                credentials: 'include',
-                body: JSON.stringify(payload),
-            });
+            const { data } = await api.post("/sing/bye", payload);
 
             let msg = '회원 탈퇴가 완료되었습니다.';
             if (data && (data.message || typeof data === 'string')) {
@@ -73,22 +57,23 @@ export default function LeavePage() {
             }
             alert(msg);
 
-            // 1) 브라우저 저장 토큰 제거
+            // 1) 브라우저 저장 토큰 제거 (axios 인터셉터에서 처리될 수도 있음)
             if (typeof window !== 'undefined') {
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
             }
 
-            // 2) zustand 상태도 제거 → 헤더가 바로 로그인해제 UI로
-            clearToken();
-
-            // 3) 홈으로 보내고 새로 렌더
+            // 2) 홈으로 보내고 새로 렌더
             router.replace('/');
             router.refresh?.();
         } catch (err) {
             console.error(err);
-            const errorMessage = err.data?.message || err.message || '탈퇴 요청 중 오류가 발생했습니다.';
+            const errorMessage = err.response?.data?.message || err.message || '탈퇴 요청 중 오류가 발생했습니다.';
             alert(errorMessage);
+            if (err.response?.status === 401) {
+                alert("로그인이 필요합니다.");
+                router.push("/login");
+            }
         }
     };
 

@@ -4,9 +4,8 @@ import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import styles from "./mypage.module.css";
-import useTokenStore from "@/app/store/TokenStore";
 import SideNav from "@/components/mypage/sidebar";
-import { api } from "@/lib/api/client";
+import api from "@/lib/api"; // 전역 axios 인스턴스 사용
 
 const TABS = [
     { key: "all", label: "전체" },
@@ -82,7 +81,6 @@ function formatDateRelative(raw) {
 
 export default function MyPage() {
     const pathname = usePathname();
-    const { accessToken } = useTokenStore();
     const [isHydrated, setIsHydrated] = useState(false);
 
     const [tab, setTab] = useState("all");
@@ -110,33 +108,13 @@ export default function MyPage() {
     useEffect(() => {
         if (!isHydrated) return; // 스토어가 준비될 때까지 대기
 
-        if (!accessToken) {
-            // 토큰이 없으면 로그인 필요 상태로 설정
-            setError("로그인이 필요합니다.");
-            setMyInfo({
-                nickname: "로그인 필요",
-                trust: 0,
-                avatarUrl: "",
-                uIdx: undefined,
-            });
-            setProducts([]);
-            return;
-        }
-
         const fetchAllMyPageData = async () => {
             try {
                 setError(null);
-                const headers = { Authorization: `Bearer ${accessToken}` };
 
                 // 1. 내 정보 가져오기
-                const meRes = await fetch("/api/sing/me", {
-                    method: "GET",
-                    headers,
-                    credentials: "include",
-                    cache: "no-store",
-                });
-                if (!meRes.ok) throw new Error("내 정보를 불러오지 못했습니다.");
-                const meData = await meRes.json();
+                const meRes = await api.get("/sing/me");
+                const meData = meRes.data;
                 
                 const profileUrl = meData.u_profile ?? meData.uProfile ?? meData.avatarUrl ?? "";
                 const mannerScore = meData.uManner ?? meData.u_manner ?? meData.manner ?? meData.trust ?? 0;
@@ -150,41 +128,40 @@ export default function MyPage() {
                 });
 
                 // 2. 상품 목록 가져오기
-                const productsRes = await fetch("/api/products/mypage", {
-                    method: "GET",
-                    headers,
-                    credentials: "include",
-                    cache: "no-store",
-                });
-                if (!productsRes.ok) throw new Error("상품 목록을 불러오지 못했습니다.");
-                const productsData = await productsRes.json();
+                const productsRes = await api.get("/products/mypage");
+                const productsData = productsRes.data;
                 setProducts(Array.isArray(productsData) ? productsData : []);
 
                 // 3. 잔액 조회
-                const balanceData = await api("/pay/balance", { headers });
-                setMyDaepa(balanceData.balance);
+                const balanceRes = await api.get("/pay/balance");
+                setMyDaepa(balanceRes.data.balance);
 
                 // 4. 정산 내역 개수 (uIdx가 있어야 호출 가능)
                 if (uIdx) {
-                    const safeCountRes = await fetch(`/api/deal/safe/count?uIdx=${uIdx}`, {
-                        cache: "no-store",
-                        credentials: "include",
-                        headers,
-                    });
-                    if (safeCountRes.ok) {
-                        const safeCountData = await safeCountRes.json();
-                        setSafeCount(typeof safeCountData === "number" ? safeCountData : safeCountData?.count ?? 0);
-                    }
+                    const safeCountRes = await api.get(`/deal/safe/count?uIdx=${uIdx}`);
+                    const safeCountData = safeCountRes.data;
+                    setSafeCount(typeof safeCountData === "number" ? safeCountData : safeCountData?.count ?? 0);
                 }
 
             } catch (err) {
                 console.error("마이페이지 데이터 조회 실패:", err);
-                setError(err.message);
+                setError(err.response?.data?.message || err.message);
+                setMyInfo({
+                    nickname: "로그인 필요",
+                    trust: 0,
+                    avatarUrl: "",
+                    uIdx: undefined,
+                });
+                setProducts([]);
+                if (err.response?.status === 401) {
+                    // 로그인 페이지로 리다이렉트 또는 로그인 모달 표시
+                    console.log("로그인이 필요합니다.");
+                }
             }
         };
 
         fetchAllMyPageData();
-    }, [accessToken, isHydrated]);
+    }, [isHydrated]);
 
     // ✅ 내 상품만
     const myProductsAll = useMemo(() => {
