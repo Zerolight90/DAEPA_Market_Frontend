@@ -2,24 +2,14 @@
 
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import tokenStore from "@/app/store/TokenStore";
 import Sidebar from "@/components/mypage/sidebar";
 import styles from "./review.module.css";
-import { api } from "@/lib/api/client";
+import api from "@/lib/api"; // 전역 axios 인스턴스 사용
 
 export default function SellerWriteReviewPage() {
     const params = useParams();
     const searchParams = useSearchParams();
     const router = useRouter();
-    const { accessToken } = tokenStore();
-
-    // store → localStorage 대문자 → 소문자
-    const realToken =
-        accessToken ||
-        (typeof window !== "undefined"
-            ? localStorage.getItem("ACCESS_TOKEN") ||
-            localStorage.getItem("access_token")
-            : null);
 
     const targetUserId = params.userId; // 후기 받는 사람(구매자)
     const dealId = searchParams.get("dealId");
@@ -40,52 +30,37 @@ export default function SellerWriteReviewPage() {
             return;
         }
 
-        if (!realToken) {
-            alert("로그인이 필요합니다.");
-            return;
-        }
-
         try {
             setSubmitting(true);
 
             // 1) 중복 확인
-            const { exists } = await api(
-                `/review/exists?dealId=${dealId}&reType=SELLER`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${realToken}`,
-                    },
-                    credentials: "include",
-                }
+            const { data: existsResponse } = await api.get(
+                `/review/exists?dealId=${dealId}&reType=SELLER`
             );
 
-            if (exists) {
+            if (existsResponse.exists) {
                 alert("이미 작성한 리뷰입니다.");
                 return;
             }
 
             // 2) 실제 저장
-            await api("/reviews", {
-                method: "POST",
-                credentials: "include",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${realToken}`,
-                },
-                body: JSON.stringify({
-                    dIdx: Number(dealId),
-                    reStar: Number(star),
-                    reContent: content,
-                    reType: "SELLER", // 판매자가 구매자에게
-                }),
+            await api.post("/reviews", {
+                dIdx: Number(dealId),
+                reStar: Number(star),
+                reContent: content,
+                reType: "SELLER", // 판매자가 구매자에게
             });
 
             alert("후기가 등록되었습니다.");
             router.back();
         } catch (error) {
             console.error("리뷰 저장 실패:", error);
-            const errorMessage = error.data?.message || error.message || "리뷰 저장에 실패했습니다.";
+            const errorMessage = error.response?.data?.message || error.message || "리뷰 저장에 실패했습니다.";
             alert(errorMessage);
+            if (error.response?.status === 401) {
+                alert("로그인이 필요합니다.");
+                router.push("/login");
+            }
         }
         finally {
             setSubmitting(false);

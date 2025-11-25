@@ -3,10 +3,9 @@
 import { useEffect, useState } from 'react';
 import styles from './settlement.module.css';
 import Sidebar from '@/components/mypage/sidebar';
-import tokenStore from '@/app/store/TokenStore';
+import api from '@/lib/api'; // 전역 axios 인스턴스 사용
 
 export default function SettlementPage() {
-    const { accessToken } = tokenStore();
     const [loading, setLoading] = useState(true);
     const [err, setErr] = useState('');
     const [list, setList] = useState([]);
@@ -17,35 +16,25 @@ export default function SettlementPage() {
             try {
                 setLoading(true);
 
-                const res = await fetch('/api/deal/safe', {
-                    headers: accessToken
-                        ? { Authorization: `Bearer ${accessToken}` }
-                        : {},
-                    credentials: 'include',
-                    cache: 'no-store',
-                });
+                const res = await api.get('/deal/safe');
 
-                if (!res.ok) {
-                    const txt = await res.text();
-                    setErr(txt || '불러오기에 실패했습니다.');
-                    setList([]);
-                    return;
-                }
-
-                const data = await res.json();
+                const data = res.data;
                 // data: [{ productTitle, agreedPrice, dealDate }]
                 setList(Array.isArray(data) ? data : []);
                 setErr('');
             } catch (e) {
-                setErr('네트워크 오류가 발생했습니다.');
+                setErr(e.response?.data?.message || e.message || '네트워크 오류가 발생했습니다.');
                 setList([]);
+                if (e.response?.status === 401) {
+                    console.log("로그인이 필요합니다.");
+                }
             } finally {
                 setLoading(false);
             }
         }
 
         fetchDeals();
-    }, [accessToken]);
+    }, []);
 
     // 날짜 예쁘게
     const formatDate = (d) => {

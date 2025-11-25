@@ -2,9 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Sidebar from "@/components/mypage/sidebar";
-import tokenStore from "@/app/store/TokenStore";
 import styles from "./review.module.css";
-import { api } from "@/lib/api/client";
+import api from "@/lib/api"; // 전역 axios 인스턴스 사용
 
 const FALLBACK_IMG =
     "https://daepa-s3.s3.ap-northeast-2.amazonaws.com/products/KakaoTalk_20251104_145039505.jpg";
@@ -14,16 +13,6 @@ function getThumb(row) {
 }
 
 export default function MyReviewsPage() {
-    const { accessToken } = tokenStore();
-
-    // store → localStorage 대문자 → 소문자
-    const realToken =
-        accessToken ||
-        (typeof window !== "undefined"
-            ? localStorage.getItem("ACCESS_TOKEN") ||
-            localStorage.getItem("access_token")
-            : null);
-
     // "received" | "written"
     const [tab, setTab] = useState("received");
 
@@ -56,11 +45,6 @@ export default function MyReviewsPage() {
         const setter = kind === "received" ? setRecv : setWrit;
         const state = kind === "received" ? recv : writ;
 
-        if (!realToken) {
-            setter((s) => ({ ...s, err: "로그인이 필요합니다.", loading: false }));
-            return;
-        }
-
         try {
             setter((s) => ({ ...s, loading: true, err: "" }));
 
@@ -69,11 +53,7 @@ export default function MyReviewsPage() {
                     ? `/review/received?page=${page}&size=${state.size}`
                     : `/review/written?page=${page}&size=${state.size}`;
 
-            const data = await api(path, {
-                headers: { Authorization: `Bearer ${realToken}` },
-                credentials: "include",
-                cache: "no-store",
-            });
+            const { data } = await api.get(path);
 
             setter((s) => ({
                 ...s,
@@ -89,10 +69,13 @@ export default function MyReviewsPage() {
         } catch (error) {
             setter((s) => ({
                 ...s,
-                err: error.data?.message || error.message || "네트워크 오류가 발생했습니다.",
+                err: error.response?.data?.message || error.message || "네트워크 오류가 발생했습니다.",
                 loading: false,
                 initialized: true,
             }));
+            if (error.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         }
     }
 
@@ -101,7 +84,7 @@ export default function MyReviewsPage() {
         if (tab === "received" && !recv.initialized) fetchReviews("received", 0);
         if (tab === "written" && !writ.initialized) fetchReviews("written", 0);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [tab, realToken]);
+    }, [tab]);
 
     const activeState = useMemo(
         () => (tab === "received" ? recv : writ),
@@ -130,25 +113,13 @@ export default function MyReviewsPage() {
     }
 
     async function saveEdit() {
-        if (!realToken) {
-            alert("로그인이 필요합니다.");
-            return;
-        }
         if (!selected) return;
 
         try {
             setSaving(true);
-            await api(`/reviews/${selected.reIdx}`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${realToken}`,
-                },
-                credentials: "include",
-                body: JSON.stringify({
-                    reStar: Number(editStar),
-                    reContent: editContent,
-                }),
+            await api.put(`/reviews/${selected.reIdx}`, {
+                reStar: Number(editStar),
+                reContent: editContent,
             });
 
             // 리스트 & 모달 동기화
@@ -167,8 +138,11 @@ export default function MyReviewsPage() {
             setEditMode(false);
             alert("수정되었습니다.");
         } catch (error) {
-            const txt = error.data?.message || error.message || "수정에 실패했습니다.";
+            const txt = error.response?.data?.message || error.message || "수정에 실패했습니다.";
             alert(txt);
+            if (error.response?.status === 401) {
+                console.log("로그인이 필요합니다.");
+            }
         }
         finally {
             setSaving(false);
