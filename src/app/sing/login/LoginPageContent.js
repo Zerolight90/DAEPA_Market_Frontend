@@ -9,7 +9,7 @@ import styles from "@/app/sing/login/login.module.css";
 import api from "@/lib/api"; // axios 인스턴스 가져오기
 import naverLogo from "@/app/naver.png";
 import kakaoLogo from "@/app/kakaologin.png";
-import { getApiBaseUrl } from "@/lib/api/client";
+// import { getApiBaseUrl } from "@/lib/api/client"; // 더 이상 필요 없음
 
 export default function LoginPageContent() {
     const router = useRouter();
@@ -21,19 +21,22 @@ export default function LoginPageContent() {
 
     // const { setToken } = tokenStore(); // 더 이상 필요 없음
 
+    // 프론트엔드 앱의 기본 URL (OAuth 리다이렉트 URI 구성에 사용)
+    const frontUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+
     // ✅ 네이버 로그인 버튼
     const handleNaverLogin = () => {
-        const backendUrl = getApiBaseUrl();
+        const backendUrl = api.defaults.baseURL; // axios 인스턴스의 baseURL 사용
         const next = searchParams.get("next") || "/"; // 리다이렉트할 경로
-        const naverAuthUrl = `${backendUrl}/api/oauth2/authorization/naver?redirect_uri=${encodeURIComponent(frontUrl + "/oauth/success?next=" + next)}`;
+        const naverAuthUrl = `${backendUrl}/oauth2/authorization/naver?redirect_uri=${encodeURIComponent(frontUrl + "/oauth/success?next=" + next)}`;
         window.location.href = naverAuthUrl;
     };
 
     // ✅ 카카오 로그인 버튼
     const handleKakaoLogin = () => {
-        const backendUrl = getApiBaseUrl();
+        const backendUrl = api.defaults.baseURL; // axios 인스턴스의 baseURL 사용
         const next = searchParams.get("next") || "/"; // 리다이렉트할 경로
-        const kakaoAuthUrl = `${backendUrl}/api/oauth2/authorization/kakao?redirect_uri=${encodeURIComponent(frontUrl + "/oauth/success?next=" + next)}`;
+        const kakaoAuthUrl = `${backendUrl}/oauth2/authorization/kakao?redirect_uri=${encodeURIComponent(frontUrl + "/oauth/success?next=" + next)}`;
         window.location.href = kakaoAuthUrl;
     };
 
