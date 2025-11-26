@@ -48,7 +48,11 @@ export default function Header() {
     const { isLoggedIn, user, logout } = useAuthStore(); // useAuthStore에서 로그인 상태, 사용자 정보, 로그아웃 액션 가져오기
     const [chatUnread, setChatUnread] = useState(0);
     const [searchKeyword, setSearchKeyword] = useState("");
-    // const fetchingRef = useRef(false); // useAuthStore에서 관리하므로 필요 없음
+    const [isClient, setIsClient] = useState(false); // ✅ 클라이언트인지 확인하는 상태 추가
+
+    useEffect(() => {
+        setIsClient(true); // ✅ 컴포넌트가 마운트되면 클라이언트임을 확인
+    }, []);
 
     useEffect(() => {
         const kw = searchParams?.get("keyword") ?? "";
@@ -147,11 +151,11 @@ export default function Header() {
                     <p className={styles.top}>안전거래를 위한 대파의 약속</p>
 
                     <div className={styles.rmenu}>
-                        {isLoggedIn ? ( // isLoggedIn 사용
+                        {isClient && isLoggedIn ? ( // isLoggedIn 사용 및 isClient 확인
                             <>
-                <span>
-                  <b>{displayName}</b>님 환영합니다.
-                </span>
+                                <span>
+                                    <b>{displayName}</b>님 환영합니다.
+                                </span>
                                 <button
                                     type="button"
                                     onClick={onLogout}
