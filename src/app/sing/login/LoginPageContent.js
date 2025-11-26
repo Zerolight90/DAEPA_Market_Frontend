@@ -10,6 +10,7 @@ import api from "@/lib/api"; // axios 인스턴스 가져오기
 import naverLogo from "@/app/naver.png";
 import kakaoLogo from "@/app/kakaologin.png";
 // import { getApiBaseUrl } from "@/lib/api/client"; // 더 이상 필요 없음
+import useAuthStore from "@/store/useAuthStore"; // useAuthStore 임포트
 
 export default function LoginPageContent() {
     const router = useRouter();
@@ -20,6 +21,7 @@ export default function LoginPageContent() {
     const [autoLogin, setAutoLogin] = useState(false);
 
     // const { setToken } = tokenStore(); // 더 이상 필요 없음
+    const { login: authLogin } = useAuthStore(); // useAuthStore에서 login 액션 가져오기
 
     // 프론트엔드 앱의 기본 URL (OAuth 리다이렉트 URI 구성에 사용)
     const frontUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
@@ -77,6 +79,9 @@ export default function LoginPageContent() {
 
             // 백엔드에서 로그인 성공 시 HttpOnly 쿠키를 설정해주므로,
             // 프론트에서는 별도로 토큰을 저장할 필요가 없습니다.
+
+            // 로그인 성공 시 useAuthStore 상태 업데이트
+            authLogin(); // 로그인 상태를 true로 설정
 
             // alert("로그인 성공");
             const next = searchParams.get("next") || "/"; // 리다이렉트할 경로가 있으면 그곳으로, 없으면 홈으로

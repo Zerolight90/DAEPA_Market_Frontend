@@ -20,6 +20,7 @@ import StorefrontIcon from "@mui/icons-material/Storefront";
 // 새로 만든 axios 인스턴스를 가져옵니다.
 import api from "@/lib/api";
 import styles from "./css/header.module.css";
+import useAuthStore from "@/store/useAuthStore"; // useAuthStore 임포트
 
 // 여러 형태로 올 수 있는 이름을 하나로 골라주는 함수
 function getDisplayName(me) {
@@ -43,10 +44,11 @@ function getDisplayName(me) {
 export default function Header() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const [me, setMe] = useState(null);
+    // const [me, setMe] = useState(null); // useAuthStore에서 관리
+    const { isLoggedIn, logout } = useAuthStore(); // useAuthStore에서 로그인 상태와 로그아웃 액션 가져오기
     const [chatUnread, setChatUnread] = useState(0);
     const [searchKeyword, setSearchKeyword] = useState("");
-    const fetchingRef = useRef(false);
+    // const fetchingRef = useRef(false); // useAuthStore에서 관리하므로 필요 없음
 
     useEffect(() => {
         const kw = searchParams?.get("keyword") ?? "";
@@ -64,47 +66,39 @@ export default function Header() {
     };
 
     // 페이지 로드 시 또는 경로 변경 시 사용자 정보 가져오기
-    // 쿠키는 브라우저가 자동으로 관리하므로, '/api/users/me' 호출만으로 인증 상태를 확인할 수 있습니다.
-    useEffect(() => {
-        if (fetchingRef.current) return;
-        fetchingRef.current = true;
+    // useAuthStore와 ConditionalLayout에서 로그인 상태를 관리하므로 이 useEffect는 필요 없음
+    // useEffect(() => {
+    //     if (fetchingRef.current) return;
+    //     fetchingRef.current = true;
 
-        const fetchUser = async () => {
-            try {
-                // axios 인스턴스를 사용하여 API 호출 (withCredentials: true가 적용됨)
-                const res = await api.get("/users/me");
-                if (res.status === 200) {
-                    setMe(res.data);
-                } else {
-                    // 응답이 성공이 아니면(401 등) 사용자 상태를 null로 설정
-                    setMe(null);
-                }
-            } catch (e) {
-                // console.error("me fetch error", e);
-                // 에러 발생 시 (예: 401 Unauthorized) 사용자 상태를 null로 설정
-                setMe(null);
-            } finally {
-                fetchingRef.current = false;
-            }
-        };
+    //     const fetchUser = async () => {
+    //         try {
+    //             const res = await api.get("/users/me");
+    //             if (res.status === 200) {
+    //                 setMe(res.data);
+    //             } else {
+    //                 setMe(null);
+    //             }
+    //         } catch (e) {
+    //             setMe(null);
+    //         } finally {
+    //             fetchingRef.current = false;
+    //         }
+    //     };
 
-        fetchUser();
-    }, [router]); // pathname이 변경될 때마다 사용자 정보를 다시 확인할 수 있습니다.
+    //     fetchUser();
+    // }, [router]);
 
     // 로그아웃
     const onLogout = async () => {
         if (!confirm("로그아웃 하시겠습니까?")) return;
         try {
-            // axios 인스턴스를 사용하여 로그아웃 요청
-            // 브라우저가 자동으로 인증 쿠키를 포함하여 전송합니다.
             await api.post("/sing/logout");
         } catch (error) {
             console.error("Logout failed:", error);
         } finally {
-            // 성공 여부와 관계없이 클라이언트 측 상태를 초기화하고 홈으로 이동
-            setMe(null);
+            logout(); // useAuthStore 상태 업데이트
             router.push("/");
-            // 페이지를 새로고침하여 서버에서 만료된 쿠키 상태를 완전히 반영
             router.refresh();
         }
     };
@@ -112,7 +106,7 @@ export default function Header() {
     // 마이페이지
     const onClickMyPage = (e) => {
         e.preventDefault();
-        if (!me) {
+        if (!isLoggedIn) { // isLoggedIn 사용
             alert("로그인 후 이용할 수 있어요.");
             router.push(`/sing/login?next=${encodeURIComponent("/mypage")}`);
             return;
@@ -123,7 +117,7 @@ export default function Header() {
     // 판매하기
     const onClickSell = (e) => {
         e.preventDefault();
-        if (!me) {
+        if (!isLoggedIn) { // isLoggedIn 사용
             alert("로그인 후 이용할 수 있어요.");
             router.push(`/sing/login?next=${encodeURIComponent("/sell")}`);
             return;
@@ -134,7 +128,7 @@ export default function Header() {
     // 🔒 채팅 접근 가드 (비로그인 차단)
     const onClickChat = (e) => {
         e.preventDefault();
-        if (!me) {
+        if (!isLoggedIn) { // isLoggedIn 사용
             alert("로그인 후 이용할 수 있어요.");
             router.push(`/sing/login?next=${encodeURIComponent("/chat")}`);
             return;
@@ -142,8 +136,10 @@ export default function Header() {
         router.push("/chat");
     };
 
-    // ✅ 여기서 최종 이름 결정
-    const displayName = getDisplayName(me) || "사용자";
+    // ✅ 여기서 최종 이름 결정 (me 상태가 없으므로 임시로 처리)
+    // 실제 사용자 이름은 /user/me 엔드포인트에서 가져와야 합니다.
+    // 현재는 isLoggedIn 상태만 사용하므로, 이름 표시는 로그인/로그아웃으로만 구분합니다.
+    const displayName = isLoggedIn ? "사용자" : null; // 로그인 상태일 때만 "사용자" 표시
 
     return (
         <header className={styles.sticky}>
@@ -153,10 +149,11 @@ export default function Header() {
                     <p className={styles.top}>안전거래를 위한 대파의 약속</p>
 
                     <div className={styles.rmenu}>
-                        {me ? (
+                        {isLoggedIn ? ( // isLoggedIn 사용
                             <>
                 <span>
-                  <b>{displayName}</b>님 환영합니다.
+                  {/* <b>{displayName}</b>님 환영합니다. */}
+                  환영합니다.
                 </span>
                                 <button
                                     type="button"
