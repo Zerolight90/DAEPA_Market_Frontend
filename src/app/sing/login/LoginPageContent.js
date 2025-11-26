@@ -78,6 +78,8 @@ export default function LoginPageContent() {
                 u_pw: upw,
             });
 
+            console.log("Login API Response:", response.data); // ✅ 로그인 응답 로깅
+
             // 백엔드에서 로그인 성공 시 HttpOnly 쿠키를 설정해주므로,
             // 프론트에서는 별도로 토큰을 저장할 필요가 없습니다.
             // 하지만 Authorization 헤더를 위해 accessToken을 저장합니다.
