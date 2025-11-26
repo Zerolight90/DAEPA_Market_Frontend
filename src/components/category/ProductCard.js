@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
-import { API_BASE, Endpoints } from "@/app/sell/api";
+import { api, Endpoints } from "@/app/sell/api";
 import tokenStore from "@/store/TokenStore";
 import styles from "./ProductCard.module.css";
 
@@ -36,23 +36,11 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
 
         (async () => {
             try {
-                const headers = {};
-                if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
-
                 const productId = item.id ?? item.pdIdx;
-                const res = await fetch(
-                    `${API_BASE}${Endpoints.favoriteStatus(productId)}`,
-                    {
-                        credentials: "include",
-                        cache: "no-store",
-                        headers,
-                    }
-                );
-                if (res.ok) {
-                    const data = await res.json();
-                    setFav(!!data.favorited);
-                    setCount(data.count ?? 0);
-                }
+                const res = await api.get(Endpoints.favoriteStatus(productId)); // axios 사용
+                // axios는 응답 데이터를 res.data에 담습니다.
+                setFav(!!res.data.favorited);
+                setCount(res.data.count ?? 0);
             } catch (e) {
                 console.error("찜 상태 조회 실패:", e);
             }
@@ -65,34 +53,34 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
         e.stopPropagation();
 
         const productId = item.id ?? item.pdIdx;
-        const url = `${API_BASE}${Endpoints.favoriteToggle(productId)}`;
+        const url = Endpoints.favoriteToggle(productId); // axios는 baseURL을 자동으로 붙임
 
         try {
-            const headers = { "Content-Type": "application/json" };
-            if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+            const res = await api.post(url); // axios 사용, 헤더는 인터셉터가 처리
 
-            const res = await fetch(url, {
-                method: "POST",
-                credentials: "include",
-                headers,
-            });
+            // axios는 401 에러를 catch 블록으로 보냅니다.
+            // 따라서 res.status === 401 체크는 필요 없습니다.
+            // if (res.status === 401) {
+            //     alert("로그인이 필요합니다.");
+            //     return;
+            // }
+            // if (!res.ok) { // axios는 !res.ok 대신 에러를 throw 합니다.
+            //     const msg = await res.text().catch(() => res.statusText);
+            //     alert(`찜 처리 실패 (${res.status})\n${msg}`);
+            //     return;
+            // }
 
-            if (res.status === 401) {
-                alert("로그인이 필요합니다.");
-                return;
-            }
-            if (!res.ok) {
-                const msg = await res.text().catch(() => res.statusText);
-                alert(`찜 처리 실패 (${res.status})\n${msg}`);
-                return;
-            }
-
-            const data = await res.json();
+            const data = res.data; // axios는 응답 데이터를 res.data에 담습니다.
             setFav(!!data.favorited);
             setCount(data.count ?? 0);
         } catch (err) {
-            console.error("[favoriteToggle] fetch error:", err);
-            alert("찜 처리 중 오류가 발생했습니다.");
+            if (err.response?.status === 401) { // axios 에러 처리
+                alert("로그인이 필요합니다.");
+                return;
+            }
+            console.error("[favoriteToggle] axios error:", err);
+            alert(`찜 처리 중 오류가 발생했습니다.\n${err.response?.data?.message || err.message}`);
+            return;
         }
     };
 

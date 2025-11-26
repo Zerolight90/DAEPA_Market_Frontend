@@ -72,27 +72,18 @@ export default function ProductRowSection({
 
         (async () => {
             try {
-                const headers = { Authorization: `Bearer ${accessToken}` };
-
                 const updated = await Promise.all(
                     items.map(async (item) => {
                         try {
-                            const res = await fetch(
-                                Endpoints.favoriteStatus(item.id),
-                                {
-                                    credentials: "include",
-                                    cache: "no-store",
-                                    headers,
-                                }
-                            );
-                            if (!res.ok) return item;
-                            const data = await res.json();
+                            const res = await api.get(Endpoints.favoriteStatus(item.id)); // axios 사용
+                            const data = res.data; // axios는 응답 데이터를 res.data에 담습니다.
                             return {
                                 ...item,
                                 favorited: !!data.favorited,
                                 favoriteCount: data.count ?? 0,
                             };
-                        } catch {
+                        } catch (e) {
+                            // 에러 발생 시 (예: 401) 해당 아이템은 변경 없이 반환
                             return item;
                         }
                     })
@@ -126,31 +117,9 @@ export default function ProductRowSection({
         const url = Endpoints.favoriteToggle(productId);
 
         try {
-            const headers = {
-                "Content-Type": "application/json",
-            };
-            if (accessToken) {
-                headers.Authorization = `Bearer ${accessToken}`;
-            }
+            const res = await api.post(url); // axios 사용, 헤더는 인터셉터가 처리
 
-            const res = await fetch(url, {
-                method: "POST",
-                credentials: "include",
-                headers,
-            });
-
-            if (res.status === 401) {
-                alert("로그인이 필요합니다.");
-                return;
-            }
-
-            if (!res.ok) {
-                const msg = await res.text().catch(() => res.statusText);
-                alert(`찜 처리 실패 (${res.status})\n${msg}`);
-                return;
-            }
-
-            const data = await res.json();
+            const data = res.data; // axios는 응답 데이터를 res.data에 담습니다.
 
             setItems((prev) =>
                 prev.map((it) =>
@@ -164,7 +133,11 @@ export default function ProductRowSection({
                 )
             );
         } catch (err) {
-            alert(`찜 처리 중 오류가 발생했습니다.\n${String(err)}`);
+            if (err.response?.status === 401) { // axios 에러 처리
+                alert("로그인이 필요합니다.");
+                return;
+            }
+            alert(`찜 처리 중 오류가 발생했습니다.\n${err.response?.data?.message || err.message}`);
         }
     };
 
