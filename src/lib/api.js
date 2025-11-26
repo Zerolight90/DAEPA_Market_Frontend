@@ -4,9 +4,9 @@ import tokenStore from "@/store/TokenStore";
 // Axios 인스턴스 생성
 const api = axios.create({
   // 백엔드 서버의 주소를 환경 변수에서 가져옵니다.
-  // .env.local 파일에 NEXT_PUBLIC_API_URL=https://daepamarket.shop/api 와 같이 설정해야 합니다.
-  // 로컬 개발 시에는 NEXT_PUBLIC_API_URL=http://localhost:8080/api 로 설정합니다.
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  // .env.local 파일에 NEXT_PUBLIC_API_BASE=https://daepamarket.shop 와 같이 설정해야 합니다.
+  // 로컬 개발 시에는 NEXT_PUBLIC_API_BASE=http://localhost:8080 로 설정합니다.
+  baseURL: `${process.env.NEXT_PUBLIC_API_BASE}/api`,
   // 다른 도메인으로 요청을 보낼 때 쿠키를 포함시키기 위한 필수 설정입니다.
   withCredentials: true,
 });
