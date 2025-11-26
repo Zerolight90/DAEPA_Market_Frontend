@@ -11,17 +11,36 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// 요청 인터셉터: 모든 요청에 인증 토큰을 자동으로 추가합니다.
+// 요청 인터셉터: 모든 요청에 인증 토큰을 자동으로 추가합니다. (서버/클라이언트 양용)
 api.interceptors.request.use(
-  (config) => {
-    // Zustand 스토어에서 토큰을 가져옵니다.
-    // 스토어 구독자가 아니므로 getState()를 사용해야 합니다.
-    const { accessToken } = tokenStore.getState();
+  async (config) => {
+    let accessToken;
+
+    // 서버 사이드 렌더링 환경일 경우
+    if (typeof window === 'undefined') {
+      try {
+        // 동적으로 'next/headers'에서 cookies 함수를 임포트
+        const { cookies } = await import('next/headers');
+        // 백엔드에서 설정한 ACCESS_TOKEN 쿠키를 읽어옵니다.
+        accessToken = cookies().get('ACCESS_TOKEN')?.value;
+      } catch (e) {
+        // console.error('Server-side cookie access error:', e);
+        // next/headers는 서버 컴포넌트와 API 라우트에서만 사용 가능하므로,
+        // 페이지(getServerSideProps) 등에서는 오류가 날 수 있습니다.
+        // 이 경우엔 쿠키를 읽을 수 없으므로 토큰 없이 요청합니다.
+      }
+    }
+    // 클라이언트 사이드 환경일 경우
+    else {
+      // Zustand 스토어에서 토큰을 가져옵니다.
+      accessToken = tokenStore.getState().accessToken;
+    }
 
     if (accessToken) {
       // 헤더에 토큰을 추가합니다.
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
+    
     return config;
   },
   (error) => {
