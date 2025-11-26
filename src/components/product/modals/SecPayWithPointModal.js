@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"; // ✅ useEffect 추가
 import BaseModal from "@/components/ui/modal/BaseModal";
-import tokenStore from "@/app/store/TokenStore"; // ✅ 토큰 스토어 임포트
+import tokenStore from "@/store/TokenStore"; // ✅ 토큰 스토어 임포트
 import { api } from "@/lib/api/client";
 
 export default function SecPayWithPointModal({ id, close, itemId, title, qty, total }) {

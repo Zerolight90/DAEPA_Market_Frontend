@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { API_BASE, Endpoints } from "@/app/sell/api";
-import tokenStore from "@/app/store/TokenStore";
+import tokenStore from "@/store/TokenStore";
 import styles from "./ProductCard.module.css";
 
 export default function ProductCard({ item, hrefBase = "/store" }) {

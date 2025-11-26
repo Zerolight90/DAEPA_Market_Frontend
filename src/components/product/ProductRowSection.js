@@ -5,7 +5,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import styles from "./ProductRowSection.module.css";
 import { apiFetch, API_BASE, Endpoints } from "@/app/sell/api";
-import tokenStore from "@/app/store/TokenStore";
+import tokenStore from "@/store/TokenStore";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
 import { formatTimeAgo } from "@/lib/formatters";

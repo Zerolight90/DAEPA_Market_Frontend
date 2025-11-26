@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import BaseModal from "@/components/ui/modal/BaseModal";
-import tokenStore from "@/app/store/TokenStore"; // ✅ 토큰 스토어
+import tokenStore from "@/store/TokenStore"; // ✅ 토큰 스토어
 import { api } from "@/lib/api/client";
 
 const STATUS_LABELS = {
