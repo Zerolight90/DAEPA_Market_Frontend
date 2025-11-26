@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import ProductsGrid from "@/components/category/ProductsGrid";
 // import useTokenStore from "@/app/store/TokenStore"; // 더 이상 필요 없음

@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import styles from "./ProductRowSection.module.css";
-import { apiFetch, API_BASE, Endpoints } from "@/app/sell/api";
+import { api, Endpoints } from "@/app/sell/api";
 import tokenStore from "@/store/TokenStore";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import FavoriteIcon from "@mui/icons-material/Favorite";
@@ -38,7 +38,7 @@ export default function ProductRowSection({
             try {
                 setLoading(true);
                 const qs = buildQueryString();
-                const res = await apiFetch(`/api/products?${qs}`);
+                const { data: res } = await api.get(`/products?${qs}`);
                 const list = Array.isArray(res?.content) ? res.content : [];
 
                 const mapped = list

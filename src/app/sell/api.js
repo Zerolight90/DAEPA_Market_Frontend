@@ -1,6 +1,9 @@
 // src/app/sell/api.js
 import api from '@/lib/api'; // 중앙 관리되는 axios 인스턴스를 가져옵니다.
 
+export { api }; // axios 인스턴스를 다시 내보냅니다.
+export const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+
 // 기존 Endpoints 객체는 그대로 사용하거나, 필요에 따라 아래 함수들처럼 바꿀 수 있습니다.
 export const Endpoints = {
     // ✅ 상위 카테고리 + 상품 개수 포함된 버전

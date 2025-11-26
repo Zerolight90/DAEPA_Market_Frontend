@@ -1,4 +1,5 @@
 import axios from 'axios';
+import tokenStore from "@/store/TokenStore";
 
 // Axios 인스턴스 생성
 const api = axios.create({
@@ -10,11 +11,29 @@ const api = axios.create({
   withCredentials: true,
 });
 
-/*
-  Axios 인터셉터를 사용하여 요청/응답을 전역으로 처리할 수 있습니다.
-  예: 토큰 만료 시 리프레시 토큰으로 새로운 액세스 토큰을 요청하는 로직 등
-*/
+// 요청 인터셉터: 모든 요청에 인증 토큰을 자동으로 추가합니다.
+api.interceptors.request.use(
+  (config) => {
+    // Zustand 스토어에서 토큰을 가져옵니다.
+    // 스토어 구독자가 아니므로 getState()를 사용해야 합니다.
+    const { accessToken } = tokenStore.getState();
 
+    if (accessToken) {
+      // 헤더에 토큰을 추가합니다.
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    return config;
+  },
+  (error) => {
+    // 요청 에러 처리
+    return Promise.reject(error);
+  }
+);
+
+/*
+  응답 인터셉터: 토큰 만료 시 리프레시 토큰으로 새로운 액세스 토큰을 요청하는 등의
+  전역 응답 처리를 할 수 있습니다.
+*/
 // api.interceptors.response.use(
 //   (response) => response,
 //   async (error) => {

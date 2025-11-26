@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { loadTossPayments } from "@tosspayments/payment-sdk";
 import styles from "./payCharge.module.css";
-import { api, getApiBaseUrl } from "@/lib/api/client";
+import { api } from "@/lib/api/client";
 
 const PACKAGES = [
     { id: 1, amount: 100, price: 100 },
@@ -31,26 +31,21 @@ export default function DaepaChargePage() {
     // ✅ 페이지가 로드될 때 잔액을 가져오는 로직
     useEffect(() => {
         const fetchBalance = async () => {
-            const token = localStorage.getItem('accessToken');
-
-            if (!token) {
-                setError("로그인이 필요합니다.");
-                setIsLoading(false);
-                return;
-                }
-
             try {
-                const data = await api("/pay/balance", {
-                    headers: {
-                    'Authorization': `Bearer ${token}`,
-                    },
-                });
+                // axios 인스턴스가 인터셉터를 통해 자동으로 토큰을 추가하므로,
+                // 수동으로 헤더를 설정할 필요가 없습니다.
+                const { data } = await api.get("/pay/balance");
                 setMyDaepa(data.balance);
 
                 } catch (err) {
                      console.error("잔액 조회 실패:", err);
-                     setError(err.message);
-                     } finally {
+                     // 로그인 필요 에러 처리 (401 Unauthorized)
+                     if (err.response?.status === 401) {
+                        setError("잔액을 보려면 로그인이 필요합니다.");
+                     } else {
+                        setError(err.message);
+                     }
+                 } finally {
                         setIsLoading(false);
                      }
                  };
@@ -72,7 +67,9 @@ export default function DaepaChargePage() {
         }
 
         const tossPayments = await loadTossPayments(clientKey);
-        const successUrl = new URL("/api/charge/success", getApiBaseUrl()).toString();
+        // 성공 URL은 axios 인스턴스의 baseURL을 사용하여 명확하게 구성합니다.
+        const successUrl = `${api.defaults.baseURL}/charge/success`;
+
 
         try {
             await tossPayments.requestPayment("카드", {

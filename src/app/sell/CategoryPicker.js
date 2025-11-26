@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiFetch, Endpoints } from "./api";
+import { api, Endpoints } from "./api";
 import styles from "./page.module.css";
 
 /** 상→중→하 카테고리 선택
@@ -25,7 +25,7 @@ export default function CategoryPicker({ onChange }) {
         (async () => {
             try {
                 setLoading((p) => ({ ...p, upper: true })); setError(null);
-                const data = await apiFetch(Endpoints.upperCategories);
+                const { data } = await api.get(Endpoints.upperCategories);
                 setUppers(Array.isArray(data) ? data : []);
             } catch (e) {
                 console.error(e); setError("대분류를 불러오지 못했습니다.");
@@ -42,7 +42,7 @@ export default function CategoryPicker({ onChange }) {
         (async () => {
             try {
                 setLoading((p) => ({ ...p, middle: true })); setError(null);
-                const data = await apiFetch(Endpoints.middleCategories(upperSel));
+                const { data } = await api.get(Endpoints.middleCategories(upperSel));
                 setMiddles(Array.isArray(data) ? data : []);
                 setMiddleSel(null); setLows([]); setLowSel(null);
             } catch (e) {
@@ -60,7 +60,7 @@ export default function CategoryPicker({ onChange }) {
         (async () => {
             try {
                 setLoading((p) => ({ ...p, low: true })); setError(null);
-                const data = await apiFetch(Endpoints.lowCategories(middleSel));
+                const { data } = await api.get(Endpoints.lowCategories(middleSel));
                 setLows(Array.isArray(data) ? data : []);
                 setLowSel(null);
             } catch (e) {

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@mui/material";
 import Bener from "@/components/bener";
 import styles from "./page.module.css";
-import { apiFetch, Endpoints } from "../app/sell/api";
+import { api, Endpoints } from "../app/sell/api";
 import ProductRowSection from "@/components/product/ProductRowSection";  // ✅ 경로 맞게 수정
 
 export default function Home() {
@@ -15,7 +15,7 @@ export default function Home() {
         (async () => {
             try {
                 // ✅ 상품 개수 포함된 상위 카테고리 목록 가져오기
-                const data = await apiFetch(Endpoints.upperCategoriesWithCount);
+                const { data } = await api.get(Endpoints.upperCategoriesWithCount);
                 console.log("카테고리 with count:", data);
 
                 // ✅ 백엔드 DTO 기반으로 매핑
