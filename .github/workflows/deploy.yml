@@ -67,6 +67,9 @@ jobs:
 
       # Next.js 빌드 검증 (에러나면 여기서 중단)!
       - name: Build (validation only)
+        env:
+          NEXT_PUBLIC_API_BASE: ${{ secrets.NEXT_PUBLIC_API_BASE }}
+          NEXT_PUBLIC_TOSS_CLIENT_KEY: ${{ secrets.NEXT_PUBLIC_TOSS_CLIENT_KEY }} # 토스 결제를 위해 이 부분도 추가하는 것을 강력히 권장합니다.
         run: npx next build --no-lint
 
       # SSH로 실제 서버에 배포
