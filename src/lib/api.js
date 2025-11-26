@@ -1,4 +1,5 @@
 import axios from 'axios';
+import tokenStore from "@/store/TokenStore"; // tokenStore 임포트
 
 // Axios 인스턴스 생성
 const api = axios.create({
@@ -9,6 +10,25 @@ const api = axios.create({
   // 다른 도메인으로 요청을 보낼 때 쿠키를 포함시키기 위한 필수 설정입니다.
   withCredentials: true,
 });
+
+// 요청 인터셉터: 모든 요청에 인증 토큰을 자동으로 추가합니다.
+api.interceptors.request.use(
+  (config) => {
+    // Zustand 스토어에서 토큰을 가져옵니다.
+    // 스토어 구독자가 아니므로 getState()를 사용해야 합니다.
+    const { accessToken } = tokenStore.getState();
+
+    if (accessToken) {
+      // 헤더에 토큰을 추가합니다.
+      config.headers.Authorization = `Bearer ${accessToken}`;
+    }
+    return config;
+  },
+  (error) => {
+    // 요청 에러 처리
+    return Promise.reject(error);
+  }
+);
 
 /*
   응답 인터셉터: 토큰 만료 시 리프레시 토큰으로 새로운 액세스 토큰을 요청하는 등의

@@ -45,7 +45,7 @@ export default function Header() {
     const router = useRouter();
     const searchParams = useSearchParams();
     // const [me, setMe] = useState(null); // useAuthStore에서 관리
-    const { isLoggedIn, logout } = useAuthStore(); // useAuthStore에서 로그인 상태와 로그아웃 액션 가져오기
+    const { isLoggedIn, user, logout } = useAuthStore(); // useAuthStore에서 로그인 상태, 사용자 정보, 로그아웃 액션 가져오기
     const [chatUnread, setChatUnread] = useState(0);
     const [searchKeyword, setSearchKeyword] = useState("");
     // const fetchingRef = useRef(false); // useAuthStore에서 관리하므로 필요 없음
@@ -136,10 +136,8 @@ export default function Header() {
         router.push("/chat");
     };
 
-    // ✅ 여기서 최종 이름 결정 (me 상태가 없으므로 임시로 처리)
-    // 실제 사용자 이름은 /user/me 엔드포인트에서 가져와야 합니다.
-    // 현재는 isLoggedIn 상태만 사용하므로, 이름 표시는 로그인/로그아웃으로만 구분합니다.
-    const displayName = isLoggedIn ? "사용자" : null; // 로그인 상태일 때만 "사용자" 표시
+    // ✅ 여기서 최종 이름 결정
+    const displayName = getDisplayName(user); // user 객체에서 이름 가져오기
 
     return (
         <header className={styles.sticky}>
@@ -152,8 +150,7 @@ export default function Header() {
                         {isLoggedIn ? ( // isLoggedIn 사용
                             <>
                 <span>
-                  {/* <b>{displayName}</b>님 환영합니다. */}
-                  환영합니다.
+                  <b>{displayName}</b>님 환영합니다.
                 </span>
                                 <button
                                     type="button"
