@@ -60,29 +60,40 @@ export async function fetchProducts({
 
     const fullPath = `${path}?${qs.toString()}`;
 
-    const pageJson = await api(fullPath, {
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-    });
+    try {
+        const pageJson = await api(fullPath, {
+            cache: "no-store",
+            headers: { Accept: "application/json" },
+        });
 
-    const items = Array.isArray(pageJson?.content)
-        ? pageJson.content
-        : Array.isArray(pageJson)
-            ? pageJson
-            : [];
+        const items = Array.isArray(pageJson?.content)
+            ? pageJson.content
+            : Array.isArray(pageJson)
+                ? pageJson
+                : [];
 
-    return {
-        items: items.map((p) => ({
-            ...p,
-            id: p.pdIdx,
-            title: p.pdTitle,
-            price: p.pdPrice,
-            thumbnail: p.pdThumb,
-            location: p.pdLocation,
-            createdAt: p.pdCreate,
-        })),
-        total: pageJson?.totalElements ?? 0,
-        page: (pageJson?.number ?? Math.max(1, page) - 1) + 1,
-        size: pageJson?.size ?? size,
-    };
+        return {
+            items: items.map((p) => ({
+                ...p,
+                id: p.pdIdx,
+                title: p.pdTitle,
+                price: p.pdPrice,
+                thumbnail: p.pdThumb,
+                location: p.pdLocation,
+                createdAt: p.pdCreate,
+            })),
+            total: pageJson?.totalElements ?? 0,
+            page: (pageJson?.number ?? Math.max(1, page) - 1) + 1,
+            size: pageJson?.size ?? size,
+        };
+    } catch (error) {
+        console.error(`[fetchProducts] API call failed for ${fullPath}:`, error);
+        return {
+            items: [],
+            total: 0,
+            page: 1,
+            size: size,
+            error: "Failed to fetch products.",
+        };
+    }
 }
