@@ -18,7 +18,7 @@ export default function ConditionalLayout({ children }) {
       try {
         // 보호된 엔드포인트 호출 (예: 사용자 정보 가져오기)
         // 이 엔드포인트가 200 OK를 반환하면 쿠키가 유효하여 로그인 상태임을 의미
-        const res = await api.get("/api/auth/me"); 
+        const res = await api.get("/auth/me"); 
         login(res.data); // 로그인 상태와 함께 사용자 정보 설정
       } catch (error) {
         // 401 Unauthorized 또는 다른 에러 발생 시 로그아웃 상태로 설정
