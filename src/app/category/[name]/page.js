@@ -1,84 +1,82 @@
+// src/app/category/[name]/page.js
+import "server-only";
 import ProductsGrid from "@/components/category/ProductsGrid";
 import FilterBar from "@/components/category/FilterBar";
 import { fetchProducts } from "@/lib/server/products";
 import {
-    fetchUpperMeta,
-    fetchMiddles,
     fetchLows,
+    fetchMiddles,
+    fetchUpperMeta,
     fetchUppers,
 } from "@/lib/server/categories";
 
-export const revalidate = 0;
+export const dynamic = "force-dynamic";
 
-export default async function CategoryPage(props) {
-    const { name } = await props.params;
-    const sp = await props.searchParams;
+export default async function CategoryPage({ params, searchParams }) {
+    const categoryName = params.name;
+    const middleCategoryName = searchParams.mid;
+    const lowCategoryName = searchParams.low;
 
-    const read = (key, def) => {
-        if (sp && typeof sp.get === "function") return sp.get(key) ?? def;
-        return sp?.[key] ?? def;
-    };
+    // restSearchParams를 수동으로 구성해야 합니다.
+    const restSearchParams = { ...searchParams };
+    delete restSearchParams.mid;
+    delete restSearchParams.low;
 
-    const upperName = decodeURIComponent(name ?? "");
+    // 1. 상위 카테고리 ID 조회
+    const upperCategory = await fetchUpperMeta(categoryName);
+    const upperId = upperCategory?.id;
 
-    const midRaw = read("mid", null);
-    const lowRaw = read("low", null);
-    const mid = midRaw != null ? Number(midRaw) : null;
-    const low = lowRaw != null ? Number(lowRaw) : null;
+    // 2. 전체 상위 카테고리 목록 (for GNB)
+    const allUppers = await fetchUppers();
 
-    const page = Number(read("page", 0));
-    const size = Number(read("size", 20));
-    const sort = read("sort", "recent");
+    // 3. 중간 카테고리 목록 조회
+    const middles = await fetchMiddles(upperId);
 
-    const minRaw = read("min", null);
-    const maxRaw = read("max", null);
-    const min = minRaw != null ? Number(minRaw) : null;
-    const max = maxRaw != null ? Number(maxRaw) : null;
+    // 4. 하위 카테고리 목록 조회 (선택된 중간 카테고리가 있을 경우)
+    const selectedMiddle =
+        middles.find(
+            (m) => m.name === middleCategoryName || String(m.id) === middleCategoryName
+        ) ?? null;
+    const middleId = selectedMiddle?.id;
+    const lows = await fetchLows(middleId);
 
-    // ✅ 새로 추가된 것들
-    const dDeal = read("dDeal", null); // "MEET" | "DELIVERY" | null
-    const excludeSold = read("excludeSold", null) === "true";
+    // 5. 상품 목록 조회
+    const selectedLow =
+        lows.find(
+            (l) => l.name === lowCategoryName || String(l.id) === lowCategoryName
+        ) ?? null;
+    const lowId = selectedLow?.id;
 
-    const upper = await fetchUpperMeta(upperName);
-    if (!upper) {
+    const { items, total, page, size, error } = await fetchProducts({
+        category: categoryName,
+        upperId,
+        middleId,
+        lowId,
+        ...restSearchParams,
+    });
+
+    if (error) {
         return (
             <main className="container">
-                <h1>{upperName}</h1>
-                <p>해당 카테고리를 찾을 수 없습니다.</p>
+                <h1>{categoryName}</h1>
+                <p>상품을 불러오는 중 에러가 발생했습니다.</p>
             </main>
         );
     }
 
-    const upperList = await fetchUppers();
-    const middleList = await fetchMiddles(upper.id);
-    const lowList = mid ? await fetchLows(mid) : [];
-
-    const data = await fetchProducts({
-        upperId: upper.id,
-        middleId: mid ?? undefined,
-        lowId: low ?? undefined,
-        min: min ?? undefined,
-        max: max ?? undefined,
-        dDeal: dDeal ?? undefined,
-        excludeSold,
-        sort,
-        page,
-        size,
-    });
-
     return (
         <main className="container">
             <FilterBar
-                categoryName={upper.name}
-                upperList={upperList}
-                currentUpperId={upper.id}
-                middleList={middleList}
-                lowList={lowList}
-                selected={{ mid, low }}
-                currentSort={sort}
+                categoryName={upperCategory.name}
+                upperList={allUppers}
+                currentUpperId={upperCategory.id}
+                middleList={middles}
+                lowList={lows}
+                selected={{ mid: middleId, low: lowId }}
+                currentSort={searchParams.sort ?? 'recent'}
             />
 
-            <ProductsGrid items={data.items ?? []} />
+            <ProductsGrid items={items ?? []} />
         </main>
     );
 }

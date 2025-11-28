@@ -3,6 +3,7 @@
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import api from "@/lib/api";
+import Sidebar from "@/components/mypage/sidebar";
 
 export default function BuyerWriteReviewPage() {
     const params = useParams();

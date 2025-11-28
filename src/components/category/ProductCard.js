@@ -88,7 +88,7 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
     const productId = item.id ?? item.pdIdx;
     const productTitle = item.title ?? item.pdTitle;
     const productPrice = item.price ?? item.pdPrice;
-    const productThumb = item.thumbnail ?? item.pdThumb ?? "/no-image.png";
+    const productThumb = item.thumbnail ?? item.pdThumb ?? "/images/no-image.png";
 
     return (
         <li className={styles.card}>

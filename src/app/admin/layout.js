@@ -12,23 +12,27 @@ import styles from "./admin.module.css";
 import { Box, CircularProgress, Typography } from "@mui/material";
 
 function AdminLayoutContent({ children }) {
+  const pathname = usePathname(); // Keep usePathname for internal logic if needed, but not for early return
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [adminName, setAdminName] = useState("대파 관리자");
-  const pathname = usePathname();
   const dropdownRef = useRef(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
 
-  if (pathname === "/admin/login") {
-    return <>{children}</>;
-  }
-
-  if (typeof window !== "undefined") {
-    const isLoggedIn = sessionStorage.getItem("adminIdx");
-    if (!isLoggedIn) {
-      window.location.href = "/admin/login";
-      return null;
+  useEffect(() => {
+    // This effect runs only on the client side
+    if (typeof window !== "undefined") {
+      const isLoggedIn = sessionStorage.getItem("adminIdx");
+      if (!isLoggedIn) {
+        window.location.href = "/admin/login";
+      } else {
+        setIsAuthenticated(true);
+      }
+      setIsLoadingAuth(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -47,6 +51,21 @@ function AdminLayoutContent({ children }) {
     const nick = sessionStorage.getItem("adminNick");
     if (nick) setAdminName(nick);
   }, []);
+
+  if (isLoadingAuth) {
+    return (
+      <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>
+        <CircularProgress />
+        <Typography sx={{ml: 2}}>인증 확인 중...</Typography>
+      </Box>
+    );
+  }
+
+  if (!isAuthenticated) {
+    // This case should ideally be caught by the redirect in useEffect,
+    // but as a fallback, return null to prevent rendering the layout.
+    return null;
+  }
 
   const menuItems = [
     { name: "대시보드", href: "/admin", icon: LayoutDashboard },
@@ -165,6 +184,12 @@ function AdminLayoutContent({ children }) {
 }
 
 export default function AdminLayout({ children }) {
+    const pathname = usePathname(); // Call usePathname here
+
+    if (pathname === "/admin/login") {
+        return <>{children}</>;
+    }
+
     return (
         <Suspense fallback={
             <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh'}}>

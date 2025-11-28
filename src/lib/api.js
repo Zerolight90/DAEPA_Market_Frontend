@@ -21,8 +21,8 @@ api.interceptors.request.use(
       try {
         // 동적으로 'next/headers'에서 cookies 함수를 임포트
         const { cookies } = await import('next/headers');
-        // 백엔드에서 설정한 ACCESS_TOKEN 쿠키를 읽어옵니다.
-        accessToken = cookies().get('ACCESS_TOKEN')?.value;
+        const cookieStore = cookies();
+        accessToken = cookieStore.get('ACCESS_TOKEN')?.value;
       } catch (e) {
         // console.error('Server-side cookie access error:', e);
         // next/headers는 서버 컴포넌트와 API 라우트에서만 사용 가능하므로,

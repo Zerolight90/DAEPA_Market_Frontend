@@ -43,28 +43,27 @@ export async function fetchProducts({
         qs.set("excludeSold", "true");
     }
 
-    let path;
+    let path = "/products";
 
     if (lowId || middleId || upperId) {
         if (upperId) qs.set("upperId", String(upperId));
-        if (middleId) qs.set("mid", String(middleId)); // 컨트롤러에서 name="mid" 로 받으니까 그대로
-        if (lowId) qs.set("low", String(lowId));
-
-        path = "/products";
+        if (middleId) qs.set("middleId", String(middleId));
+        if (lowId) qs.set("lowId", String(lowId));
+    } else if (category) {
+        qs.set("upperId", category);
     } else {
-        if (!category) return { items: [], page, size, total: 0 };
-
-        qs.set("big", category);
-        path = "/products/by-name";
+        // 카테고리 정보가 아예 없으면 빈 목록 리턴
+        return { items: [], page, size, total: 0 };
     }
 
     const fullPath = `${path}?${qs.toString()}`;
 
     try {
-        const pageJson = await api(fullPath, {
+        const response = await api.get(fullPath, {
             cache: "no-store",
             headers: { Accept: "application/json" },
         });
+        const pageJson = response.data;
 
         const items = Array.isArray(pageJson?.content)
             ? pageJson.content

@@ -29,7 +29,8 @@ export const SIDE_SECTIONS = [
 ];
 
 export default function SideNav({ sections = SIDE_SECTIONS, currentPath }) {
-    const pathname = currentPath || usePathname() || "";
+    const routerPathname = usePathname(); // Always call usePathname
+    const pathname = currentPath || routerPathname || "";
 
     const isActive = (href) =>
         pathname === href || pathname.startsWith(href + "/");

@@ -13,18 +13,30 @@ function clamp100(v) {
 }
 
 export default function SellerProfilePanel({ seller }) {
-    if (!seller) return null;
-
-    const nickname = seller.nickname || seller.name || "판매자";
-    const mannerRaw = seller.freshness ?? seller.manner ?? seller.mannerScore ?? 0;
-    const freshness = clamp100(mannerRaw);
-    const deals = Number.isFinite(+seller.deals) ? +seller.deals : 0;
-    const sellerId = seller.id ?? seller.uIdx ?? seller.uid;
-    const hasAvatar = !!seller.avatarUrl;
-
-    // 최근 본 판매자 힌트 캐시에 저장 → 다음 페이지에서 즉시 사용
+    // Always call hooks at the top level
     const remember = useSellerHintStore((s) => s.remember);
+
+    // qs depends on seller, so it needs to be inside useMemo
+    const qs = useMemo(() => {
+        if (!seller) return ""; // Handle seller being null/undefined
+        const nickname = seller.nickname || seller.name || "판매자";
+        const freshness = clamp100(seller.freshness ?? seller.manner ?? seller.mannerScore ?? 0);
+
+        const p = new URLSearchParams();
+        if (nickname) p.set("nick", nickname);
+        if (seller?.avatarUrl) p.set("avatar", seller.avatarUrl);
+        if (Number.isFinite(freshness)) p.set("fresh", String(freshness));
+        return p.toString();
+    }, [seller]); // Depend on seller object
+
     useEffect(() => {
+        if (!seller) return; // Only run if seller is available
+        const nickname = seller.nickname || seller.name || "판매자";
+        const mannerRaw = seller.freshness ?? seller.manner ?? seller.mannerScore ?? 0;
+        const freshness = clamp100(mannerRaw);
+        const deals = Number.isFinite(+seller.deals) ? +seller.deals : 0;
+        const sellerId = seller.id ?? seller.uIdx ?? seller.uid;
+
         if (!sellerId) return;
         remember(sellerId, {
             nickname,
@@ -33,16 +45,16 @@ export default function SellerProfilePanel({ seller }) {
             deals,
             since: seller.since ?? null,
         });
-    }, [sellerId, nickname, freshness, deals, seller?.since, seller?.avatarUrl, remember]);
+    }, [seller, remember]); // Depend on seller object and remember function
 
-    // 페이지 전환 시 프로필 정보를 쿼리로 실어 즉시 수화
-    const qs = useMemo(() => {
-        const p = new URLSearchParams();
-        if (nickname) p.set("nick", nickname);
-        if (seller?.avatarUrl) p.set("avatar", seller.avatarUrl);
-        if (Number.isFinite(freshness)) p.set("fresh", String(freshness));
-        return p.toString();
-    }, [nickname, seller?.avatarUrl, freshness]);
+    if (!seller) return null; // Now, conditionally render after hooks
+
+    const nickname = seller.nickname || seller.name || "판매자";
+    const mannerRaw = seller.freshness ?? seller.manner ?? seller.mannerScore ?? 0;
+    const freshness = clamp100(mannerRaw);
+    const deals = Number.isFinite(+seller.deals) ? +seller.deals : 0;
+    const sellerId = seller.id ?? seller.uIdx ?? seller.uid;
+    const hasAvatar = !!seller.avatarUrl;
 
     const storeHref = qs ? `/seller/${sellerId}?${qs}` : `/seller/${sellerId}`;
     const reviewsHref = qs ? `/seller/${sellerId}/reviews?${qs}` : `/seller/${sellerId}/reviews`;

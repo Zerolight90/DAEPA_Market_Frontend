@@ -6,25 +6,36 @@ export async function fetchUpperMeta(upperName) {
     try {
         // upperName이 아예 없으면 null 리턴해서 뒤에서 체크하게
         if (!upperName) return null;
+        console.log(`[fetchUpperMeta] Searching for upper category: "${upperName}"`);
 
         // 1) by-name API가 있다면 우선 시도
         try {
-            const meta = await api(
-                `/category/uppers/by-name?name=${encodeURIComponent(upperName)}`
-            );
+            const endpoint = `/category/search?name=${encodeURIComponent(upperName)}`;
+            console.log(`[fetchUpperMeta] Trying endpoint: ${endpoint}`);
+            const response = await api.get(endpoint);
+            const meta = response.data;
+            console.log("[fetchUpperMeta] Response from by-name API:", meta);
+
             if (meta?.upperIdx || meta?.id) {
-                return {
+                const result = {
                     id: meta.upperIdx ?? meta.id,
                     name: meta.upperCt ?? meta.name ?? upperName,
                 };
+                console.log("[fetchUpperMeta] Found ID via by-name API:", result.id);
+                return result;
             }
-        } catch (_) {
+        } catch (e) {
+            console.error("[fetchUpperMeta] by-name API failed:", e.message);
             // 못 받아도 밑으로 내려감
         }
 
         // 2) 전체 조회 후 매칭
         try {
-            const list = await api("/category/uppers");
+            console.log("[fetchUpperMeta] Falling back to fetching all uppers.");
+            const response = await api.get("/category/uppers");
+            const list = response.data;
+            console.log("[fetchUpperMeta] Response from all uppers API:", list);
+
             const found =
                 Array.isArray(list) &&
                 list.find(
@@ -32,20 +43,27 @@ export async function fetchUpperMeta(upperName) {
                         (u.upperCt ?? u.name) === upperName ||
                         String(u.upperIdx ?? u.id) === String(upperName)
                 );
+            
+            console.log("[fetchUpperMeta] Found object after searching list:", found);
+
             if (found) {
-                return {
+                const result = {
                     id: found.upperIdx ?? found.id,
                     name: found.upperCt ?? found.name ?? upperName,
                 };
+                console.log("[fetchUpperMeta] Found ID via all uppers list:", result.id);
+                return result;
             }
-        } catch (_) {
+        } catch (e) {
+            console.error("[fetchUpperMeta] Fetching all uppers failed:", e.message);
             // 여기도 실패하면 마지막 fallback
         }
 
         // 3) 최후: 이름을 ID로 간주
+        console.warn(`[fetchUpperMeta] No numeric ID found for "${upperName}". Falling back to using name as ID.`);
         return { id: upperName, name: upperName };
     } catch (error) {
-        console.error(`[fetchUpperMeta] Failed for ${upperName}:`, error);
+        console.error(`[fetchUpperMeta] A critical error occurred for ${upperName}:`, error);
         return null;
     }
 }
@@ -53,7 +71,8 @@ export async function fetchUpperMeta(upperName) {
 /** ✅ 전체 상위카테고리 목록 가져오기 */
 export async function fetchUppers() {
     try {
-        const data = await api("/category/uppers");
+        const response = await api.get("/category/uppers");
+        const data = response.data;
         return (Array.isArray(data) ? data : []).map((u) => ({
             id: u.upperIdx ?? u.id,
             name: u.upperCt ?? u.name,
@@ -71,7 +90,8 @@ export async function fetchMiddles(upperId) {
     // 🛑 여기서 막는다: id 없으면 요청 안 함
     if (!upperId) return [];
     try {
-        const data = await api(`/category/uppers/${upperId}/middles`);
+        const response = await api.get(`/category/middle?upperCategory=${upperId}`);
+        const data = response.data;
         return (Array.isArray(data) ? data : []).map((m) => ({
             id: m.middleIdx ?? m.id,
             name: m.middleCt ?? m.name,
@@ -88,7 +108,8 @@ export async function fetchLows(middleId) {
     // 🛑 여기도 막는다
     if (!middleId) return [];
     try {
-        const data = await api(`/category/middles/${middleId}/lows`);
+        const response = await api.get(`/category/low?middleCategory=${middleId}`);
+        const data = response.data;
         return (Array.isArray(data) ? data : []).map((l) => ({
             id: l.lowIdx ?? l.id,
             name: l.lowCt ?? l.name,

@@ -195,7 +195,7 @@ export default function ProductRowSection({
                                         >
                                             <div className={styles.thumbWrap}>
                                                 <img
-                                                    src={item.thumb || "/no-image.png"}
+                                                    src={item.thumb || "/images/no-image.png"}
                                                     alt={item.title}
                                                     className={styles.thumb}
                                                     style={{

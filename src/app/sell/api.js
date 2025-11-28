@@ -11,8 +11,8 @@ export const Endpoints = {
 
     // 카테고리/상품등록
     upperCategories: `/category/uppers`,
-    middleCategories: (upperId) => `/category/uppers/${upperId}/middles`,
-    lowCategories: (middleId)   => `/category/middles/${middleId}/lows`,
+    middleCategories: (upperId) => `/category/middle?upperCategory=${upperId}`,
+    lowCategories: (middleId)   => `/category/low?middleCategory=${middleId}`,
     
     // 찜 관련
     favoriteStatus: (pid) => `/favorites/${pid}`,          // GET

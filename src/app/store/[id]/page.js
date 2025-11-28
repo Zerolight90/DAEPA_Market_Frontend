@@ -84,7 +84,7 @@ export default async function ProductPage(props) {
         {
             id: item.sellerId ?? item.seller_id ?? null,
             name: item.sellerName ?? "알 수 없음",
-            avatar: item.sellerAvatar ?? "/no-image.png",
+            avatar: item.sellerAvatar ?? "/images/avatar-default.png",
             manner: item.sellerManner ?? 0,
         };
 
