@@ -27,8 +27,8 @@ export default function ProductRowSection({
         params.set("sort", sort);
         params.set("size", query.size ? String(query.size) : "30");
         if (query.upperId) params.set("upperId", query.upperId);
-        if (query.middleId) params.set("middleId", query.middleId);
-        if (query.lowId) params.set("lowId", query.lowId);
+        if (query.middleId) params.set("mid", query.middleId);
+        if (query.lowId) params.set("low", query.lowId);
         params.set("page", "0");
         return params.toString();
     };

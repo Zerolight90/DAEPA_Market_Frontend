@@ -1,72 +1,38 @@
-import axios from 'axios';
-import tokenStore from "@/store/TokenStore"; // tokenStore 임포트
+import axios from "axios";
+import tokenStore from "@/store/TokenStore";
 
-// Axios 인스턴스 생성
+// 중앙 axios 인스턴스
 const api = axios.create({
-  // 백엔드 서버의 주소를 환경 변수에서 가져옵니다.
-  // .env.local 파일에 NEXT_PUBLIC_API_BASE=https://daepamarket.shop 와 같이 설정해야 합니다.
-  // 로컬 개발 시에는 NEXT_PUBLIC_API_BASE=http://localhost:8080 로 설정합니다.
   baseURL: `${process.env.NEXT_PUBLIC_API_BASE}/api`,
-  // 다른 도메인으로 요청을 보낼 때 쿠키를 포함시키기 위한 필수 설정입니다.
   withCredentials: true,
 });
 
-// 요청 인터셉터: 모든 요청에 인증 토큰을 자동으로 추가합니다. (서버/클라이언트 양용)
+// 모든 요청에 액세스 토큰 자동 첨부
 api.interceptors.request.use(
   async (config) => {
     let accessToken;
 
-    // 서버 사이드 렌더링 환경일 경우
-    if (typeof window === 'undefined') {
+    // 서버 환경 (app router server component)
+    if (typeof window === "undefined") {
       try {
-        // 동적으로 'next/headers'에서 cookies 함수를 임포트
-        const { cookies } = await import('next/headers');
-        const cookieStore = cookies();
-        accessToken = cookieStore.get('ACCESS_TOKEN')?.value;
+        const { cookies } = await import("next/headers");
+        const cookieStore = await cookies();
+        accessToken = cookieStore.get("ACCESS_TOKEN")?.value;
       } catch (e) {
-        // console.error('Server-side cookie access error:', e);
-        // next/headers는 서버 컴포넌트와 API 라우트에서만 사용 가능하므로,
-        // 페이지(getServerSideProps) 등에서는 오류가 날 수 있습니다.
-        // 이 경우엔 쿠키를 읽을 수 없으므로 토큰 없이 요청합니다.
+        // 서버가 아닌 환경이면 무시
       }
-    }
-    // 클라이언트 사이드 환경일 경우
-    else {
-      // Zustand 스토어에서 토큰을 가져옵니다.
+    } else {
+      // 클라이언트 환경
       accessToken = tokenStore.getState().accessToken;
     }
 
     if (accessToken) {
-      // 헤더에 토큰을 추가합니다.
       config.headers.Authorization = `Bearer ${accessToken}`;
     }
-    
+
     return config;
   },
-  (error) => {
-    // 요청 에러 처리
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
-
-/*
-  응답 인터셉터: 토큰 만료 시 리프레시 토큰으로 새로운 액세스 토큰을 요청하는 등의
-  전역 응답 처리를 할 수 있습니다.
-*/
-// api.interceptors.response.use(
-//   (response) => response,
-//   async (error) => {
-//     const originalRequest = error.config;
-//     // 401 에러 및 재시도 로직 추가 가능
-//     if (error.response.status === 401 && !originalRequest._retry) {
-//       originalRequest._retry = true;
-//       // 여기서 리프레시 토큰으로 새로운 액세스 토큰을 요청하는 로직을 구현할 수 있습니다.
-//       // 예: const { data } = await api.post('/auth/refresh');
-//       // axios.defaults.headers.common['Authorization'] = 'Bearer ' + data.accessToken;
-//       // return api(originalRequest);
-//     }
-//     return Promise.reject(error);
-//   }
-// );
 
 export default api;

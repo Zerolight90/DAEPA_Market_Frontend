@@ -13,7 +13,6 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
     const [fav, setFav] = useState(false);
     const [count, setCount] = useState(0);
 
-    // d_sell 파싱
     const rawSell =
         item?.dSell ??
         item?.d_sell ??
@@ -25,70 +24,58 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
         0;
 
     const sellState = Number(rawSell) || 0;
-    const isSold = sellState === 1;    // 판매완료
-    const isTrading = sellState === 2; // 거래중/판매 중 으로 보여줄 것
-
+    const isSold = sellState === 1;
+    const isTrading = sellState === 2;
     const accessToken = tokenStore((state) => state.accessToken);
 
     // 찜 상태 초기 조회
     useEffect(() => {
-        if (!item?.id && !item?.pdIdx) return;
+        const productId = item?.id ?? item?.pdIdx;
+        const numericId = Number(productId);
+        if (!numericId || Number.isNaN(numericId)) return;
 
         (async () => {
             try {
-                const productId = item.id ?? item.pdIdx;
-                const res = await api.get(Endpoints.favoriteStatus(productId)); // axios 사용
-                // axios는 응답 데이터를 res.data에 담습니다.
+                const res = await api.get(Endpoints.favoriteStatus(numericId));
                 setFav(!!res.data.favorited);
                 setCount(res.data.count ?? 0);
             } catch (e) {
-                console.error("찜 상태 조회 실패:", e);
+                // 즐겨찾기 조회 실패 시 조용히 기본값으로 유지 (백엔드 404/500 등 방어)
+                setFav(false);
+                setCount(0);
             }
         })();
-    }, [item?.id, item?.pdIdx, accessToken]);
+        // 토큰이 바뀌어도 재조회하지 않도록 ID만 의존
+    }, [item?.id, item?.pdIdx]);
 
-    // 찜 토글
     const onToggle = async (e) => {
         e.preventDefault();
         e.stopPropagation();
 
-        const productId = item.id ?? item.pdIdx;
-        const url = Endpoints.favoriteToggle(productId); // axios는 baseURL을 자동으로 붙임
+        const productId = item?.id ?? item?.pdIdx;
+        if (!productId) return;
+
+        const url = Endpoints.favoriteToggle(productId);
 
         try {
-            const res = await api.post(url); // axios 사용, 헤더는 인터셉터가 처리
-
-            // axios는 401 에러를 catch 블록으로 보냅니다.
-            // 따라서 res.status === 401 체크는 필요 없습니다.
-            // if (res.status === 401) {
-            //     alert("로그인이 필요합니다.");
-            //     return;
-            // }
-            // if (!res.ok) { // axios는 !res.ok 대신 에러를 throw 합니다.
-            //     const msg = await res.text().catch(() => res.statusText);
-            //     alert(`찜 처리 실패 (${res.status})\n${msg}`);
-            //     return;
-            // }
-
-            const data = res.data; // axios는 응답 데이터를 res.data에 담습니다.
+            const res = await api.post(url);
+            const data = res.data;
             setFav(!!data.favorited);
             setCount(data.count ?? 0);
         } catch (err) {
-            if (err.response?.status === 401) { // axios 에러 처리
+            if (err.response?.status === 401) {
                 alert("로그인이 필요합니다.");
                 return;
             }
             console.error("[favoriteToggle] axios error:", err);
-            alert(`찜 처리 중 오류가 발생했습니다.\n${err.response?.data?.message || err.message}`);
-            return;
+            alert(`요청 처리 중 오류가 발생했습니다.\n${err.response?.data?.message || err.message}`);
         }
     };
 
-    // 화면용 필드
-    const productId = item.id ?? item.pdIdx;
-    const productTitle = item.title ?? item.pdTitle;
-    const productPrice = item.price ?? item.pdPrice;
-    const productThumb = item.thumbnail ?? item.pdThumb ?? "/images/no-image.png";
+    const productId = item?.id ?? item?.pdIdx;
+    const productTitle = item?.title ?? item?.pdTitle;
+    const productPrice = item?.price ?? item?.pdPrice;
+    const productThumb = item?.thumbnail ?? item?.pdThumb ?? "/images/no-image.png";
 
     return (
         <li className={styles.card}>
@@ -133,9 +120,9 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
                                     lineHeight: 1,
                                 }}
                             >
-                                ✓
+                                예약
                             </div>
-                            <div>{isSold ? "판매완료" : "판매 중"}</div>
+                            <div>{isSold ? "거래 완료" : "거래 중"}</div>
                         </div>
                     )}
 
@@ -160,9 +147,8 @@ export default function ProductCard({ item, hrefBase = "/store" }) {
                         {productPrice?.toLocaleString?.() ?? productPrice}원
                     </div>
                     <div className={styles.sub}>
-                        <span>{item.location ?? item.pdLocation}</span>
-                        <span className={styles.dot}>•</span>
-                        <span>{item.createdAt?.slice(0, 10) ?? item.pdCreate ?? ""}</span>
+                        <span>{item?.location ?? item?.pdLocation}</span>
+                        {item?.pdCreate && <span>{item.pdCreate}</span>}
                     </div>
                 </div>
             </Link>

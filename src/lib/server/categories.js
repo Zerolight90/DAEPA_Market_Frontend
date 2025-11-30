@@ -1,74 +1,47 @@
 // src/lib/server/categories.js
 import { api } from "@/lib/api/client";
 
-/** 상위카테고리 이름 → { id, name } */
+// Upper category metadata by display name or id in the URL
 export async function fetchUpperMeta(upperName) {
+    if (!upperName) return null;
+
+    const decoded = (() => {
+        try {
+            return decodeURIComponent(upperName);
+        } catch (e) {
+            return upperName;
+        }
+    })();
+
     try {
-        // upperName이 아예 없으면 null 리턴해서 뒤에서 체크하게
-        if (!upperName) return null;
-        console.log(`[fetchUpperMeta] Searching for upper category: "${upperName}"`);
+        const response = await api.get("/category/uppers");
+        const list = Array.isArray(response.data) ? response.data : [];
 
-        // 1) by-name API가 있다면 우선 시도
-        try {
-            const endpoint = `/category/search?name=${encodeURIComponent(upperName)}`;
-            console.log(`[fetchUpperMeta] Trying endpoint: ${endpoint}`);
-            const response = await api.get(endpoint);
-            const meta = response.data;
-            console.log("[fetchUpperMeta] Response from by-name API:", meta);
+        const found =
+            list.find(
+                (u) =>
+                    (u.upperCt ?? u.name) === decoded ||
+                    String(u.upperIdx ?? u.id) === String(decoded)
+            ) ?? null;
 
-            if (meta?.upperIdx || meta?.id) {
-                const result = {
-                    id: meta.upperIdx ?? meta.id,
-                    name: meta.upperCt ?? meta.name ?? upperName,
-                };
-                console.log("[fetchUpperMeta] Found ID via by-name API:", result.id);
-                return result;
-            }
-        } catch (e) {
-            console.error("[fetchUpperMeta] by-name API failed:", e.message);
-            // 못 받아도 밑으로 내려감
+        if (found) {
+            return {
+                id: found.upperIdx ?? found.id,
+                name: found.upperCt ?? found.name ?? decoded,
+            };
         }
 
-        // 2) 전체 조회 후 매칭
-        try {
-            console.log("[fetchUpperMeta] Falling back to fetching all uppers.");
-            const response = await api.get("/category/uppers");
-            const list = response.data;
-            console.log("[fetchUpperMeta] Response from all uppers API:", list);
-
-            const found =
-                Array.isArray(list) &&
-                list.find(
-                    (u) =>
-                        (u.upperCt ?? u.name) === upperName ||
-                        String(u.upperIdx ?? u.id) === String(upperName)
-                );
-            
-            console.log("[fetchUpperMeta] Found object after searching list:", found);
-
-            if (found) {
-                const result = {
-                    id: found.upperIdx ?? found.id,
-                    name: found.upperCt ?? found.name ?? upperName,
-                };
-                console.log("[fetchUpperMeta] Found ID via all uppers list:", result.id);
-                return result;
-            }
-        } catch (e) {
-            console.error("[fetchUpperMeta] Fetching all uppers failed:", e.message);
-            // 여기도 실패하면 마지막 fallback
-        }
-
-        // 3) 최후: 이름을 ID로 간주
-        console.warn(`[fetchUpperMeta] No numeric ID found for "${upperName}". Falling back to using name as ID.`);
-        return { id: upperName, name: upperName };
+        console.warn(
+            `[fetchUpperMeta] Upper category "${upperName}" not found; falling back to name.`
+        );
+        return { id: null, name: decoded };
     } catch (error) {
-        console.error(`[fetchUpperMeta] A critical error occurred for ${upperName}:`, error);
-        return null;
+        console.error("[fetchUpperMeta] Failed to load upper categories:", error);
+        return { id: null, name: decoded };
     }
 }
 
-/** ✅ 전체 상위카테고리 목록 가져오기 */
+// All upper categories
 export async function fetchUppers() {
     try {
         const response = await api.get("/category/uppers");
@@ -76,21 +49,19 @@ export async function fetchUppers() {
         return (Array.isArray(data) ? data : []).map((u) => ({
             id: u.upperIdx ?? u.id,
             name: u.upperCt ?? u.name,
-            // 메인에서 쓰는 것처럼 개수도 있으면 넘겨주기
             count: u.productCount ?? u.count ?? undefined,
         }));
     } catch (error) {
-        console.error(`[fetchUppers] Failed:`, error);
+        console.error("[fetchUppers] Failed:", error);
         return [];
     }
 }
 
-/** 상위ID → 중간카테고리 목록 */
+// Middle categories by upper id
 export async function fetchMiddles(upperId) {
-    // 🛑 여기서 막는다: id 없으면 요청 안 함
     if (!upperId) return [];
     try {
-        const response = await api.get(`/category/middle?upperCategory=${upperId}`);
+        const response = await api.get(`/category/uppers/${upperId}/middles`);
         const data = response.data;
         return (Array.isArray(data) ? data : []).map((m) => ({
             id: m.middleIdx ?? m.id,
@@ -103,12 +74,11 @@ export async function fetchMiddles(upperId) {
     }
 }
 
-/** 중간ID → 하위카테고리 목록 */
+// Low categories by middle id
 export async function fetchLows(middleId) {
-    // 🛑 여기도 막는다
     if (!middleId) return [];
     try {
-        const response = await api.get(`/category/low?middleCategory=${middleId}`);
+        const response = await api.get(`/category/middles/${middleId}/lows`);
         const data = response.data;
         return (Array.isArray(data) ? data : []).map((l) => ({
             id: l.lowIdx ?? l.id,

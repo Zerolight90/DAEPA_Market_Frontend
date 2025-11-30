@@ -1,23 +1,23 @@
-//src/lib/server/products.js
+// src/lib/server/products.js
 import "server-only";
 import { api } from "@/lib/api/client";
 
 /**
- * 상품 목록 조회
+ * Fetch product list for category filters.
  */
 export async function fetchProducts({
-                                        category,
-                                        upperId,
-                                        middleId,
-                                        lowId,
-                                        page = 1,
-                                        size = 20,
-                                        sort = "recent",
-                                        min,
-                                        max,
-                                        dDeal,
-                                        excludeSold = false,
-                                    }) {
+    category,
+    upperId,
+    middleId,
+    lowId,
+    page = 1,
+    size = 20,
+    sort = "recent",
+    min,
+    max,
+    dDeal,
+    excludeSold = false,
+}) {
     const qs = new URLSearchParams({
         page: String(Math.max(1, page) - 1),
         size: String(size),
@@ -25,7 +25,6 @@ export async function fetchProducts({
 
     if (sort && sort !== "recent") qs.set("sort", sort);
 
-    // 가격
     if (typeof min !== "undefined" && min !== null) {
         qs.set("min", String(min));
     }
@@ -33,26 +32,33 @@ export async function fetchProducts({
         qs.set("max", String(max));
     }
 
-    // 거래방식
     if (dDeal) {
-        qs.set("dDeal", dDeal); // "MEET" 또는 "DELIVERY"
+        qs.set("dDeal", dDeal); // "MEET" or "DELIVERY"
     }
 
-    // 판매완료 제외
     if (excludeSold) {
         qs.set("excludeSold", "true");
     }
 
-    let path = "/products";
+    const decodedCategory = (() => {
+        if (!category) return category;
+        try {
+            return decodeURIComponent(category);
+        } catch (e) {
+            return category;
+        }
+    })();
 
-    if (lowId || middleId || upperId) {
+    const hasCategoryIds = Boolean(lowId || middleId || upperId);
+    let path = hasCategoryIds ? "/products" : "/products/by-name";
+
+    if (hasCategoryIds) {
         if (upperId) qs.set("upperId", String(upperId));
-        if (middleId) qs.set("middleId", String(middleId));
-        if (lowId) qs.set("lowId", String(lowId));
-    } else if (category) {
-        qs.set("upperId", category);
+        if (middleId) qs.set("mid", String(middleId));
+        if (lowId) qs.set("low", String(lowId));
+    } else if (decodedCategory) {
+        qs.set("big", decodedCategory);
     } else {
-        // 카테고리 정보가 아예 없으면 빈 목록 리턴
         return { items: [], page, size, total: 0 };
     }
 

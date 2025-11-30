@@ -17,24 +17,21 @@ import ChatIcon from "@mui/icons-material/Chat";
 import FavoriteBorderIcon from "@mui/icons-material/FavoriteBorder";
 import StorefrontIcon from "@mui/icons-material/Storefront";
 
-// 새로 만든 axios 인스턴스를 가져옵니다.
 import api from "@/lib/api";
 import styles from "./css/header.module.css";
-import useAuthStore from "@/store/useAuthStore"; // useAuthStore 임포트
+import useAuthStore from "@/store/useAuthStore";
+import tokenStore from "@/store/TokenStore";
 
-// 여러 형태로 올 수 있는 이름을 하나로 골라주는 함수
 function getDisplayName(me) {
     if (!me) return null;
 
     return (
-        // 1) 우리가 백에서 Map으로 내려준 경우
         me.uNickname ||
-        // 2) 옛날 OauthController 처럼 스네이크로 내려준 경우
         me.u_nickname ||
-        // 3) 이름으로만 내려준 경우
+        me.nickname ||
+        me.nickName ||
         me.uName ||
         me.u_name ||
-        // 4) 아이디/이메일만 있는 경우
         me.uId ||
         me.u_id ||
         null
@@ -44,15 +41,56 @@ function getDisplayName(me) {
 export default function Header() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    // const [me, setMe] = useState(null); // useAuthStore에서 관리
-    const { isLoggedIn, user, logout } = useAuthStore(); // useAuthStore에서 로그인 상태, 사용자 정보, 로그아웃 액션 가져오기
+    const { isLoggedIn, user, logout, login: authLogin } = useAuthStore();
+    const { clearAccessToken, accessToken } = tokenStore();
     const [chatUnread, setChatUnread] = useState(0);
     const [searchKeyword, setSearchKeyword] = useState("");
-    const [isClient, setIsClient] = useState(false); // ✅ 클라이언트인지 확인하는 상태 추가
+    const [isClient, setIsClient] = useState(false);
+    const fetchingUserRef = useRef(false);
 
     useEffect(() => {
-        setIsClient(true); // ✅ 컴포넌트가 마운트되면 클라이언트임을 확인
+        setIsClient(true);
     }, []);
+
+    const [hasCookie, setHasCookie] = useState(false);
+
+    useEffect(() => {
+        if (!isClient) return;
+
+        const cookieExists = document.cookie
+            .split(";")
+            .some((c) => c.trim().startsWith("ACCESS_TOKEN="));
+        const hasToken = !!accessToken;
+
+        setHasCookie(cookieExists);
+
+        if (cookieExists && !isLoggedIn && !fetchingUserRef.current) {
+            fetchingUserRef.current = true;
+            api.get("/sing/me")
+                .then((res) => {
+                    if (res?.data) {
+                        authLogin(res.data);
+                    }
+                })
+                .catch((err) => {
+                    // 토큰이 만료되었거나 잘못된 경우 persisted 상태를 정리해 중복 로그인 노출을 막음
+                    if (err?.response?.status === 401) {
+                        logout();
+                        clearAccessToken();
+                    } else {
+                        console.error("내 정보 불러오기 실패:", err?.message || err);
+                    }
+                })
+                .finally(() => {
+                    fetchingUserRef.current = false;
+                });
+        }
+
+        if (!cookieExists && !hasToken && isLoggedIn) {
+            logout();
+            clearAccessToken();
+        }
+    }, [isClient, accessToken, isLoggedIn, authLogin, logout, clearAccessToken]);
 
     useEffect(() => {
         const kw = searchParams?.get("keyword") ?? "";
@@ -69,31 +107,6 @@ export default function Header() {
         router.push(params.toString() ? `/all?${params.toString()}` : "/all");
     };
 
-    // 페이지 로드 시 또는 경로 변경 시 사용자 정보 가져오기
-    // useAuthStore와 ConditionalLayout에서 로그인 상태를 관리하므로 이 useEffect는 필요 없음
-    // useEffect(() => {
-    //     if (fetchingRef.current) return;
-    //     fetchingRef.current = true;
-
-    //     const fetchUser = async () => {
-    //         try {
-    //             const res = await api.get("/users/me");
-    //             if (res.status === 200) {
-    //                 setMe(res.data);
-    //             } else {
-    //                 setMe(null);
-    //             }
-    //         } catch (e) {
-    //             setMe(null);
-    //         } finally {
-    //             fetchingRef.current = false;
-    //         }
-    //     };
-
-    //     fetchUser();
-    // }, [router]);
-
-    // 로그아웃
     const onLogout = async () => {
         if (!confirm("로그아웃 하시겠습니까?")) return;
         try {
@@ -101,60 +114,49 @@ export default function Header() {
         } catch (error) {
             console.error("Logout failed:", error);
         } finally {
-            logout(); // useAuthStore 상태 업데이트
+            document.cookie = "ACCESS_TOKEN=; path=/; max-age=0; SameSite=Lax";
+            clearAccessToken();
+            logout();
             router.push("/");
             router.refresh();
         }
     };
 
-    // 마이페이지
-    const onClickMyPage = (e) => {
+    const guardOrPush = (e, target) => {
         e.preventDefault();
-        if (!isLoggedIn) { // isLoggedIn 사용
-            alert("로그인 후 이용할 수 있어요.");
-            router.push(`/sing/login?next=${encodeURIComponent("/mypage")}`);
+        if (!isLoggedIn) {
+            alert("로그인이 필요한 서비스입니다.");
+            router.push(`/sing/login?next=${encodeURIComponent(target)}`);
             return;
         }
-        router.push("/mypage");
+        router.push(target);
     };
 
-    // 판매하기
-    const onClickSell = (e) => {
-        e.preventDefault();
-        if (!isLoggedIn) { // isLoggedIn 사용
-            alert("로그인 후 이용할 수 있어요.");
-            router.push(`/sing/login?next=${encodeURIComponent("/sell")}`);
-            return;
-        }
-        router.push("/sell");
-    };
+    const onClickMyPage = (e) => guardOrPush(e, "/mypage");
+    const onClickSell = (e) => guardOrPush(e, "/sell");
+    const onClickChat = (e) => guardOrPush(e, "/chat");
 
-    // 🔒 채팅 접근 가드 (비로그인 차단)
-    const onClickChat = (e) => {
-        e.preventDefault();
-        if (!isLoggedIn) { // isLoggedIn 사용
-            alert("로그인 후 이용할 수 있어요.");
-            router.push(`/sing/login?next=${encodeURIComponent("/chat")}`);
-            return;
-        }
-        router.push("/chat");
-    };
-
-    // ✅ 여기서 최종 이름 결정
-    const displayName = getDisplayName(user); // user 객체에서 이름 가져오기
+    const displayNameRaw = getDisplayName(user);
+    const displayName = (displayNameRaw || "").trim();
+    const greetingName = displayName || "회원";
+    const isAuthenticated =
+        isClient &&
+        isLoggedIn &&
+        !!user &&
+        displayName.length > 0 &&
+        (hasCookie || !!accessToken);
 
     return (
         <header className={styles.sticky}>
             <div className={styles.warp}>
-                {/* 상단 작은 메뉴 */}
                 <div className={styles.header}>
-                    <p className={styles.top}>안전거래를 위한 대파의 약속</p>
+                    <p className={styles.top}>안전거래를 위한 빠른 약속</p>
 
                     <div className={styles.rmenu}>
-                        {isClient && isLoggedIn ? ( // isLoggedIn 사용 및 isClient 확인
+                        {isAuthenticated ? (
                             <>
                                 <span>
-                                    <b>{displayName}</b>님 환영합니다.
+                                    <b>{greetingName}</b>님 환영합니다
                                 </span>
                                 <button
                                     type="button"
@@ -177,13 +179,12 @@ export default function Header() {
 
                 <Divider className={styles.hr} />
 
-                {/* 로고 / 검색 / 아이콘 */}
                 <div className={styles.menu}>
                     <Link href="/">
                         <div className={styles.logo}>
                             <Image
                                 src="/DAEPA_Logo.png"
-                                alt="대 파 로고"
+                                alt="대파마켓 로고"
                                 width={150}
                                 height={80}
                                 priority
@@ -199,7 +200,7 @@ export default function Header() {
                     >
                         <FormControl className={styles.searchControl}>
                             <OutlinedInput
-                                placeholder="찾으시는 상품을 검색해주세요"
+                                placeholder="찾으시는 상품을 검색해 주세요"
                                 value={searchKeyword}
                                 onChange={(event) => setSearchKeyword(event.target.value)}
                                 startAdornment={
@@ -228,8 +229,11 @@ export default function Header() {
                             <AccountCircleIcon />
                         </Link>
 
-                        {/* 🔒 비로그인 차단 */}
-                        <a href="/chat" onClick={onClickChat} className={styles.chatBadgeWrap}>
+                        <a
+                            href="/chat"
+                            onClick={onClickChat}
+                            className={styles.chatBadgeWrap}
+                        >
                             <Badge
                                 badgeContent={chatUnread}
                                 color="error"
