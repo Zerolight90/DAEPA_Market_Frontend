@@ -1,0 +1,118 @@
+.modalContent {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.productInfo {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+}
+
+.productImage {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: #f3f4f6;
+}
+
+.productTitle {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 4px;
+}
+
+.productPrice {
+    font-size: 0.95rem;
+    color: #6b7280;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.qtyBox {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 6px 10px;
+    background: #f9fafb;
+}
+
+.qtyBox button {
+    border: none;
+    background: none;
+    font-size: 16px;
+    cursor: pointer;
+    padding: 4px 6px;
+}
+
+.addressBox {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: #f9fafb;
+}
+
+.linkBtn {
+    align-self: flex-start;
+    border: none;
+    background: none;
+    color: #0ea5e9;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.total {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #008c6e;
+}
+
+.buttonRow {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.primaryBtn,
+.secondaryBtn {
+    flex: 1;
+    padding: 12px 14px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s ease, opacity 0.2s ease;
+}
+
+.primaryBtn {
+    background: #0f172a;
+    color: #fff;
+}
+
+.primaryBtn:hover {
+    transform: translateY(-1px);
+}
+
+.secondaryBtn {
+    background: #e5f3ff;
+    color: #0f172a;
+}
+
+.secondaryBtn:hover {
+    transform: translateY(-1px);
+}
