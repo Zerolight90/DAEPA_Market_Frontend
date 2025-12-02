@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import styles from "./admin.module.css";
 import { Box, CircularProgress, Typography } from "@mui/material";
+import { getSafeSessionStorage, safeGetItem, safeRemoveItem } from "@/lib/safeStorage";
 
 function AdminLayoutContent({ children }) {
   const pathname = usePathname(); // Keep usePathname for internal logic if needed, but not for early return
@@ -24,7 +25,8 @@ function AdminLayoutContent({ children }) {
   useEffect(() => {
     // This effect runs only on the client side
     if (typeof window !== "undefined") {
-      const isLoggedIn = sessionStorage.getItem("adminIdx");
+      const ss = getSafeSessionStorage();
+      const isLoggedIn = safeGetItem(ss, "adminIdx");
       if (!isLoggedIn) {
         window.location.href = "/admin/login";
       } else {
@@ -48,7 +50,8 @@ function AdminLayoutContent({ children }) {
   }, []);
 
   useEffect(() => {
-    const nick = sessionStorage.getItem("adminNick");
+    const ss = getSafeSessionStorage();
+    const nick = safeGetItem(ss, "adminNick");
     if (nick) setAdminName(nick);
   }, []);
 
@@ -156,8 +159,9 @@ function AdminLayoutContent({ children }) {
           <button
               className={styles.logoutButton}
               onClick={() => {
-                sessionStorage.removeItem("adminIdx");
-                sessionStorage.removeItem("adminNick");
+                const ss = getSafeSessionStorage();
+                safeRemoveItem(ss, "adminIdx");
+                safeRemoveItem(ss, "adminNick");
                 window.location.href = "/admin/login";
               }}
           >

@@ -58,7 +58,8 @@ export default function CreateNoticePage() {
     setIsSubmitting(true);
 
     try {
-        const adIdx = sessionStorage.getItem("adminIdx");
+        const ss = getSafeSessionStorage();
+        const adIdx = safeGetItem(ss, "adminIdx");
         if (!adIdx) {
             alert("로그인이 필요합니다.");
             setIsSubmitting(false);

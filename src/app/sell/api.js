@@ -2,7 +2,7 @@
 import api from "@/lib/api";
 
 export { api };
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL;
+export const API_BASE = `${process.env.NEXT_PUBLIC_API_BASE}/api`;
 
 export const Endpoints = {
     // 카테고리
@@ -11,8 +11,9 @@ export const Endpoints = {
     middleCategories: (upperId) => `/category/uppers/${upperId}/middles`,
     lowCategories: (middleId) => `/category/middles/${middleId}/lows`,
 
-    // 찜
-    favoriteStatus: (pid) => `/favorites/${pid}`,
+    createProduct: "/products/create-multipart",
+
+    // �?    favoriteStatus: (pid) => `/favorites/${pid}`,
     favoriteToggle: (pid) => `/favorites/${pid}/toggle`,
 };
 

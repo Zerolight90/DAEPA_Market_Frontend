@@ -24,6 +24,13 @@
     background: #f2f2f2;
 }
 
+.avatarImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
 .meta { flex: 1; min-width: 0; }
 .name { font-weight: 700; color: #111; }
 .sub  { color: #777; font-size: 13px; margin-top: 2px; }

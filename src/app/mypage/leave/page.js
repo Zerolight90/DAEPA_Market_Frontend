@@ -5,13 +5,14 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/mypage/sidebar';
 import styles from './leave.module.css';
-import api from "@/lib/api"; // 전역 axios 인스턴스 사용
+import api from "@/lib/api"; // 지역 axios 서비스 사용
+import { getSafeLocalStorage, safeRemoveItem } from "@/lib/safeStorage";
 
 const REASONS = [
-    { id: 'low_usage', label: '사용 빈도가 낮고 개인정보 및 보안 우려' },
+    { id: 'low_usage', label: '사용 빈도가 낮음 / 개인정보 및 보안 우려' },
     { id: 'bad_users', label: '비매너 사용자들로 인한 불편 (사기 등)' },
-    { id: 'ux_issues', label: '서비스 기능 불편 (상품등록/거래 등)' },
-    { id: 'temporary', label: '이벤트 등의 목적으로 한시 사용' },
+    { id: 'ux_issues', label: 'UI/기능 불편 (상품등록/거래 등)' },
+    { id: 'temporary', label: '이벤트/일회성 목적이라 잠시 사용' },
     { id: 'etc', label: '기타' },
 ];
 
@@ -28,7 +29,7 @@ export default function LeavePage() {
         );
     };
 
-    // 기타 선택했으면 내용 채워야 제출 가능
+    // 기타 선택 시 내용 채워야 제출 가능
     const canSubmit = useMemo(() => {
         const etcOk =
             !checked.includes('etc') ||
@@ -57,21 +58,22 @@ export default function LeavePage() {
             }
             alert(msg);
 
-            // 1) 브라우저 저장 토큰 제거 (axios 인터셉터에서 처리될 수도 있음)
+            // 1) 브라우저 토큰 제거
             if (typeof window !== 'undefined') {
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
+                const ls = getSafeLocalStorage();
+                safeRemoveItem(ls, 'accessToken');
+                safeRemoveItem(ls, 'refreshToken');
             }
 
-            // 2) 홈으로 보내고 새로 렌더
+            // 2) 홈으로 이동
             router.replace('/');
             router.refresh?.();
         } catch (err) {
             console.error(err);
-            const errorMessage = err.response?.data?.message || err.message || '탈퇴 요청 중 오류가 발생했습니다.';
+            const errorMessage = err.response?.data?.message || err.message || '탈퇴 요청 처리 중 오류가 발생했습니다.';
             alert(errorMessage);
             if (err.response?.status === 401) {
-                alert("로그인이 필요합니다.");
+                alert("로그인이 필요합니다");
                 router.push("/login");
             }
         }
@@ -87,21 +89,18 @@ export default function LeavePage() {
             {/* 본문 */}
             <main className={styles.main}>
                 <header className={styles.header}>
-                    {/*<Link href="/mypage" className={styles.backLink} aria-label="뒤로가기">*/}
-                    {/*    ←*/}
-                    {/*</Link>*/}
                     <h1 className={styles.pageTitle}>회원 탈퇴</h1>
                 </header>
 
                 <section className={styles.titleBlock}>
                     <h2 className={styles.titleLine}>
-                        탈퇴사유를 알려주시면 개선을 위해 노력하겠습니다.
+                        탈퇴 이유를 알려주시면 개선하는 데에 힘쓰겠습니다
                     </h2>
-                    <p className={styles.subtitle}>다중 선택이 가능해요.</p>
+                    <p className={styles.subtitle}>한 번 선택해 주세요</p>
                 </section>
 
-                <form onSubmit={onSubmit} className={styles.formGrid}>
-                    {/* 사유 체크 */}
+                    <form onSubmit={onSubmit} className={styles.formGrid}>
+                    {/* 이유 체크 */}
                     <section className={styles.card}>
                         <div className={styles.reasonList}>
                             {REASONS.map((r) => (
@@ -119,13 +118,13 @@ export default function LeavePage() {
 
                         {checked.includes('etc') && (
                             <div className={styles.etcBox}>
-                                <label className={styles.label}>기타 사유 (최대 100자)</label>
+                                <label className={styles.label}>기타 이유 (최대 100자)</label>
                                 <textarea
                                     value={etcText}
                                     onChange={(e) => setEtcText(e.target.value.slice(0, 100))}
                                     maxLength={100}
                                     rows={3}
-                                    placeholder="기타 사유를 간단히 입력하세요"
+                                    placeholder="기타 이유를 간단히 적어주세요"
                                     className={styles.textarea}
                                 />
                                 <div className={styles.counter}>{etcText.length}/100</div>
@@ -141,35 +140,33 @@ export default function LeavePage() {
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>01</span>
                                 <span>
-                  탈퇴 신청일로부터 <b>30일</b> 이내 동일 아이디와 휴대폰 번호로 재가입
-                  불가하며 신규 가입 혜택은 적용되지 않습니다.
+                  탈퇴 요청으로부터 <b>30일</b> 내 동일 이메일/전화번호로 재가입하시면 기록이 유지되며 규정 가입이 가능합니다.
                 </span>
                             </li>
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>02</span>
                                 <span>
-                  회원 탈퇴 시 본인 계정에 등록/작성한 게시물은 삭제됩니다. 단,
-                  스크랩/공용 게시물 등은 직접 삭제한 후 진행해 주세요.
+                  회원 탈퇴 시 본인 계정의 등록/작성한 게시물은 삭제되지 않으니 필요 시 직접 삭제 후 진행해주세요.
                 </span>
                             </li>
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>03</span>
                                 <div className={styles.noticeBlock}>
                                     <div>
-                                        전자상거래법에 따라 아래 기록을 보관하며 다른 목적으로 이용하지 않습니다.
+                                        전자상거래법에 따라 거래 기록은 보관되며 다른 목적으로 사용하지 않습니다.
                                     </div>
                                     <div className={styles.keepGrid}>
                                         <div className={styles.keepItem}>
-                                            표시·광고에 대한 기록 <b>6개월</b>
+                                            표시·광고에 관한 기록 <b>6개월</b>
                                         </div>
                                         <div className={styles.keepItem}>
-                                            계약/청약철회·대금결제·재화공급 <b>5년</b>
+                                            계약/청약철회·결제·재화공급 <b>5년</b>
                                         </div>
                                         <div className={styles.keepItem}>
                                             소비자 불만/분쟁 처리 기록 <b>3년</b>
                                         </div>
                                         <div className={styles.keepItem}>
-                                            로그인 기록 <b>3개월</b>
+                                            로그기록 <b>3개월</b>
                                         </div>
                                         <div className={`${styles.keepItem} ${styles.keepItemWide}`}>
                                             전자금융거래기록 <b>5년</b>
@@ -180,13 +177,12 @@ export default function LeavePage() {
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>04</span>
                                 <span>
-                  탈퇴 신청 후 <b>72시간(3일)</b> 이내 동일 계정 로그인 시 탈퇴 신청이 자동
-                  철회됩니다.
+                  탈퇴 요청 후 <b>72시간(3일)</b> 내 동일 계정 로그인 시 탈퇴 요청이 자동 철회됩니다.
                 </span>
                             </li>
                             <li className={styles.noticeItem}>
                                 <span className={styles.badgeNum}>05</span>
-                                <span>연동 서비스 권한이 해제될 수 있으며, 등급/권한 변경에 유의해 주세요.</span>
+                                <span>자동 결제권한이 해제되었는지 꼭 확인해주세요</span>
                             </li>
                         </ol>
 

@@ -43,7 +43,7 @@ export function useChatRooms(me) {
             setLoading(true);
             setError(null);
             try {
-                const roomList = await fetchRooms();
+                const roomList = await fetchRooms(me.id);
                 // 서버에서 받은 데이터를 프론트엔드 모델에 맞게 정규화
                 const normalized = (Array.isArray(roomList) ? roomList : [])
                     .map((r) => normalizeRoomDto(r, me.id))

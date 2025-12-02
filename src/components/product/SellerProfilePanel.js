@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import useSellerHintStore from "@/store/SellerHintStore";
 import styles from "./seller-profile-panel.module.css";
@@ -55,6 +54,7 @@ export default function SellerProfilePanel({ seller }) {
     const deals = Number.isFinite(+seller.deals) ? +seller.deals : 0;
     const sellerId = seller.id ?? seller.uIdx ?? seller.uid;
     const hasAvatar = !!seller.avatarUrl;
+    const avatarSrc = seller.avatarUrl || "/images/avatar-default.png";
 
     const storeHref = qs ? `/seller/${sellerId}?${qs}` : `/seller/${sellerId}`;
     const reviewsHref = qs ? `/seller/${sellerId}/reviews?${qs}` : `/seller/${sellerId}/reviews`;
@@ -64,7 +64,7 @@ export default function SellerProfilePanel({ seller }) {
             <div className={styles.row}>
                 <div className={styles.avatar}>
                     {hasAvatar ? (
-                        <Image src={seller.avatarUrl} alt="" fill sizes="64px" />
+                        <img src={avatarSrc} alt="" className={styles.avatarImg} />
                     ) : (
                         <div className={styles.avatarFallback} />
                     )}

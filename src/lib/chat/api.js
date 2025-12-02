@@ -30,8 +30,15 @@ export async function fetchMe() {
 
 export async function fetchRooms(userId) {
     const params = userId ? { userId } : undefined;
-    const { data } = await http.get("/chats/my-rooms", { params });
-    return data;
+    const headers = userId ? { "x-user-id": String(userId) } : undefined;
+    try {
+        const { data } = await http.get("/chats/my-rooms", { params, headers });
+        return data;
+    } catch (e) {
+        const msg = e?.response?.data || e?.message || e;
+        console.error("fetchRooms failed", msg);
+        return [];
+    }
 }
 
 export async function fetchMessages(roomId, size = 30, before) {

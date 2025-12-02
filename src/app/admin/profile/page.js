@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { ArrowLeft, Save, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import styles from "../admin.module.css";
-import api from "@/lib/api"; // axios 인스턴스 가져오기
+import api from "@/lib/api"; // axios 서비스 가져오기
+import { getSafeSessionStorage, safeGetItem, safeSetItem } from "@/lib/safeStorage";
 
 export default function AdminProfilePage() {
   const [formData, setFormData] = useState({
-    nickname: "대파관리자",
-    name: "김관리",
+    nickname: "관리자",
+    name: "관리자",
     birthDate: "1990-01-01",
     adminId: "admin001",
     password: "",
@@ -22,13 +22,14 @@ export default function AdminProfilePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-      const adIdx = sessionStorage.getItem("adminIdx");
+      const ss = getSafeSessionStorage();
+      const adIdx = safeGetItem(ss, "adminIdx");
       if (!adIdx) {
           window.location.href = "/admin/login";
           return;
       }
 
-      api.get(`/admin/me?adIdx=${adIdx}`) // axios.get 사용
+      api.get(`/admin/me?adIdx=${adIdx}`)
           .then((response) => {
               const data = response.data;
               setFormData((prev) => ({
@@ -62,21 +63,22 @@ export default function AdminProfilePage() {
     setIsSubmitting(true);
 
     try {
-        const adIdx = sessionStorage.getItem("adminIdx");
-        const response = await api.put(`/admin/me`, { // axios.put 사용
+        const ss = getSafeSessionStorage();
+        const adIdx = safeGetItem(ss, "adminIdx");
+        const response = await api.put(`/admin/me`, {
             adIdx: adIdx,
             adNick: formData.nickname,
             adName: formData.name,
             adBirth: formData.birthDate,
-            adPw: formData.password || null  // 빈 경우 null 로 전송
+            adPw: formData.password || null
         });
         const data = response.data;
 
         // 1) sessionStorage 닉네임 갱신
-        sessionStorage.setItem("adminNick", data.adNick);
+        safeSetItem(ss, "adminNick", data.adNick);
 
         // 2) 완료 후 /admin 으로 이동
-        alert("관리자 정보가 성공적으로 수정되었습니다!");
+        alert("관리자 정보가 성공적으로 수정되었습니다.");
         window.location.href = "/admin";
 
     } catch (error) {
@@ -169,7 +171,7 @@ export default function AdminProfilePage() {
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                placeholder="실명을 입력하세요"
+                placeholder="성명을 입력하세요"
                 required
                 style={{
                   width: "100%",
@@ -297,7 +299,7 @@ export default function AdminProfilePage() {
                 </button>
               </div>
               <p style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>
-                비밀번호를 변경하지 않으려면 비워두세요
+                비밀번호를 변경하지 않을 경우 비워두세요
               </p>
             </div>
 
@@ -399,7 +401,7 @@ export default function AdminProfilePage() {
                 }}
               >
                 <Save size={16} />
-                {isSubmitting ? "저장 중..." : "정보 저장"}
+                {isSubmitting ? "저장 중.." : "정보 저장"}
               </button>
             </div>
           </div>

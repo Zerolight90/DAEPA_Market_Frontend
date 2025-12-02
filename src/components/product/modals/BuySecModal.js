@@ -3,194 +3,172 @@
 import { useState, useEffect } from "react";
 import BaseModal from "@/components/ui/modal/BaseModal";
 import { useModal } from "@/components/ui/modal/ModalProvider";
-import SecPayWithPointModal from "./SecPayWithPointModal";
+import PayWithPointModal from "./SecPayWithPointModal";
 import { loadTossPayments } from '@tosspayments/payment-sdk';
-import styles from './BuyModal.module.css';
+import styles from './BuySecModal.module.css';
 import AddressChangeModal from "@/components/product/modals/AddressChangeModal";
-import { api, getApiBaseUrl } from "@/lib/api/client";
+import { api } from "@/lib/api/client";
+import { getSafeLocalStorage, safeGetItem } from "@/lib/safeStorage";
 
-// 안심 결제가 아닌 일반 결제 진행하는 모달
-export default function BuyModal({ id, close, itemId, title, price }) { // imageUrl prop 제거
+// 안전결제 진행 모달
+export default function BuySecModal({ id, close, itemId, title, price }) {
     const [qty, setQty] = useState(1);
     const total = (Number(price) || 0) * qty;
     const modal = useModal();
 
     const [selectedAddress, setSelectedAddress] = useState(null);
-    const [addressLoading, setAddressLoading] = useState(true); // 주소 로딩 상태 추가
-    const [productImageUrl, setProductImageUrl] = useState('/images/placeholder.jpg'); // 상품 이미지 URL 상태 추가
+    const [addressLoading, setAddressLoading] = useState(true);
+    const [productImageUrl, setProductImageUrl] = useState('/images/placeholder.jpg');
 
     function generateUUID() {
-           return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-                 var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                 return v.toString(16);
-               });
-         }
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
 
-    // 상품 이미지 정보를 가져오는 useEffect
     useEffect(() => {
-        if (!itemId) return; // itemId가 없으면 실행하지 않음
-
+        if (!itemId) return;
         const fetchProductImage = async () => {
             try {
-                // 백엔드 API에서 상품 정보를 가져옵니다.
                 const data = await api(`/products/${itemId}`);
-                // pdThumb 필드가 있는지 확인하고 상태를 업데이트합니다.
-                if (data && data.pdThumb) {
-                    setProductImageUrl(data.pdThumb);
-                }
+                if (data && data.pdThumb) setProductImageUrl(data.pdThumb);
             } catch (error) {
                 console.error("상품 이미지를 불러오는 데 실패했습니다.", error);
-                // 에러 발생 시 기본 이미지를 유지합니다.
             }
         };
-
         fetchProductImage();
-    }, [itemId]); // itemId가 변경될 때마다 실행
+    }, [itemId]);
 
     useEffect(() => {
-        // 백엔드 API에서 기본 배송지 정보를 가져오는 함수 호출
         const fetchDefaultAddress = async () => {
             setAddressLoading(true);
             try {
-                // localStorage에서 토큰을 가져옵니다. (실제 저장 위치에 맞게 수정 필요)
-                const token = localStorage.getItem('accessToken');
+                const ls = getSafeLocalStorage();
+                const token = safeGetItem(ls, 'accessToken');
 
                 const data = await api(`/sing/locations/default`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
                 });
-                // 204 No Content의 경우 api 유틸리티가 null을 반환
                 setSelectedAddress(data);
-
             } catch (error) {
                 if (error.status !== 204) {
-                    console.error("기본 배송지를 불러오는 데 실패했습니다.", error);
+                    console.error("기본 배송지 불러오기 실패:", error);
                 }
-                setSelectedAddress(null); // 에러 발생 시 주소 정보 초기화
+                setSelectedAddress(null);
             } finally {
-                setAddressLoading(false); // 로딩 상태 종료
+                setAddressLoading(false);
             }
         };
         fetchDefaultAddress();
-    }, []); // 컴포넌트 마운트 시 1회만 실행
+    }, []);
 
     const purchase = async () => {
-        // .env 파일에서 토스 클라이언트 키 받아오기
+        if (!selectedAddress || !selectedAddress.locKey) {
+            alert("배송지를 선택해 주세요.");
+            return;
+        }
         const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY);
-        const successUrl = new URL("/api/secPay/success", getApiBaseUrl()).toString();
+        const orderId = `product-sec-${itemId}-${generateUUID()}`;
 
-        // 결제/주문 토스페이먼츠 API 호출
         tossPayments.requestPayment('카드', {
-            // 상태에서 금액 가져오기
             amount: total,
-            // 거래번호 필요한 값 붙여서 생성
-            orderId: `product-${itemId}-${generateUUID()}`,
-            // 주문명 동적 생성
-            orderName: title || '상품 구매',
-            customerName: "id", // TODO: 실제 유저 이름으로 변경 필요
-            successUrl: successUrl,
-            failUrl: `${window.location.origin}/pay/fail`,
+            orderId: orderId,
+            orderName: title || '안심결제 구매',
+            customerName: "id",
+        }).then(data => {
+            const { paymentKey, amount } = data;
+            window.location.href =
+                `${window.location.origin}/pay/sec/success?paymentKey=${paymentKey}&orderId=${orderId}&amount=${amount}`;
         }).catch(error => {
             if (error.code === 'USER_CANCEL') {
                 console.log('사용자가 결제를 취소했습니다');
             } else {
-                alert(`결제 요청 중 오류가 발생했습니다: ${error.message}`);
+                window.location.href =
+                    `${window.location.origin}/pay/sec/fail?message=${error.message}`;
             }
         });
     };
 
-    // 대파 페이 결제 모달 열기
-    const openSecPayWithPointModal = () => {
+    const openPayWithPointModal = () => {
         modal.open(({ id: newModalId, close: newModalClose }) => (
-            <SecPayWithPointModal
+            <PayWithPointModal
                 id={newModalId}
                 close={newModalClose}
                 itemId={itemId}
                 title={title}
                 qty={qty}
-                total={total}
+                price={price}
+                selectedAddress={selectedAddress}
+                onAddressChange={() => {}}
             />
         ));
     };
 
-    const handleChangeAddress = () => {
-        modal.open(({ id, close }) => (
+    const openAddressModal = () => {
+        modal.open(({ id: modalId, close: modalClose }) => (
             <AddressChangeModal
-                id={id}
-                close={close}
-                onAddressSelect={(newAddress) => {
-                    setSelectedAddress(newAddress);
+                id={modalId}
+                close={modalClose}
+                onAddressSelect={(addr) => {
+                    setSelectedAddress(addr);
+                    modalClose();
                 }}
             />
         ));
     };
 
     return (
-        <BaseModal id={id} close={close} title="안심 결제">
+        <BaseModal id={id} close={close} title="안심결제 구매">
             <div className={styles.modalContent}>
-                {/* 상품 정보 섹션 */}
                 <div className={styles.productInfo}>
-                    <img src={productImageUrl} alt={title} className={styles.productImage} />
-                    <div className={styles.productDetails}>
-                        <h2 className={styles.productTitle}>{title}</h2>
-                        <p className={styles.productPrice}>{(price || 0).toLocaleString()}원</p>
+                    <img src={productImageUrl} alt="상품 이미지" className={styles.productImage} />
+                    <div>
+                        <div className={styles.productTitle}>{title}</div>
+                        <div className={styles.productPrice}>{Number(price).toLocaleString()}원</div>
                     </div>
                 </div>
 
-                {/* 배송지 정보 섹션 */}
-                <div className={styles.section}>
-                    <div className={styles.sectionHeader}>
-                        <h3 className={styles.sectionTitle}>배송지 정보</h3>
-                        <button onClick={handleChangeAddress} className={styles.changeBtn}>
-                            변경
+                <div className={styles.row}>
+                    <span>수량</span>
+                    <div className={styles.qtyBox}>
+                        <button type="button" onClick={() => setQty((q) => Math.max(1, q - 1))}>-</button>
+                        <span>{qty}</span>
+                        <button type="button" onClick={() => setQty((q) => q + 1)}>+</button>
+                    </div>
+                </div>
+
+                <div className={styles.row}>
+                    <span>배송지</span>
+                    <div className={styles.addressBox}>
+                        {addressLoading ? (
+                            <span>로딩 중...</span>
+                        ) : selectedAddress ? (
+                            <>
+                                <div>{selectedAddress.locTitle}</div>
+                                <div>{selectedAddress.locAddress} {selectedAddress.locDetail}</div>
+                            </>
+                        ) : (
+                            <span>기본 배송지를 설정해 주세요.</span>
+                        )}
+                        <button type="button" className={styles.linkBtn} onClick={openAddressModal}>
+                            배송지 변경
                         </button>
                     </div>
-                    {addressLoading ? (
-                        <p>배송지를 불러오는 중입니다...</p>
-                    ) : selectedAddress ? (
-                        <div className={styles.addressDisplay}>
-                            <div className={styles.addressHeader}>
-                                <span className={styles.addressTitle}>{selectedAddress.locTitle}</span>
-                                {/* 백엔드에서 false가 대표 배송지이므로 !selectedAddress.locDefault 로 변경 */}
-                                {!selectedAddress.locDefault && (
-                                    <span className={styles.defaultBadge}>대표 배송지</span>
-                                )}
-                            </div>
-                            <p>{selectedAddress.locName}</p>
-                            <p>{selectedAddress.locNum}</p>
-                            {/* 백엔드 필드명인 locAddress 로 변경 */}
-                            <p>[{selectedAddress.locCode}] {selectedAddress.locAddress}</p>
-                            <p>{selectedAddress.locDetail}</p>
-                        </div>
-                    ) : (
-                        <p>설정된 배송지가 없습니다. 배송지를 추가해주세요.</p>
-                    )}
                 </div>
 
-                {/* 수량 및 최종 금액 섹션 */}
-                <div className={styles.section}>
-                    <div className={styles.quantityControl}>
-                        <span className={styles.quantityLabel}>수량</span>
-                        <input
-                            type="number"
-                            min={1}
-                            value={qty}
-                            onChange={(e) => setQty(Math.max(1, Number(e.target.value) || 1))}
-                            className={styles.quantityInput}
-                        />
-                    </div>
-                    <div className={styles.totalPriceWrapper}>
-                        <span className={styles.totalPriceLabel}>최종 결제금액</span>
-                        <span className={styles.totalPrice}>{total.toLocaleString()}원</span>
-                    </div>
+                <div className={styles.row}>
+                    <span>총 결제금액</span>
+                    <strong className={styles.total}>{total.toLocaleString()}원</strong>
                 </div>
 
-                {/* 버튼 그룹 */}
-                <div className={styles.buttonGroup}>
-                    <button onClick={purchase} className={`${styles.btn} ${styles.btnSecondary}`}>안심 결제</button>
-                    <button onClick={openSecPayWithPointModal} className={`${styles.btn} ${styles.btnSecondary}`}>페이로 결제</button>
-                    <button onClick={close} className={`${styles.btn} ${styles.btnGhost}`}>취소</button>
+                <div className={styles.buttonRow}>
+                    <button className={styles.secondaryBtn} onClick={openPayWithPointModal}>
+                        포인트로 결제
+                    </button>
+                    <button className={styles.primaryBtn} onClick={purchase}>
+                        안심결제
+                    </button>
                 </div>
             </div>
         </BaseModal>

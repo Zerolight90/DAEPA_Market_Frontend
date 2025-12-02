@@ -1,5 +1,12 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import { getSafeLocalStorage } from "@/lib/safeStorage";
+
+const memoryStorage = {
+    getItem: () => null,
+    setItem: () => {},
+    removeItem: () => {},
+};
 
 const useAuthStore = create(
     persist(
@@ -10,8 +17,8 @@ const useAuthStore = create(
             logout: () => set({ isLoggedIn: false, user: null }), // user 정보도 초기화
         }),
         {
-            name: "auth-status", // localStorage에 저장될 때 사용될 키
-            storage: createJSONStorage(() => localStorage), // localStorage를 사용
+            name: "auth-status", // localStorage에 저장될 키 이름입니다.
+            storage: createJSONStorage(() => getSafeLocalStorage() || memoryStorage), // localStorage를 사용
         }
     )
 );

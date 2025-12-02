@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import BaseModal from "@/components/ui/modal/BaseModal";
 import styles from './AddressChangeModal.module.css';
 import { api } from "@/lib/api/client";
+import { getSafeLocalStorage, safeGetItem } from "@/lib/safeStorage";
 
 export default function AddressChangeModal({ id, close, onAddressSelect }) {
     const [addresses, setAddresses] = useState([]);
@@ -15,12 +16,10 @@ export default function AddressChangeModal({ id, close, onAddressSelect }) {
         setLoading(true);
         setError(null);
         try {
-            // localStorage에서 토큰을 가져옵니다. (실제 저장 위치에 맞게 수정 필요)
-            const token = localStorage.getItem('accessToken');
+            const ls = getSafeLocalStorage();
+            const token = safeGetItem(ls, 'accessToken');
             const data = await api("/sing/locations", {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
             });
             setAddresses(data);
         } catch (err) {
@@ -31,31 +30,28 @@ export default function AddressChangeModal({ id, close, onAddressSelect }) {
         }
     };
 
-    // 컴포넌트가 마운트될 때 주소 목록을 불러옵니다.
+    // 컴포넌트가 마운트될 때 주소 목록을 불러온다
     useEffect(() => {
         fetchAddresses();
     }, []);
 
     // '선택' 버튼 핸들러
     const handleSelectAddress = (address) => {
-        onAddressSelect(address); // 부모 컴포넌트의 상태 업데이트
-        close(); // 모달 닫기
+        onAddressSelect(address);
+        close();
     };
 
     // '기본으로 설정' 버튼 핸들러
     const handleSetDefault = async (locationId) => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const ls = getSafeLocalStorage();
+            const token = safeGetItem(ls, 'accessToken');
             await api(`/sing/location/${locationId}/update`, {
                 method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
             });
 
-            // 성공 시, 주소 목록을 다시 불러와 '대표 배송지' 배지를 업데이트
             await fetchAddresses();
-
         } catch (err) {
             alert("기본 배송지 설정에 실패했습니다.");
             console.error(err);
@@ -75,9 +71,8 @@ export default function AddressChangeModal({ id, close, onAddressSelect }) {
                                 <div className={styles.addressInfo}>
                                     <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
                                         <span className={styles.addressTitle}>{addr.locTitle}</span>
-                                        {/* 백엔드에서 false가 대표 배송지이므로 !addr.locDefault 로 변경 */}
                                         {!addr.locDefault && (
-                                            <span className={styles.defaultBadge}>대표 배송지</span>
+                                            <span className={styles.defaultBadge}>기본 배송지</span>
                                         )}
                                     </div>
                                     <p>{addr.locName} | {addr.locNum}</p>
@@ -94,7 +89,6 @@ export default function AddressChangeModal({ id, close, onAddressSelect }) {
                                     <button
                                         onClick={() => handleSetDefault(addr.locKey)}
                                         className={styles.setDefaultBtn}
-                                        // 이미 대표 배송지이면 비활성화
                                         disabled={!addr.locDefault}
                                     >
                                         기본으로 설정

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Eye, EyeOff, LogIn, Shield } from "lucide-react";
 import Link from "next/link";
 import styles from "./login.module.css";
-import api from "@/lib/api"; // axios 인스턴스 가져오기
+import api from "@/lib/api"; // axios 서비스 가져오기
+import { getSafeSessionStorage, safeSetItem } from "@/lib/safeStorage";
 
 export default function AdminLoginPage() {
   const [formData, setFormData] = useState({
@@ -31,7 +32,7 @@ export default function AdminLoginPage() {
     
     // 필수 필드 검증
     if (!formData.adminId || !formData.password) {
-      setError("관리자 ID와 비밀번호를 모두 입력해주세요.");
+      setError("관리자 ID와 비밀번호를 모두 입력해 주세요.");
       return;
     }
 
@@ -42,16 +43,17 @@ export default function AdminLoginPage() {
       const response = await api.post(`/admin/login`, formData); // axios.post 사용
       const data = response.data;
 
-      // 로그인 정보 저장 (관리자 PK, 닉네임)
-      sessionStorage.setItem("adminIdx", data.adIdx);
-      sessionStorage.setItem("adminNick", data.adNick);
+      // 로그인 정보 저장(관리자 PK, 닉네임)
+      const ss = getSafeSessionStorage();
+      safeSetItem(ss, "adminIdx", data.adIdx);
+      safeSetItem(ss, "adminNick", data.adNick);
 
       // 로그인 성공 후 페이지 이동
       window.location.href = "/admin";
 
     } catch (err) {
       console.error("로그인 실패:", err);
-      setError(err.response?.data?.message || "로그인 중 오류가 발생했습니다. 다시 시도해주세요.");
+      setError(err.response?.data?.message || "로그인 중 오류가 발생했습니다. 다시 시도해 주세요.");
       setIsSubmitting(false);
     }
   };
@@ -143,7 +145,7 @@ export default function AdminLoginPage() {
               로그인에 문제가 있으신가요?
             </p>
             <p className={styles.contactInfo}>
-              시스템 관리자에게 문의하세요: admin@daepa-market.com
+              시스템 관리자에게 문의하세요 admin@daepa-market.com
             </p>
           </div>
         </form>
@@ -151,7 +153,7 @@ export default function AdminLoginPage() {
         {/* 푸터 */}
         <div className={styles.footer}>
           {/*<p className={styles.footerText}>*/}
-          {/*  © 2024 대파마켓. All rights reserved.*/}
+          {/*  © 2024 대파마켓 All rights reserved.*/}
           {/*</p>*/}
         </div>
       </div>
