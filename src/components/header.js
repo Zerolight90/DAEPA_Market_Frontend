@@ -52,45 +52,28 @@ export default function Header() {
         setIsClient(true);
     }, []);
 
-    const [hasCookie, setHasCookie] = useState(false);
-
     useEffect(() => {
         if (!isClient) return;
+        if (isLoggedIn || fetchingUserRef.current) return;
 
-        const cookieExists = document.cookie
-            .split(";")
-            .some((c) => c.trim().startsWith("ACCESS_TOKEN="));
-        const hasToken = !!accessToken;
-
-        setHasCookie(cookieExists);
-
-        if (cookieExists && !isLoggedIn && !fetchingUserRef.current) {
-            fetchingUserRef.current = true;
-            api.get("/sing/me")
-                .then((res) => {
-                    if (res?.data) {
-                        authLogin(res.data);
-                    }
-                })
-                .catch((err) => {
-                    // 토큰이 만료되었거나 잘못된 경우 persisted 상태를 정리해 중복 로그인 노출을 막음
-                    if (err?.response?.status === 401) {
-                        logout();
-                        clearAccessToken();
-                    } else {
-                        console.error("내 정보 불러오기 실패:", err?.message || err);
-                    }
-                })
-                .finally(() => {
-                    fetchingUserRef.current = false;
-                });
-        }
-
-        if (!cookieExists && !hasToken && isLoggedIn) {
-            logout();
-            clearAccessToken();
-        }
-    }, [isClient, accessToken, isLoggedIn, authLogin, logout, clearAccessToken]);
+        // HttpOnly 쿠키는 document.cookie에서 안 보이므로 /sing/me로 세션을 복원
+        fetchingUserRef.current = true;
+        api.get("/sing/me")
+            .then((res) => {
+                if (res?.data) authLogin(res.data);
+            })
+            .catch((err) => {
+                if (err?.response?.status === 401) {
+                    logout();
+                    clearAccessToken();
+                } else {
+                    console.error("사용자 정보 불러오기 실패:", err?.message || err);
+                }
+            })
+            .finally(() => {
+                fetchingUserRef.current = false;
+            });
+    }, [isClient, isLoggedIn, authLogin, logout, clearAccessToken]);
 
     useEffect(() => {
         const kw = searchParams?.get("keyword") ?? "";
@@ -143,8 +126,7 @@ export default function Header() {
         isClient &&
         isLoggedIn &&
         !!user &&
-        displayName.length > 0 &&
-        (hasCookie || !!accessToken);
+        displayName.length > 0;
 
     return (
         <header className={styles.sticky}>
