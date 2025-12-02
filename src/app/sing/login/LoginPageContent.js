@@ -50,56 +50,85 @@ export default function LoginPageContent() {
     };
 
     return (
-        <div className={styles.wrap}>
-            <form className={styles.form} onSubmit={submit}>
-                <h1 className={styles.title}>로그인</h1>
+        <div className={styles.container}>
+            <div className={styles.card}>
+                <form onSubmit={submit}>
+                    <h1 className={styles.title}>로그인</h1>
 
-                <label className={styles.label}>
-                    아이디
-                    <input
-                        className={styles.input}
-                        value={id}
-                        onChange={(e) => setId(e.target.value)}
-                        placeholder="아이디"
-                    />
-                </label>
-
-                <label className={styles.label}>
-                    비밀번호
-                    <input
-                        className={styles.input}
-                        type="password"
-                        value={pw}
-                        onChange={(e) => setPw(e.target.value)}
-                        placeholder="비밀번호"
-                    />
-                </label>
-
-                {error && <div className={styles.error}>{error}</div>}
-
-                <div className={styles.checkboxRow}>
-                    <label>
+                    <div className={styles.row}>
+                        <label className={styles.label}>아이디</label>
                         <input
-                            type="checkbox"
-                            checked={rememberId}
-                            onChange={(e) => setRememberId(e.target.checked)}
+                            className={styles.input}
+                            value={id}
+                            onChange={(e) => setId(e.target.value)}
+                            placeholder="아이디를 입력하세요"
                         />
-                        아이디 저장
-                    </label>
-                    <label>
-                        <input
-                            type="checkbox"
-                            checked={autoLogin}
-                            onChange={(e) => setAutoLogin(e.target.checked)}
-                        />
-                        자동 로그인
-                    </label>
-                </div>
+                    </div>
 
-                <button type="submit" className={styles.submit}>
-                    로그인
-                </button>
-            </form>
+                    <div className={styles.row}>
+                        <label className={styles.label}>비밀번호</label>
+                        <input
+                            className={styles.input}
+                            type="password"
+                            value={pw}
+                            onChange={(e) => setPw(e.target.value)}
+                            placeholder="비밀번호를 입력하세요"
+                        />
+                    </div>
+
+                    {error && <div className={styles.error}>{error}</div>}
+
+                    <div className={styles.options}>
+                        <label className={styles.checkItem}>
+                            <input
+                                type="checkbox"
+                                checked={rememberId}
+                                onChange={(e) => setRememberId(e.target.checked)}
+                            />
+                            아이디 저장
+                        </label>
+                        <label className={styles.checkItem}>
+                            <input
+                                type="checkbox"
+                                checked={autoLogin}
+                                onChange={(e) => setAutoLogin(e.target.checked)}
+                            />
+                            자동 로그인
+                        </label>
+                    </div>
+
+                    <div className={styles.actions} style={{ textAlign: "center" }}>
+                        <button type="submit" className={styles.submitBtn}>
+                            로그인
+                        </button>
+                    </div>
+
+                    <div className={styles.links}>
+                        <a className={styles.link} href="/sing/login/find_id">아이디 찾기</a>
+                        <span className={styles.divider}>|</span>
+                        <a className={styles.link} href="/sing/login/find_password">비밀번호 찾기</a>
+                        <span className={styles.divider}>|</span>
+                        <a className={styles.link} href="/sing/join/agree">회원가입</a>
+                    </div>
+
+                    <div className={styles.snsWrap}>
+                        <button
+                            type="button"
+                            className={`${styles.snsBtn} ${styles.kakao}`}
+                            onClick={() => (window.location.href = "/api/oauth2/authorization/kakao")}
+                        >
+                            카카오로 로그인
+                        </button>
+                        <button
+                            type="button"
+                            className={`${styles.snsBtn} ${styles.naver}`}
+                            onClick={() => (window.location.href = "/api/oauth2/authorization/naver")}
+                        >
+                            네이버로 로그인
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
     );
 }
