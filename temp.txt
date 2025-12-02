@@ -1,0 +1,345 @@
+"use client";
+
+import { useState } from "react";
+import { ArrowLeft, Save, X } from "lucide-react";
+import Link from "next/link";
+import styles from "../../admin.module.css";
+import api from "@/lib/api"; // axios ?�스?�스 가?�오�?
+
+export default function CreateNoticePage() {
+  // ???�력 ?�이???�목, 카테고리, ?�용)�?관리하???�태
+  const [formData, setFormData] = useState({
+    title: "",
+    category: "공�?",
+    content: "",
+    isImportant: false,
+    nFix: false
+  });
+  
+  // (?��?지) ?�용?��? ?�택???�일 객체�?관리하???�태
+  const [file, setFile] = useState(null);
+  // (?��?지) ?�택???��?지 ?�일??미리보기 URL??관리하???�태
+  const [imagePreview, setImagePreview] = useState(null);
+  
+  // ???�출 진행 ?�태�?관리하???�태
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // ?�스???�력 ?�드(?�목, ?�용 ????변경을 처리?�는 ?�들??
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  // ?�일 ?�력 ?�드??변경을 처리?�는 ?�들??
+  const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    if (selectedFile) {
+      // ?�일 객체 ?�태 ?�데?�트
+      setFile(selectedFile);
+      // 미리보기 URL ?�성 �??�태 ?�데?�트
+      setImagePreview(URL.createObjectURL(selectedFile));
+    } else {
+      // ?�일 ?�택??취소??경우 ?�태 초기??
+      setFile(null);
+      setImagePreview(null);
+    }
+  };
+
+  // ???�출??처리?�는 ?�들??
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.title || !formData.content) {
+        alert("?�목�??�용?� ?�수 ?�력 ??��?�니??");
+        return;
+    }
+    setIsSubmitting(true);
+
+    try {
+        const adIdx = sessionStorage.getItem("adminIdx");
+        if (!adIdx) {
+            alert("로그?�이 ?�요?�니??");
+            setIsSubmitting(false);
+            return;
+        }
+
+        const categoryMap = { "공�?": 1, "?�데?�트": 2, "?�내": 3, "?�벤??: 4 };
+
+        // 백엔??API??DTO ?�식??맞게 ?�송??JSON ?�이??
+        const noticeData = {
+            adIdx: Number(adIdx),
+            nSubject: formData.title,
+            nContent: formData.content,
+            nCategory: categoryMap[formData.category],
+            nFix: formData.nFix ? 1 : 0,
+            nIp: "127.0.0.1"
+        };
+
+        // multipart/form-data ?�식?�로 ?�이?��? 보내�??�해 FormData 객체 ?�성
+        const formDataToSend = new FormData();
+        
+        // 1. JSON ?�이?��? 'req'?�는 ?�의 Blob 객체�?변?�하??FormData??추�?
+        formDataToSend.append('req', new Blob([JSON.stringify(noticeData)], { type: "application/json" }));
+
+        // 2. ?��?지 ?�일???�는 경우, 'file'?�라???�로 FormData??추�?
+        if (file) {
+            formDataToSend.append('file', file);
+        }
+
+        // axios ?�스?�스�??�용?�여 ?�버??POST ?�청
+        await api.post("/admin/notices", formDataToSend);
+
+        alert("공�??�항???�록?�었?�니??");
+        window.location.href = "/admin/notice";
+
+    } catch (err) {
+        console.error(err);
+        alert(err.response?.data?.message || "공�??�항 ?�록 �??�류가 발생?�습?�다.");
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
+  // 취소 버튼 ?�릭 ??처리 ?�들??
+  const handleCancel = () => {
+    if (confirm("?�성 중인 ?�용????��?�니?? ?�말 취소?�시겠습?�까?")) {
+      window.location.href = "/admin/notice";
+    }
+  };
+
+  return (
+    <>
+      <div className={styles.pageContainer}>
+      <div className={styles.pageHeader}>
+        <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem" }}>
+          <Link 
+            href="/admin/notice" 
+            style={{ 
+              display: "flex", 
+              alignItems: "center", 
+              gap: "0.5rem", 
+              color: "#64748b", 
+              textDecoration: "none",
+              fontSize: "0.875rem"
+            }}
+          >
+            <ArrowLeft size={16} />
+            목록?�로 ?�아가�?
+          </Link>
+        </div>
+        <h1 className={styles.pageTitle}>공�??�항 ?�성</h1>
+        <p className={styles.pageSubtitle}>
+          ?�로??공�??�항???�성?�고 ?�록?�세??
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div className={styles.tableContainer}>
+          <div style={{ padding: "2rem" }}>
+            {/* ?�목 */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ 
+                display: "block", 
+                marginBottom: "0.5rem", 
+                fontWeight: "600", 
+                color: "#374151",
+                fontSize: "0.875rem"
+              }}>
+                ?�목 *
+              </label>
+              <input
+                type="text"
+                name="title"
+                value={formData.title}
+                onChange={handleInputChange}
+                placeholder="공�??�항 ?�목???�력?�세??
+                required
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.875rem",
+                  background: "white",
+                  transition: "border-color 0.2s"
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#3b82f6"}
+                onBlur={(e) => e.target.style.borderColor = "#d1d5db"}
+              />
+            </div>
+
+            {/* 카테고리 */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <div>
+                <label style={{ 
+                  display: "block", 
+                  marginBottom: "0.5rem", 
+                  fontWeight: "600", 
+                  color: "#374151",
+                  fontSize: "0.875rem"
+                }}>
+                  카테고리 *
+                </label>
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  required
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem",
+                    border: "1px solid #d1d5db",
+                    borderRadius: "0.5rem",
+                    fontSize: "0.875rem",
+                    background: "white",
+                    cursor: "pointer"
+                  }}
+                >
+                  <option value="공�?">공�?</option>
+                  <option value="?�데?�트">?�데?�트</option>
+                  <option value="?�내">?�내</option>
+                  <option value="?�벤??>?�벤??/option>
+                </select>
+              </div>
+            </div>
+
+            {/* ?�단 고정 체크박스 */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ display: "flex", alignItems: "center", cursor: "pointer", fontSize: "0.875rem" }}>
+                <input
+                  type="checkbox"
+                  name="nFix"
+                  checked={formData.nFix}
+                  onChange={handleInputChange}
+                  style={{ marginRight: "0.5rem" }}
+                />
+                <span>??공�??�항???�단??고정?�니??</span>
+              </label>
+            </div>
+
+            {/* ?�용 */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ 
+                display: "block", 
+                marginBottom: "0.5rem", 
+                fontWeight: "600", 
+                color: "#374151",
+                fontSize: "0.875rem"
+              }}>
+                ?�용 *
+              </label>
+              <textarea
+                name="content"
+                value={formData.content}
+                onChange={handleInputChange}
+                placeholder="공�??�항 ?�용???�력?�세??
+                required
+                rows={10}
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.875rem",
+                  background: "white",
+                  resize: "vertical",
+                  minHeight: "200px",
+                  fontFamily: "inherit",
+                  lineHeight: "1.5"
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#3b82f6"}
+                onBlur={(e) => e.target.style.borderColor = "#d1d5db"}
+              />
+            </div>
+
+            {/* ?��?지 첨�? UI */}
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: "600", color: "#374151", fontSize: "0.875rem" }}>
+                ?��?지 첨�? (?�택)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                style={{
+                  width: "100%",
+                  padding: "0.75rem",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "0.5rem",
+                  fontSize: "0.875rem",
+                  background: "white",
+                  cursor: "pointer"
+                }}
+              />
+            </div>
+
+            {/* ?��?지 미리보기 UI */}
+            {imagePreview && (
+              <div style={{ marginBottom: "2rem" }}>
+                <h4 style={{ marginBottom: "1rem", fontWeight: "600", color: "#374151", fontSize: "0.875rem" }}>
+                  ?��?지 미리보기
+                </h4>
+                <div style={{ padding: "1rem", border: "1px solid #e5e7eb", borderRadius: "0.5rem", backgroundColor: "#f9fafb" }}>
+                  <img src={imagePreview} alt="미리보기" style={{ maxWidth: "100%", maxHeight: "300px", borderRadius: "0.5rem", border: "1px solid #e5e7eb" }} />
+                </div>
+              </div>
+            )}
+
+            {/* 버튼 */}
+            <div style={{ 
+              display: "flex", 
+              justifyContent: "flex-end", 
+              gap: "1rem",
+              paddingTop: "1rem",
+              borderTop: "1px solid #e5e7eb"
+            }}>
+              <button
+                type="button"
+                onClick={handleCancel}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.75rem 1.5rem",
+                  background: "#f3f4f6",
+                  color: "#374151",
+                  border: "1px solid #d1d5db",
+                  borderRadius: "0.5rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+              >
+                <X size={16} />
+                취소
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting || !formData.title || !formData.content}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem",
+                  padding: "0.75rem 1.5rem",
+                  background: isSubmitting || !formData.title || !formData.content ? "#9ca3af" : "#3b82f6",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "0.5rem",
+                  fontWeight: "600",
+                  cursor: isSubmitting || !formData.title || !formData.content ? "not-allowed" : "pointer",
+                  transition: "all 0.2s"
+                }}
+              >
+                <Save size={16} />
+                {isSubmitting ? "?�록 �?.." : "공�??�항 ?�록"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </form>
+      </div>
+    </>
+  );
+}
