@@ -24,6 +24,17 @@ api.interceptors.request.use(
     } else {
       // 클라이언트 환경
       accessToken = tokenStore.getState().accessToken;
+      // 토큰스토어가 비었을 때를 대비해 쿠키에서 직접 조회
+      if (!accessToken && typeof document !== "undefined") {
+        const m = document.cookie.match(/(?:^|; )ACCESS_TOKEN=([^;]*)/);
+        if (m && m[1]) {
+          try {
+            accessToken = decodeURIComponent(m[1]);
+          } catch {
+            accessToken = m[1];
+          }
+        }
+      }
     }
 
     if (accessToken) {

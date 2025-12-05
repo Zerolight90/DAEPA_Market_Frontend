@@ -5,9 +5,13 @@ import styles from "./login.module.css";
 import api from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { getSafeLocalStorage, safeGetItem, safeSetItem, safeRemoveItem } from "@/lib/safeStorage";
+import useAuthStore from "@/store/useAuthStore";
+import tokenStore from "@/store/TokenStore";
 
 export default function LoginPageContent() {
     const router = useRouter();
+    const { login: setAuthUser } = useAuthStore();
+    const { setAccessToken } = tokenStore.getState();
 
     const [id, setId] = useState("");
     const [pw, setPw] = useState("");
@@ -29,8 +33,19 @@ export default function LoginPageContent() {
         e.preventDefault();
         setError("");
         try {
-            const res = await api.post("/sing/login", { uid: id, upw: pw });
+            const res = await api.post("/sing/login", { u_id: id, u_pw: pw });
             if (res?.data?.message) alert(res.data.message);
+
+            // 토큰/유저 상태 저장
+            setAccessToken?.(res?.data?.accessToken || null);
+            setAuthUser?.(res?.data || null);
+
+            // 미들웨어에서 쿠키로 로그인 여부를 판단하므로 클라이언트에서도 쿠키를 심어둔다.
+            const access = res?.data?.accessToken;
+            if (access && typeof document !== "undefined") {
+                const secureAttr = process.env.NODE_ENV === "production" ? "; Secure; SameSite=None" : "; SameSite=Lax";
+                document.cookie = `ACCESS_TOKEN=${access}; Path=/${secureAttr}`;
+            }
 
             const ls = getSafeLocalStorage();
             if (rememberId) {
