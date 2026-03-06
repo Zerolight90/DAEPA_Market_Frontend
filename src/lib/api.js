@@ -2,13 +2,11 @@ import axios from "axios";
 import tokenStore from "@/store/TokenStore";
 
 const api = axios.create({
-    // ✅ 직접 주소를 쓰지 않고 /api로 설정하여 Next.js 프록시(Rewrites)를 타게 합니다.
-    // 이렇게 해야 브라우저가 쿠키(토큰)를 안전하게 백엔드로 전달합니다.
-    baseURL: "/api", 
-    withCredentials: true,
-    headers: {
-        "Content-Type": "application/json",
-    }
+  baseURL: "/api",  // ✅ 상대경로로 변경
+  withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  }
 });
 
 // 모든 요청에 액세스 토큰 자동 첨부 로직
