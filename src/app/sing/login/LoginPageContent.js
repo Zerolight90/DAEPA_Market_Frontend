@@ -33,21 +33,18 @@ export default function LoginPageContent() {
         e.preventDefault();
         setError("");
         try {
-            // 1. 로그인 API 호출
+            // 1. 로그인 API 호출 (u_id, u_pw 형식 확인)
             const res = await api.post("/sing/login", { u_id: id, u_pw: pw });
             if (res?.data?.message) alert(res.data.message);
 
-            // 2. 토큰/유저 상태 저장
+            // 2. Zustand 등 클라이언트 상태 저장
             const access = res?.data?.accessToken;
             setAccessToken?.(access || null);
             setAuthUser?.(res?.data || null);
 
-            // 3. ✅ [최종 수정] 쿠키 저장 로직 (Domain 설정을 추가하여 api 서버와 토큰 공유)
-            if (access && typeof document !== "undefined") {
-                // Domain=daepamarket.shop을 추가해야 api.daepamarket.shop 서버가 이 쿠키를 읽을 수 있습니다.
-                document.cookie = `ACCESS_TOKEN=${access}; Path=/; Domain=daepamarket.shop; SameSite=Lax`;
-                console.log("토큰 쿠키 저장 완료 (Domain 설정 포함)");
-            }
+            // 3. ✅ [최종 수정] 수동 쿠키 저장 코드 삭제 (보고서 6번 반영)
+            // 백엔드의 application-prod.yml 설정으로 쿠키가 자동 저장되므로 여기서 처리하지 않습니다.
+            // document.cookie = ... 코드를 삭제하여 XSS 취약점을 방지합니다.
 
             // 4. 로컬 스토리지 관리
             const ls = getSafeLocalStorage();
@@ -75,7 +72,6 @@ export default function LoginPageContent() {
             <div className={styles.card}>
                 <form onSubmit={submit}>
                     <h1 className={styles.title}>로그인</h1>
-
                     <div className={styles.row}>
                         <label className={styles.label}>아이디</label>
                         <input
@@ -85,7 +81,6 @@ export default function LoginPageContent() {
                             placeholder="아이디를 입력하세요"
                         />
                     </div>
-
                     <div className={styles.row}>
                         <label className={styles.label}>비밀번호</label>
                         <input
@@ -96,9 +91,7 @@ export default function LoginPageContent() {
                             placeholder="비밀번호를 입력하세요"
                         />
                     </div>
-
                     {error && <div className={styles.error}>{error}</div>}
-
                     <div className={styles.options}>
                         <label className={styles.checkItem}>
                             <input
@@ -117,36 +110,15 @@ export default function LoginPageContent() {
                             자동 로그인
                         </label>
                     </div>
-
                     <div className={styles.actions} style={{ textAlign: "center" }}>
-                        <button type="submit" className={styles.submitBtn}>
-                            로그인
-                        </button>
+                        <button type="submit" className={styles.submitBtn}>로그인</button>
                     </div>
-
                     <div className={styles.links}>
                         <a className={styles.link} href="/sing/login/find_id">아이디 찾기</a>
                         <span className={styles.divider}>|</span>
                         <a className={styles.link} href="/sing/login/find_password">비밀번호 찾기</a>
                         <span className={styles.divider}>|</span>
                         <a className={styles.link} href="/sing/join/agree">회원가입</a>
-                    </div>
-
-                    <div className={styles.snsWrap}>
-                        <button
-                            type="button"
-                            className={`${styles.snsBtn} ${styles.kakao}`}
-                            onClick={() => (window.location.href = "/api/oauth2/authorization/kakao")}
-                        >
-                            카카오로 로그인
-                        </button>
-                        <button
-                            type="button"
-                            className={`${styles.snsBtn} ${styles.naver}`}
-                            onClick={() => (window.location.href = "/api/oauth2/authorization/naver")}
-                        >
-                            네이버로 로그인
-                        </button>
                     </div>
                 </form>
             </div>

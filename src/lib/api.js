@@ -1,10 +1,12 @@
 import axios from "axios";
 import tokenStore from "@/store/TokenStore";
 
-// ✅ 환경 변수 대신 실제 API 주소를 직접 입력하여 불확실성을 제거합니다.
+// ✅ 1. 환경 변수 기반으로 baseURL 설정 (보고서 3번 반영)
 const api = axios.create({
-  baseURL: "https://api.daepamarket.shop/api",
-  withCredentials: true,
+  baseURL: process.env.NEXT_PUBLIC_API_BASE 
+    ? `${process.env.NEXT_PUBLIC_API_BASE}/api` 
+    : "/api",
+  withCredentials: true, // ✅ 쿠키 공유를 위해 필수
   headers: {
     "Content-Type": "application/json",
   }
