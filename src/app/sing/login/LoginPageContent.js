@@ -33,7 +33,7 @@ export default function LoginPageContent() {
         e.preventDefault();
         setError("");
         try {
-            // 1. 로그인 API 호출 (u_id, u_pw 형식 확인 완료)
+            // 1. 로그인 API 호출
             const res = await api.post("/sing/login", { u_id: id, u_pw: pw });
             if (res?.data?.message) alert(res.data.message);
 
@@ -42,11 +42,11 @@ export default function LoginPageContent() {
             setAccessToken?.(access || null);
             setAuthUser?.(res?.data || null);
 
-            // 3. ✅ [수정됨] 쿠키 저장 로직 (Secure 옵션 제거)
+            // 3. ✅ [최종 수정] 쿠키 저장 로직 (Domain 설정을 추가하여 api 서버와 토큰 공유)
             if (access && typeof document !== "undefined") {
-                // SSL 설정과 관계없이 브라우저에 토큰이 박히도록 단순화했습니다.
-                document.cookie = `ACCESS_TOKEN=${access}; Path=/; SameSite=Lax`;
-                console.log("토큰 쿠키 저장 완료");
+                // Domain=daepamarket.shop을 추가해야 api.daepamarket.shop 서버가 이 쿠키를 읽을 수 있습니다.
+                document.cookie = `ACCESS_TOKEN=${access}; Path=/; Domain=daepamarket.shop; SameSite=Lax`;
+                console.log("토큰 쿠키 저장 완료 (Domain 설정 포함)");
             }
 
             // 4. 로컬 스토리지 관리
