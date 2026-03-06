@@ -1,11 +1,18 @@
 import axios from "axios";
 import tokenStore from "@/store/TokenStore";
 
-// 중앙 axios 인스턴스
+
+console.log("현재 API 주소 확인:", process.env.NEXT_PUBLIC_API_BASE);
+
 const api = axios.create({
   baseURL: `${process.env.NEXT_PUBLIC_API_BASE}/api`,
   withCredentials: true,
 });
+// 중앙 axios 인스턴스
+// const api = axios.create({
+//   baseURL: `${process.env.NEXT_PUBLIC_API_BASE}/api`,
+//   withCredentials: true,
+// });
 
 // 모든 요청에 액세스 토큰 자동 첨부
 api.interceptors.request.use(
