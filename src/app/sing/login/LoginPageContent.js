@@ -33,18 +33,21 @@ export default function LoginPageContent() {
         e.preventDefault();
         setError("");
         try {
-            // 1. 로그인 API 호출 (u_id, u_pw 형식 확인)
+            // 1. 로그인 API 호출
             const res = await api.post("/sing/login", { u_id: id, u_pw: pw });
             if (res?.data?.message) alert(res.data.message);
 
-            // 2. Zustand 등 클라이언트 상태 저장
+            // 2. 상태 저장
             const access = res?.data?.accessToken;
             setAccessToken?.(access || null);
             setAuthUser?.(res?.data || null);
 
-            // 3. ✅ [최종 수정] 수동 쿠키 저장 코드 삭제 (보고서 6번 반영)
-            // 백엔드의 application-prod.yml 설정으로 쿠키가 자동 저장되므로 여기서 처리하지 않습니다.
-            // document.cookie = ... 코드를 삭제하여 XSS 취약점을 방지합니다.
+            // 3. ✅ [최종 수정] 쿠키 저장 로직 복구
+            // Domain을 daepamarket.shop으로 설정해야 api 서버와 쿠키가 공유됩니다.
+            if (access && typeof document !== "undefined") {
+                document.cookie = `ACCESS_TOKEN=${access}; Path=/; Domain=daepamarket.shop; SameSite=Lax`;
+                console.log("토큰 쿠키 저장 완료 (Domain 설정 포함)");
+            }
 
             // 4. 로컬 스토리지 관리
             const ls = getSafeLocalStorage();

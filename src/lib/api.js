@@ -1,51 +1,50 @@
 import axios from "axios";
 import tokenStore from "@/store/TokenStore";
 
-// ✅ 1. 환경 변수 기반으로 baseURL 설정 (보고서 3번 반영)
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE 
-    ? `${process.env.NEXT_PUBLIC_API_BASE}/api` 
-    : "/api",
-  withCredentials: true, // ✅ 쿠키 공유를 위해 필수
-  headers: {
-    "Content-Type": "application/json",
-  }
+    // ✅ 직접 주소를 쓰지 않고 /api로 설정하여 Next.js 프록시(Rewrites)를 타게 합니다.
+    // 이렇게 해야 브라우저가 쿠키(토큰)를 안전하게 백엔드로 전달합니다.
+    baseURL: "/api", 
+    withCredentials: true,
+    headers: {
+        "Content-Type": "application/json",
+    }
 });
 
-// 모든 요청에 액세스 토큰 자동 첨부 (기존 로직 유지)
+// 모든 요청에 액세스 토큰 자동 첨부 로직
 api.interceptors.request.use(
-  async (config) => {
-    let accessToken;
+    async (config) => {
+        let accessToken;
 
-    if (typeof window === "undefined") {
-      try {
-        const { cookies } = await import("next/headers");
-        const cookieStore = await cookies();
-        accessToken = cookieStore.get("ACCESS_TOKEN")?.value;
-      } catch (e) {
-        // 서버 환경 에러 무시
-      }
-    } else {
-      accessToken = tokenStore.getState().accessToken;
-      if (!accessToken && typeof document !== "undefined") {
-        const m = document.cookie.match(/(?:^|; )ACCESS_TOKEN=([^;]*)/);
-        if (m && m[1]) {
-          try {
-            accessToken = decodeURIComponent(m[1]);
-          } catch {
-            accessToken = m[1];
-          }
+        if (typeof window === "undefined") {
+            try {
+                const { cookies } = await import("next/headers");
+                const cookieStore = await cookies();
+                accessToken = cookieStore.get("ACCESS_TOKEN")?.value;
+            } catch (e) {
+                // 서버 사이드 에러 무시
+            }
+        } else {
+            accessToken = tokenStore.getState().accessToken;
+            if (!accessToken && typeof document !== "undefined") {
+                const m = document.cookie.match(/(?:^|; )ACCESS_TOKEN=([^;]*)/);
+                if (m && m[1]) {
+                    try {
+                        accessToken = decodeURIComponent(m[1]);
+                    } catch {
+                        accessToken = m[1];
+                    }
+                }
+            }
         }
-      }
-    }
 
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
-    }
+        if (accessToken) {
+            config.headers.Authorization = `Bearer ${accessToken}`;
+        }
 
-    return config;
-  },
-  (error) => Promise.reject(error)
+        return config;
+    },
+    (error) => Promise.reject(error)
 );
 
 export default api;
