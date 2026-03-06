@@ -33,20 +33,23 @@ export default function LoginPageContent() {
         e.preventDefault();
         setError("");
         try {
+            // 1. 로그인 API 호출 (u_id, u_pw 형식 확인 완료)
             const res = await api.post("/sing/login", { u_id: id, u_pw: pw });
             if (res?.data?.message) alert(res.data.message);
 
-            // 토큰/유저 상태 저장
-            setAccessToken?.(res?.data?.accessToken || null);
+            // 2. 토큰/유저 상태 저장
+            const access = res?.data?.accessToken;
+            setAccessToken?.(access || null);
             setAuthUser?.(res?.data || null);
 
-            // 미들웨어에서 쿠키로 로그인 여부를 판단하므로 클라이언트에서도 쿠키를 심어둔다.
-            const access = res?.data?.accessToken;
+            // 3. ✅ [수정됨] 쿠키 저장 로직 (Secure 옵션 제거)
             if (access && typeof document !== "undefined") {
-                const secureAttr = process.env.NODE_ENV === "production" ? "; Secure; SameSite=None" : "; SameSite=Lax";
-                document.cookie = `ACCESS_TOKEN=${access}; Path=/${secureAttr}`;
+                // SSL 설정과 관계없이 브라우저에 토큰이 박히도록 단순화했습니다.
+                document.cookie = `ACCESS_TOKEN=${access}; Path=/; SameSite=Lax`;
+                console.log("토큰 쿠키 저장 완료");
             }
 
+            // 4. 로컬 스토리지 관리
             const ls = getSafeLocalStorage();
             if (rememberId) {
                 safeSetItem(ls, "login_saved_id", id);
@@ -57,8 +60,11 @@ export default function LoginPageContent() {
             }
             safeSetItem(ls, "login_auto_login", autoLogin ? "1" : "0");
 
+            // 5. 메인 화면으로 이동
             router.push("/");
+            
         } catch (err) {
+            console.error("로그인 에러 상세:", err);
             const msg = err.response?.data?.message || err.message || "로그인에 실패했습니다.";
             setError(msg);
         }
