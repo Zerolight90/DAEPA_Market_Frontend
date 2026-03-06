@@ -5,6 +5,9 @@ import tokenStore from "@/store/TokenStore";
 const api = axios.create({
   baseURL: "https://api.daepamarket.shop/api",
   withCredentials: true,
+  headers: {
+    "Content-Type": "application/json",
+  }
 });
 
 // 모든 요청에 액세스 토큰 자동 첨부 (기존 로직 유지)
