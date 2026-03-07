@@ -17,11 +17,11 @@ const nextConfig = {
         return [
             {
                 source: "/api/:path*",
-                destination: `https://api.daepamarket.shop/api/:path*`,
+                destination: `https://api.daepazone.shop/api/:path*`,
             },
             {
                 source: "/uploads/:path*",
-                destination: `https://api.daepamarket.shop/uploads/:path*`,
+                destination: `https://api.daepazone.shop/uploads/:path*`,
             },
         ];
     },
