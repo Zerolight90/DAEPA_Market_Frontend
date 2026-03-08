@@ -1,8 +1,14 @@
 import axios from "axios";
 import tokenStore from "@/store/TokenStore";
 
+const isServer = typeof window === "undefined";
+// 서버(SSR)일 때는 환경변수 주소를 붙이고, 클라이언트(브라우저)일 때는 상대 경로(/api) 사용
+const baseURL = isServer 
+    ? (process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080") + "/api" 
+    : "/api";
+
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: baseURL, // 🚨 수정된 부분
   withCredentials: true, // HttpOnly 쿠키 자동 전송 (REFRESH_TOKEN)
   headers: {
     "Content-Type": "application/json",
