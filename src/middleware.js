@@ -1,40 +1,30 @@
-// src/middleware.js
-// 비로그인 시 /sing/login?next=<원래경로> 로 리다이렉트
-
 import { NextResponse } from "next/server";
-
-/** 쿠키 존재 여부를 안전하게 확인 */
-function hasCookie(req, name) {
-    const c = req.cookies.get(name);
-    return c && typeof c.value === "string" && c.value.length > 0;
-}
-
-/** 로그인 여부 판정: 프로젝트의 실제 쿠키 이름에 맞추어 수정 가능 */
-function isAuthenticated(req) {
-    return (
-        hasCookie(req, "ACCESS_TOKEN") ||
-        hasCookie(req, "REFRESH_TOKEN") ||
-        hasCookie(req, "accessToken") ||
-        hasCookie(req, "refreshToken")
-    );
-}
 
 export function middleware(req) {
     const { pathname } = req.nextUrl;
 
-    // 보호할 경로 목록 (하위 경로 포함)
+    // 1. 보호할 경로 목록 (하위 경로 포함)
     const protectedPaths = ["/chat", "/like", "/mypage", "/sell"];
     const needsAuth = protectedPaths.some(
         (p) => pathname === p || pathname.startsWith(p + "/")
     );
+    
+    // 보호할 경로가 아니면 프리패스
     if (!needsAuth) return NextResponse.next();
 
-    // 로그인 상태면 통과
-    if (isAuthenticated(req)) {
+    // 2. ✅ Next.js 공식 메서드로 안전하게 쿠키 존재 여부 확인
+    const hasToken = 
+        req.cookies.has("ACCESS_TOKEN") || 
+        req.cookies.has("REFRESH_TOKEN") || 
+        req.cookies.has("accessToken") || 
+        req.cookies.has("refreshToken");
+
+    // 로그인 상태(쿠키 있음)면 프리패스
+    if (hasToken) {
         return NextResponse.next();
     }
 
-    // 비로그인 → 로그인 페이지로 리다이렉트 (돌아올 next 파라미터 포함)
+    // 3. 비로그인(쿠키 없음) → 로그인 페이지로 쫓아내기 (돌아올 목적지 기억)
     const url = req.nextUrl.clone();
     url.pathname = "/sing/login";
     url.searchParams.set("next", pathname + (req.nextUrl.search || ""));
