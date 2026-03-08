@@ -3,13 +3,14 @@
 import React, { useEffect, useState } from "react";
 import styles from "./login.module.css";
 import api from "@/lib/api";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getSafeLocalStorage, safeGetItem, safeSetItem, safeRemoveItem } from "@/lib/safeStorage";
 import useAuthStore from "@/store/useAuthStore";
 import tokenStore from "@/store/TokenStore";
 
 export default function LoginPageContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { login: setAuthUser } = useAuthStore();
     const { setAccessToken } = tokenStore.getState();
 
@@ -19,6 +20,9 @@ export default function LoginPageContent() {
     const [rememberId, setRememberId] = useState(false);
     const [autoLogin, setAutoLogin] = useState(false);
 
+    // ✅ 세션 만료로 리다이렉트된 경우 안내 메시지 표시
+    const [sessionMsg, setSessionMsg] = useState("");
+
     useEffect(() => {
         const ls = getSafeLocalStorage();
         const savedId = safeGetItem(ls, "login_saved_id", "") || "";
@@ -27,15 +31,21 @@ export default function LoginPageContent() {
         setId(savedId);
         setRememberId(savedRemember);
         setAutoLogin(savedAuto);
-    }, []);
+
+        // ✅ ?reason=session_expired 파라미터 감지
+        const reason = searchParams?.get("reason");
+        if (reason === "session_expired") {
+            setSessionMsg("세션이 만료되었습니다. 다시 로그인해 주세요.");
+        }
+    }, [searchParams]);
 
     const submit = async (e) => {
         e.preventDefault();
         setError("");
+        setSessionMsg("");
         try {
             // 1. 로그인 API 호출
             const res = await api.post("/sing/login", { u_id: id, u_pw: pw });
-            if (res?.data?.message) alert(res.data.message);
 
             // 2. 토큰/유저 상태 저장
             const access = res?.data?.accessToken;
@@ -53,12 +63,21 @@ export default function LoginPageContent() {
             }
             safeSetItem(ls, "login_auto_login", autoLogin ? "1" : "0");
 
-            // 4. 메인 화면으로 이동
-            router.push("/");
-            
+            // 4. ✅ next 파라미터가 있으면 원래 페이지로, 없으면 메인으로
+            const next = searchParams?.get("next") || "/";
+            router.replace(next);
+
         } catch (err) {
             console.error("로그인 에러 상세:", err);
-            const msg = err.response?.data?.message || err.message || "로그인에 실패했습니다.";
+            const status = err.response?.status;
+            let msg;
+            if (status === 401) {
+                msg = "아이디 또는 비밀번호가 올바르지 않습니다.";
+            } else if (status === 403) {
+                msg = "탈퇴한 회원입니다.";
+            } else {
+                msg = err.response?.data?.message || err.message || "로그인에 실패했습니다.";
+            }
             setError(msg);
         }
     };
@@ -68,6 +87,21 @@ export default function LoginPageContent() {
             <div className={styles.card}>
                 <form onSubmit={submit}>
                     <h1 className={styles.title}>로그인</h1>
+
+                    {/* ✅ 세션 만료 안내 배너 */}
+                    {sessionMsg && (
+                        <div style={{
+                            background: "#fff3cd",
+                            border: "1px solid #ffc107",
+                            borderRadius: "8px",
+                            padding: "10px 14px",
+                            marginBottom: "16px",
+                            fontSize: "13px",
+                            color: "#856404",
+                        }}>
+                            ⚠️ {sessionMsg}
+                        </div>
+                    )}
 
                     <div className={styles.row}>
                         <label className={styles.label}>아이디</label>
