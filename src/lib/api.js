@@ -141,9 +141,12 @@ api.interceptors.response.use(
         }
 
         // 로그인 페이지로 이동 (세션 만료 안내)
-        const currentPath = window.location.pathname + window.location.search;
-        const loginUrl = `/sing/login?reason=session_expired&next=${encodeURIComponent(currentPath)}`;
-        window.location.href = loginUrl;
+        const currentPath = window.location.pathname;
+        // 현재 페이지가 이미 로그인 페이지(/sing/login)가 아닐 때만 튕겨냅니다!
+        if (!currentPath.includes('/sing/login')) {
+          const fullPath = currentPath + window.location.search;
+          window.location.href = `/sing/login?reason=session_expired&next=${encodeURIComponent(fullPath)}`;
+        }
       }
 
       return Promise.reject(refreshError);
