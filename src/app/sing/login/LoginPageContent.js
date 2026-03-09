@@ -44,8 +44,8 @@ export default function LoginPageContent() {
         setError("");
         setSessionMsg("");
         try {
-            // 1. 로그인 API 호출
-            const res = await api.post("/sing/login", { u_id: id, u_pw: pw });
+            // 🚨 수정된 부분: autoLogin 값을 백엔드로 전달합니다!
+            const res = await api.post("/sing/login", { u_id: id, u_pw: pw, autoLogin: autoLogin });
 
             // 2. 토큰/유저 상태 저장
             const access = res?.data?.accessToken;
