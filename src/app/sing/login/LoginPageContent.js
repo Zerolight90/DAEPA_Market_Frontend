@@ -163,14 +163,22 @@ export default function LoginPageContent() {
                         <button
                             type="button"
                             className={`${styles.snsBtn} ${styles.kakao}`}
-                            onClick={() => (window.location.href = "/api/oauth2/authorization/kakao")}
+                            onClick={() => {
+                                
+                                const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "https://api.daepazone.shop";
+                                window.location.href = `${backendUrl}/oauth2/authorization/kakao`;
+                            }}
                         >
                             카카오로 로그인
                         </button>
                         <button
                             type="button"
                             className={`${styles.snsBtn} ${styles.naver}`}
-                            onClick={() => (window.location.href = "/api/oauth2/authorization/naver")}
+                            onClick={() => {
+                               
+                                const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "https://api.daepazone.shop";
+                                window.location.href = `${backendUrl}/oauth2/authorization/naver`;
+                            }}
                         >
                             네이버로 로그인
                         </button>
