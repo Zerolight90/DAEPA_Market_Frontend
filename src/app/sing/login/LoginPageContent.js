@@ -44,7 +44,6 @@ export default function LoginPageContent() {
         setError("");
         setSessionMsg("");
         try {
-            // 🚨 수정된 부분: autoLogin 값을 백엔드로 전달합니다!
             const res = await api.post("/sing/login", { u_id: id, u_pw: pw, autoLogin: autoLogin });
 
             // 2. 토큰/유저 상태 저장
@@ -164,10 +163,9 @@ export default function LoginPageContent() {
                             type="button"
                             className={`${styles.snsBtn} ${styles.kakao}`}
                             onClick={() => {
-                                
                                 document.cookie = `oauth_auto_login=${autoLogin}; path=/; max-age=60`;
-                                
-                                window.location.href = `https://daepazone.shop/oauth2/authorization/kakao`;
+                                // 🚨 원상 복구: 백엔드 주소(api.)로 직접 요청합니다.
+                                window.location.href = `https://api.daepazone.shop/oauth2/authorization/kakao`;
                             }}
                         >
                             카카오로 로그인
@@ -176,10 +174,9 @@ export default function LoginPageContent() {
                             type="button"
                             className={`${styles.snsBtn} ${styles.naver}`}
                             onClick={() => {
-                                
                                 document.cookie = `oauth_auto_login=${autoLogin}; path=/; max-age=60`;
-                                
-                                window.location.href = `https://daepazone.shop/oauth2/authorization/naver`;
+                                // 🚨 원상 복구: 백엔드 주소(api.)로 직접 요청합니다.
+                                window.location.href = `https://api.daepazone.shop/oauth2/authorization/naver`;
                             }}
                         >
                             네이버로 로그인
