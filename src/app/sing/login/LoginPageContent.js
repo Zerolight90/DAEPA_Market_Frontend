@@ -163,8 +163,8 @@ export default function LoginPageContent() {
                             type="button"
                             className={`${styles.snsBtn} ${styles.kakao}`}
                             onClick={() => {
-                                document.cookie = `oauth_auto_login=${autoLogin}; path=/; max-age=60`;
-                                // 🚨 원상 복구: 백엔드 주소(api.)로 직접 요청합니다.
+                                // ✅ 쿠키 도메인 추가 & 백엔드(api.) 직접 호출
+                                document.cookie = `oauth_auto_login=${autoLogin}; path=/; domain=.daepazone.shop; max-age=60`;
                                 window.location.href = `https://api.daepazone.shop/oauth2/authorization/kakao`;
                             }}
                         >
@@ -174,8 +174,8 @@ export default function LoginPageContent() {
                             type="button"
                             className={`${styles.snsBtn} ${styles.naver}`}
                             onClick={() => {
-                                document.cookie = `oauth_auto_login=${autoLogin}; path=/; max-age=60`;
-                                // 🚨 원상 복구: 백엔드 주소(api.)로 직접 요청합니다.
+                                // ✅ 쿠키 도메인 추가 & 백엔드(api.) 직접 호출
+                                document.cookie = `oauth_auto_login=${autoLogin}; path=/; domain=.daepazone.shop; max-age=60`;
                                 window.location.href = `https://api.daepazone.shop/oauth2/authorization/naver`;
                             }}
                         >
