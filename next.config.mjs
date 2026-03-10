@@ -13,7 +13,7 @@ const nextConfig = {
     },
 
     async rewrites() {
-        // ✅ 개발/배포 공통: 프론트엔드의 /api 요청을 백엔드 서버로 강제 연결합니다.
+        
         return [
             {
                 source: "/api/:path*",

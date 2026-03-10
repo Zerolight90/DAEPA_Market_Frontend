@@ -165,6 +165,8 @@ export default function LoginPageContent() {
                             className={`${styles.snsBtn} ${styles.kakao}`}
                             onClick={() => {
                                 
+                                document.cookie = `oauth_auto_login=${autoLogin}; path=/; max-age=60`;
+                                
                                 const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "https://api.daepazone.shop";
                                 window.location.href = `${backendUrl}/oauth2/authorization/kakao`;
                             }}
@@ -175,7 +177,9 @@ export default function LoginPageContent() {
                             type="button"
                             className={`${styles.snsBtn} ${styles.naver}`}
                             onClick={() => {
-                               
+                                
+                                document.cookie = `oauth_auto_login=${autoLogin}; path=/; max-age=60`;
+                                
                                 const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "https://api.daepazone.shop";
                                 window.location.href = `${backendUrl}/oauth2/authorization/naver`;
                             }}
