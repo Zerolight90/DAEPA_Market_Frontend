@@ -167,8 +167,7 @@ export default function LoginPageContent() {
                                 
                                 document.cookie = `oauth_auto_login=${autoLogin}; path=/; max-age=60`;
                                 
-                                const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "https://api.daepazone.shop";
-                                window.location.href = `${backendUrl}/oauth2/authorization/kakao`;
+                                window.location.href = `https://daepazone.shop/oauth2/authorization/kakao`;
                             }}
                         >
                             카카오로 로그인
@@ -180,8 +179,7 @@ export default function LoginPageContent() {
                                 
                                 document.cookie = `oauth_auto_login=${autoLogin}; path=/; max-age=60`;
                                 
-                                const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "https://api.daepazone.shop";
-                                window.location.href = `${backendUrl}/oauth2/authorization/naver`;
+                                window.location.href = `https://daepazone.shop/oauth2/authorization/naver`;
                             }}
                         >
                             네이버로 로그인
