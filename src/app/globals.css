@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+@theme {
+  --color-daepa-green: #22c55e; /* 대파마켓 시그니처 컬러 예시 */
+  --font-sans: "Pretendard", ui-sans-serif, system-ui;
+}
+
 /* ==============================
    🌐 Global Styles
    ============================== */
