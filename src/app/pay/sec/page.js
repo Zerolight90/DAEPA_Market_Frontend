@@ -83,7 +83,6 @@ function PaySecContent() {
                     transactionDate: new Date(),
                 }));
                 if (err.response?.status === 401) {
-                    console.log("로그인이 필요합니다.");
                 }
             } finally {
                 setIsLoading(false);

@@ -18,7 +18,7 @@ export default function AddressChangeModal({ id, close, onAddressSelect }) {
         try {
             const ls = getSafeLocalStorage();
             const token = safeGetItem(ls, 'accessToken');
-            const data = await api("/sing/locations", {
+            const data = await api("/sign/locations", {
                 headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
             });
             setAddresses(data);
@@ -46,7 +46,7 @@ export default function AddressChangeModal({ id, close, onAddressSelect }) {
         try {
             const ls = getSafeLocalStorage();
             const token = safeGetItem(ls, 'accessToken');
-            await api(`/sing/location/${locationId}/update`, {
+            await api(`/sign/location/${locationId}/update`, {
                 method: 'PUT',
                 headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
             });

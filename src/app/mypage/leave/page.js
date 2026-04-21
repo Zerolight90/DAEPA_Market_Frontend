@@ -50,7 +50,7 @@ export default function LeavePage() {
         };
 
         try {
-            const { data } = await api.post("/sing/bye", payload);
+            const { data } = await api.post("/sign/bye", payload);
 
             let msg = '회원 탈퇴가 완료되었습니다.';
             if (data && (data.message || typeof data === 'string')) {

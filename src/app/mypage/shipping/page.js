@@ -66,7 +66,6 @@ export default function ShippingPage() {
                     setErr(e.response?.data?.message || e.message || '네트워크 오류가 발생했습니다.');
                     setItems([]);
                     if (e.response?.status === 401) {
-                        console.log("로그인이 필요합니다.");
                     }
                 }
             } finally {

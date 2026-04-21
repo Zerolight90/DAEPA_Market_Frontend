@@ -26,7 +26,7 @@ export function middleware(req) {
 
     // 3. 비로그인(쿠키 없음) → 로그인 페이지로 쫓아내기 (돌아올 목적지 기억)
     const url = req.nextUrl.clone();
-    url.pathname = "/sing/login";
+    url.pathname = "/sign/login";
     url.searchParams.set("next", pathname + (req.nextUrl.search || ""));
     return NextResponse.redirect(url);
 }

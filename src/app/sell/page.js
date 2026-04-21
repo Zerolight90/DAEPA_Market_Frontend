@@ -99,7 +99,7 @@ export default function Page() {
             // ✅ 미로그인/만료 시 로그인 페이지로 이동
             if (res.status === 401) {
                 alert("판매하기는 로그인 후 이용할 수 있어요. 로그인 페이지로 이동합니다.");
-                return router.push(`/sing/login?next=${encodeURIComponent("/sell")}&reason=need_login`);
+                return router.push(`/sign/login?next=${encodeURIComponent("/sell")}&reason=need_login`);
             }
 
             if (!res.ok) {

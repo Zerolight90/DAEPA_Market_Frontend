@@ -88,7 +88,7 @@ api.interceptors.response.use(
     }
 
     // refresh 엔드포인트 자체가 401이면 무한루프 방지
-    if (originalReq.url?.includes("/sing/refresh")) {
+    if (originalReq.url?.includes("/sign/refresh")) {
       return Promise.reject(error);
     }
 
@@ -112,7 +112,7 @@ api.interceptors.response.use(
 
     try {
       // REFRESH_TOKEN은 HttpOnly Cookie로 자동 전송됨 (withCredentials: true)
-      const { data } = await api.post("/sing/refresh");
+      const { data } = await api.post("/sign/refresh");
 
       // 백엔드가 새 ACCESS_TOKEN을 쿠키로 내려주지만,
       // Zustand Store도 최신 상태로 유지 (쿠키에서 읽어서 저장)
@@ -148,10 +148,10 @@ api.interceptors.response.use(
 
         const currentPath = window.location.pathname;
         
-        // 🚨 방어막 추가: 현재 주소가 로그인 페이지가 아니고, 요청한 API가 '/sing/me'가 아닐 때만 튕겨냅니다!
-        if (!currentPath.includes('/sing/login') && !originalReq.url?.includes('/sing/me')) {
+        // 🚨 방어막 추가: 현재 주소가 로그인 페이지가 아니고, 요청한 API가 '/sign/me'가 아닐 때만 튕겨냅니다!
+        if (!currentPath.includes('/sign/login') && !originalReq.url?.includes('/sign/me')) {
           const fullPath = currentPath + window.location.search;
-          window.location.href = `/sing/login?reason=session_expired&next=${encodeURIComponent(fullPath)}`;
+          window.location.href = `/sign/login?reason=session_expired&next=${encodeURIComponent(fullPath)}`;
         }
       }
 

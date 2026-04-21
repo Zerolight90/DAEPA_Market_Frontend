@@ -95,7 +95,7 @@ export default function RightPanelClient({
 
             if (!myUid) {
                 alert("로그인 후 이용해주세요.");
-                router.push(`/sing/login?next=${encodeURIComponent("/chat")}`);
+                router.push(`/sign/login?next=${encodeURIComponent("/chat")}`);
                 return;
             }
 

@@ -45,7 +45,6 @@ export default function MatchingPage() {
             } catch (err) {
                 setError(err.response?.data?.message || err.message);
                 if (err.response?.status === 401) {
-                    console.log("로그인이 필요합니다.");
                 }
             } finally {
                 setIsLoading(false);
@@ -120,7 +119,6 @@ export default function MatchingPage() {
         } catch (err) {
             alert(err.response?.data?.message || err.message);
             if (err.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         }
     };
@@ -156,7 +154,6 @@ export default function MatchingPage() {
         } catch (err) {
             alert(err.response?.data?.message || err.message);
             if (err.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         }
     };
@@ -177,7 +174,6 @@ export default function MatchingPage() {
             alert(error.response?.data?.message || error.message);
             setNotifications([]);
             if (error.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         } finally {
             setIsNotificationLoading(false);
@@ -195,7 +191,6 @@ export default function MatchingPage() {
             console.error('Error deleting notification:', error);
             alert(error.response?.data?.message || error.message);
             if (error.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         }
     };

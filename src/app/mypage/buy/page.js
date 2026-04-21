@@ -105,7 +105,6 @@ export default function BuyHistoryPage() {
                     // 401 (Unauthorized) 에러 처리
                     if (error.response?.status === 401) {
                         // 로그인 페이지로 리다이렉트 또는 로그인 모달 표시
-                        console.log("로그인이 필요합니다.");
                     }
                 }
             }
@@ -129,7 +128,6 @@ export default function BuyHistoryPage() {
             setList([]);
             // 401 (Unauthorized) 에러 처리
             if (error.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         } finally {
             if (mountedRef.current) setLoading(false);
@@ -279,7 +277,6 @@ export default function BuyHistoryPage() {
             const txt = error.response?.data?.message || error.message || '처리 중 오류가 발생했습니다.';
             alert('처리 중 오류가 발생했습니다.\n' + txt);
             if (error.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         } finally {
             setPendingDoneId((prev) => (prev === dealId ? null : prev));
@@ -298,7 +295,6 @@ export default function BuyHistoryPage() {
                 error.response?.data?.message || error.message || '구매확정에 실패했습니다.';
             alert(txt);
             if (error.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         }
     }
@@ -319,7 +315,6 @@ export default function BuyHistoryPage() {
         } catch (error) {
             // 조회 실패해도 작성 화면 이동은 허용
             if (error.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         }
         const sellerIdx =

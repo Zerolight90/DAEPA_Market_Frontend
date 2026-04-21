@@ -52,7 +52,7 @@ export default function BuyModal({ id, close, itemId, title, price }) {
                 const ls = getSafeLocalStorage();
                 const token = safeGetItem(ls, 'accessToken');
 
-                const data = await api(`/sing/locations/default`, {
+                const data = await api(`/sign/locations/default`, {
                     headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
                 });
                 setSelectedAddress(data);
@@ -88,7 +88,6 @@ export default function BuyModal({ id, close, itemId, title, price }) {
                 `${window.location.origin}/pay/success?paymentKey=${paymentKey}&orderId=${orderId}&amount=${amount}`;
         }).catch(error => {
             if (error.code === 'USER_CANCEL') {
-                console.log('사용자가 결제를 취소했습니다');
             } else {
                 window.location.href =
                     `${window.location.origin}/pay/fail?message=${error.message}`;

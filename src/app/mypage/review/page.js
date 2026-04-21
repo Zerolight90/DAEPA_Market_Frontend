@@ -74,7 +74,6 @@ export default function MyReviewsPage() {
                 initialized: true,
             }));
             if (error.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         }
     }
@@ -141,7 +140,6 @@ export default function MyReviewsPage() {
             const txt = error.response?.data?.message || error.message || "수정에 실패했습니다.";
             alert(txt);
             if (error.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         }
         finally {

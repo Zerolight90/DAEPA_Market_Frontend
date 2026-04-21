@@ -64,7 +64,7 @@ export default function AddressPage() {
             try {
                 setLoading(true);
                 // axios 인스턴스를 사용하여 API 호출
-                const response = await api.get('/sing/me');
+                const response = await api.get('/sign/me');
 
                 const data = response.data; // axios는 응답 데이터를 .data 속성에 담습니다.
                 setMe(data);
@@ -166,7 +166,7 @@ export default function AddressPage() {
 
         try {
             // axios 인스턴스를 사용하여 POST 요청
-            const response = await api.post('/sing/location', payload);
+            const response = await api.post('/sign/location', payload);
             const data = response.data;
 
             alert(data.message || '주소가 저장되었습니다.');
@@ -197,7 +197,7 @@ export default function AddressPage() {
 
         try {
             // axios 인스턴스를 사용하여 DELETE 요청
-            const response = await api.delete(`/sing/location/${locKey}`);
+            const response = await api.delete(`/sign/location/${locKey}`);
             const data = response.data;
 
             alert(data?.message || '배송지가 삭제되었습니다.');
@@ -225,7 +225,7 @@ export default function AddressPage() {
         }
         try {
             // axios 인스턴스를 사용하여 PUT 요청
-            const response = await api.put(`/sing/location/${locKey}/update`);
+            const response = await api.put(`/sign/location/${locKey}/update`);
             const data = response.data;
 
             // 서비스가 {message, locations}로 주게 해놨으니까 그대로 반영

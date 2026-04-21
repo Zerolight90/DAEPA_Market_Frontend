@@ -113,7 +113,7 @@ export default function MyPage() {
                 setError(null);
 
                 // 1. 내 정보 가져오기
-                const meRes = await api.get("/sing/me");
+                const meRes = await api.get("/sign/me");
                 const meData = meRes.data;
                 
                 const profileUrl = meData.u_profile ?? meData.uProfile ?? meData.avatarUrl ?? "";
@@ -155,7 +155,6 @@ export default function MyPage() {
                 setProducts([]);
                 if (err.response?.status === 401) {
                     // 로그인 페이지로 리다이렉트 또는 로그인 모달 표시
-                    console.log("로그인이 필요합니다.");
                 }
             }
         };
@@ -240,7 +239,7 @@ export default function MyPage() {
         return (
             <main className={styles.wrap}>
                 <div className={styles.empty}>
-                    {error} <Link href="/sing/login">로그인 페이지로 이동</Link>
+                    {error} <Link href="/sign/login">로그인 페이지로 이동</Link>
                 </div>
             </main>
         );

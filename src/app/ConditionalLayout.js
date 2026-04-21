@@ -18,7 +18,7 @@ export default function ConditionalLayout({ children }) {
     const checkLoginStatus = async () => {
       try {
         // 보호된 리소스 로그인 확인 (쿠키 기반)
-        const res = await api.get("/sing/me");
+        const res = await api.get("/sign/me");
         login(res.data);
       } catch (error) {
         // 401 등 에러 시 로그아웃 처리

@@ -8,7 +8,6 @@ export default function ChatModal({ id, close, seller }) {
 
     const send = () => {
         // TODO: 실제 채팅 API 연동
-        console.log("CHAT_SEND", { to: seller?.id, msg });
         alert("메시지를 보냈습니다.");
         close();
     };

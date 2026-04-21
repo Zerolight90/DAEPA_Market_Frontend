@@ -36,7 +36,7 @@ function EditProfileContent() {
     useEffect(() => {
         (async () => {
             try {
-                const res = await api.get("/sing/me");
+                const res = await api.get("/sign/me");
                 const data = res.data;
 
                 const hasLocations =
@@ -149,7 +149,7 @@ function EditProfileContent() {
     const onBlurNickname = async () => {
         if (!vo.u_nickname) return;
         try {
-            const res = await api.get("/sing/join/check_nickname", {
+            const res = await api.get("/sign/join/check_nickname", {
                 params: { u_nickname: vo.u_nickname },
             });
             if (res.data === true) {
@@ -198,14 +198,14 @@ function EditProfileContent() {
                 fd.append("file", profileFile);
 
                 // 🔥 여기서 Content-Type 안 넣는다. axios가 알아서 넣음
-                const uploadRes = await api.post("/sing/upload-profile", fd);
+                const uploadRes = await api.post("/sign/upload-profile", fd);
 
                 // 백엔드가 record UploadRes(String url) 로 주니까 이거 그대로 씀
                 profileUrl = uploadRes.data?.url || "";
             }
 
             // 2) 실제 회원 정보 수정 호출
-            await api.post("/sing/update", {
+            await api.post("/sign/update", {
                 newPassword: vo.new_password || "",
                 newPasswordConfirm: vo.new_password2 || "",
                 nickname: vo.u_nickname || "",

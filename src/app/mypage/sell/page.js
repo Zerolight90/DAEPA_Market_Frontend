@@ -90,7 +90,6 @@ export default function SellHistoryPage() {
             setErr(errorMessage);
             setList([]);
             if (e.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         } finally {
             if (mountedRef.current) setLoading(false);
@@ -251,7 +250,6 @@ export default function SellHistoryPage() {
             const txt = error.response?.data?.message || error.message || '배송 보냄 확인에 실패했습니다.';
             alert('배송 보냄 확인에 실패했습니다.\n' + txt);
             if (error.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         } finally {
             setPendingSendId((prev) => (prev === dealId ? null : prev));
@@ -272,7 +270,6 @@ export default function SellHistoryPage() {
             const txt = error.response?.data?.message || error.message || '처리 중 오류가 발생했습니다.';
             alert('처리 중 오류가 발생했습니다.\n' + txt);
             if (error.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         } finally {
             setPendingDoneId((prev) => (prev === dealId ? null : prev));
@@ -297,7 +294,6 @@ export default function SellHistoryPage() {
             const txt = error.response?.data?.message || error.message || '환불 처리 중 오류가 발생했습니다.';
             alert('환불 처리 중 오류가 발생했습니다.\n' + txt);
             if (error.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         } finally {
             setPendingRefundId((prev) => (prev === dealId ? null : prev));
@@ -320,7 +316,6 @@ export default function SellHistoryPage() {
         } catch (error) {
             // 조회 실패해도 이동은 허용 가능
             if (error.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         }
 

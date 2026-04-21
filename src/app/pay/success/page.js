@@ -66,7 +66,6 @@ function PaySuccessContent() {
                 console.error("결제 처리 또는 상품 정보 로딩 실패:", err);
                 setError(err.response?.data?.message || err.message || "결제 처리 중 오류가 발생했습니다.");
                 if (err.response?.status === 401) {
-                    console.log("로그인이 필요합니다.");
                 }
             } finally {
                 setIsLoading(false);

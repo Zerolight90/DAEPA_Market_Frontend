@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@mui/material";
-import Bener from "@/components/bener";
+import Banner from "@/components/banner";
 import styles from "./page.module.css";
-import { api, Endpoints } from "../app/sell/api";
-import ProductRowSection from "@/components/product/ProductRowSection";  // ✅ 경로 맞게 수정
+import api from "@/lib/api";
+import ProductRowSection from "@/components/product/ProductRowSection";
+
+const CATEGORY_ICONS = ["📱", "👕", "🏠", "📚", "⚽", "🚗", "🐕", "📦"];
 
 export default function Home() {
     const [categories, setCategories] = useState([]);
@@ -14,41 +16,29 @@ export default function Home() {
     useEffect(() => {
         (async () => {
             try {
-                // ✅ 상품 개수 포함된 상위 카테고리 목록 가져오기
-                const { data } = await api.get(Endpoints.upperCategoriesWithCount);
-                console.log("카테고리 with count:", data);
-
-                // ✅ 백엔드 DTO 기반으로 매핑
+                const { data } = await api.get("/category/uppers-with-count");
                 const mapped = data.map((u, idx) => ({
                     id: u.upperIdx,
                     name: u.upperCt,
-                    icon: pickIcon(idx),
-                    count: u.productCount ?? 0, // ← 여기서 상품 개수
+                    icon: CATEGORY_ICONS[idx % CATEGORY_ICONS.length],
+                    count: u.productCount ?? 0,
                 }));
-
                 setCategories(mapped);
             } catch (e) {
-                console.error("카테고리 불러오기 실패:", e);
+                // 카테고리 로딩 실패 시 빈 목록으로 graceful degradation
             }
         })();
     }, []);
 
-    // ✅ 카테고리별 기본 아이콘 매칭 함수 (인덱스 기준)
-    const pickIcon = (i) => {
-        const icons = ["📱", "👕", "🏠", "📚", "⚽", "🚗", "🐕", "📦"];
-        return icons[i % icons.length];
-    };
-
-
     return (
         <>
-            <Bener />
+            <Banner />
 
             <div className="container">
                 <h2 className={styles.categoryTitle}>카테고리</h2>
 
                 <div className={styles.categoryList}>
-                    {(categories ?? []).map((c) => (
+                    {categories.map((c) => (
                         <Link
                             key={c.id}
                             href={`/category/${encodeURIComponent(c.name)}`}
@@ -59,26 +49,16 @@ export default function Home() {
                                     <div className={styles.categoryIcon}>{c.icon}</div>
                                     <h3 className={styles.categoryName}>{c.name}</h3>
                                     <p className={styles.categoryCount}>
-                                        {typeof c.count === "number" && c.count > 0
-                                            ? `${c.count}개`
-                                            : "상품 준비중"}
+                                        {c.count > 0 ? `${c.count}개` : "상품 준비중"}
                                     </p>
                                 </CardContent>
                             </Card>
                         </Link>
                     ))}
-
                 </div>
-                <ProductRowSection
-                    title="전체 보기"
-                    sort="recent"
-                    link="/all"
-                />
-                <ProductRowSection
-                    title="찜이 많은 상품"
-                    sort="favorite"
-                    link="/all?sort=favorite"
-                />
+
+                <ProductRowSection title="전체 보기" sort="recent" link="/all" />
+                <ProductRowSection title="찜이 많은 상품" sort="favorite" link="/all?sort=favorite" />
             </div>
         </>
     );

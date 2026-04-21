@@ -56,9 +56,9 @@ export default function Header() {
         if (!isClient) return;
         if (isLoggedIn || fetchingUserRef.current) return;
 
-        // HttpOnly 쿠키는 document.cookie에서 안 보이므로 /sing/me로 세션을 복원
+        // HttpOnly 쿠키는 document.cookie에서 안 보이므로 /sign/me로 세션을 복원
         fetchingUserRef.current = true;
-        api.get("/sing/me")
+        api.get("/sign/me")
             .then((res) => {
                 if (res?.data) authLogin(res.data);
             })
@@ -93,7 +93,7 @@ export default function Header() {
     const onLogout = async () => {
         if (!confirm("로그아웃 하시겠습니까?")) return;
         try {
-            await api.post("/sing/logout");
+            await api.post("/sign/logout");
         } catch (error) {
             console.error("Logout failed:", error);
         } finally {
@@ -109,7 +109,7 @@ export default function Header() {
         e.preventDefault();
         if (!isLoggedIn) {
             alert("로그인이 필요한 서비스입니다.");
-            router.push(`/sing/login?next=${encodeURIComponent(target)}`);
+            router.push(`/sign/login?next=${encodeURIComponent(target)}`);
             return;
         }
         router.push(target);
@@ -151,8 +151,8 @@ export default function Header() {
                             </>
                         ) : (
                             <>
-                                <Link href="/sing/login">로그인</Link>
-                                <Link href="/sing/join/agree">회원가입</Link>
+                                <Link href="/sign/login">로그인</Link>
+                                <Link href="/sign/join/agree">회원가입</Link>
                                 <Link href="/faq">고객센터</Link>
                             </>
                         )}

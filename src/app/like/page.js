@@ -84,7 +84,7 @@ function MyLikePageContent() { // Suspense를 위해 컴포넌트 분리
                 // axios 에러 객체는 e.response에 상세 정보를 담고 있습니다.
                 if (e.response?.status === 401) {
                     alert("로그인이 필요합니다.");
-                    router.push(`/sing/login?next=${encodeURIComponent("/like")}`);
+                    router.push(`/sign/login?next=${encodeURIComponent("/like")}`);
                     return;
                 }
                 console.error("[/api/favorites] fetch error:", e.response?.data?.message || e.message);

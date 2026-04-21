@@ -33,7 +33,6 @@ export default function PurchaseItem({ deal }) {
             setError(errorMessage);
             alert(`오류: ${errorMessage}`);
             if (err.response?.status === 401) {
-                console.log("로그인이 필요합니다.");
             }
         } finally {
             setIsCanceling(false);

@@ -34,7 +34,6 @@ export function createChatClient({ userId, displayName }) {
             "x-user-name": displayName ?? "",
         },
         debug: process.env.NODE_ENV === "development"
-            ? (str) => console.log("[STOMP DEBUG]", str)
             : () => {},
     });
 

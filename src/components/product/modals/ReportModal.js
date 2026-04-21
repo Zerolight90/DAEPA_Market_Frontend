@@ -39,7 +39,7 @@ export default function ReportModal({ id, close, productId }) {
 
         if (!bearer) {
             alert("로그인 후 이용해주세요.");
-            // 필요하면 로그인 페이지로 이동: location.href = `/sing/login?next=${encodeURIComponent(location.pathname+location.search)}`
+            // 필요하면 로그인 페이지로 이동: location.href = `/sign/login?next=${encodeURIComponent(location.pathname+location.search)}`
             return;
         }
 
