@@ -7,18 +7,22 @@ import Header from "@/components/header";
 import Footer from "@/components/footer";
 import api from "@/lib/api";
 import useAuthStore from "@/store/useAuthStore";
+import tokenStore from "@/store/TokenStore";
 import StorageGuard from "@/components/StorageGuard";
 
 export default function ConditionalLayout({ children }) {
   const pathname = usePathname();
   const { login, logout } = useAuthStore();
 
-  // 컴포넌트 마운트 시 로그인 상태 확인
+  // 컴포넌트 마운트 시 로그인 상태 확인 + Zustand TokenStore 초기화
   useEffect(() => {
     const checkLoginStatus = async () => {
       try {
-        // 보호된 리소스 로그인 확인 (쿠키 기반)
+        // HttpOnly 쿠키를 서버가 검증하여 사용자 정보 + accessToken 반환
         const res = await api.get("/sign/me");
+        if (res.data?.accessToken) {
+          tokenStore.getState().setAccessToken(res.data.accessToken);
+        }
         login(res.data);
       } catch (error) {
         // 401 등 에러 시 로그아웃 처리

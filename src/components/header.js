@@ -60,7 +60,13 @@ export default function Header() {
         fetchingUserRef.current = true;
         api.get("/sign/me")
             .then((res) => {
-                if (res?.data) authLogin(res.data);
+                if (res?.data) {
+                    // accessToken을 TokenStore에 저장 (새로고침 후 Zustand 상태 복원)
+                    if (res.data.accessToken) {
+                        tokenStore.getState().setAccessToken(res.data.accessToken);
+                    }
+                    authLogin(res.data);
+                }
             })
             .catch((err) => {
                 if (err?.response?.status === 401) {

@@ -32,20 +32,10 @@ api.interceptors.request.use(
         // SSR 환경에서는 무시
       }
     } else {
-      // 클라이언트 사이드: Zustand Store 우선
+      // 클라이언트 사이드: Zustand Store에서 읽기
+      // ACCESS_TOKEN은 HttpOnly 쿠키로 저장되므로 JS로 직접 읽을 수 없음
+      // 로그인/refresh 시 응답 바디에서 받아 Store에 저장한 값을 사용
       accessToken = tokenStore.getState().accessToken;
-
-      // Store에 없으면 쿠키에서 읽기 (새로고침 직후 등)
-      if (!accessToken && typeof document !== "undefined") {
-        const m = document.cookie.match(/(?:^|; )ACCESS_TOKEN=([^;]*)/);
-        if (m && m[1]) {
-          try {
-            accessToken = decodeURIComponent(m[1]);
-          } catch {
-            accessToken = m[1];
-          }
-        }
-      }
     }
 
     if (accessToken) {
@@ -112,11 +102,11 @@ api.interceptors.response.use(
 
     try {
       // REFRESH_TOKEN은 HttpOnly Cookie로 자동 전송됨 (withCredentials: true)
+      // 백엔드가 응답 바디에 accessToken을 포함해 반환함
       const { data } = await api.post("/sign/refresh");
 
-      // 백엔드가 새 ACCESS_TOKEN을 쿠키로 내려주지만,
-      // Zustand Store도 최신 상태로 유지 (쿠키에서 읽어서 저장)
-      const newToken = extractAccessTokenFromCookie();
+      // 응답 바디에서 accessToken 읽기 (HttpOnly 쿠키는 JS로 읽을 수 없음)
+      const newToken = data?.accessToken || null;
       if (newToken) {
         tokenStore.getState().setAccessToken(newToken);
       }
@@ -162,17 +152,5 @@ api.interceptors.response.use(
     }
   }
 );
-
-/** document.cookie에서 ACCESS_TOKEN 파싱 */
-function extractAccessTokenFromCookie() {
-  if (typeof document === "undefined") return null;
-  const m = document.cookie.match(/(?:^|; )ACCESS_TOKEN=([^;]*)/);
-  if (!m || !m[1]) return null;
-  try {
-    return decodeURIComponent(m[1]);
-  } catch {
-    return m[1];
-  }
-}
 
 export default api;
