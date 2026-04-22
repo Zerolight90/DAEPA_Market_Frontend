@@ -13,7 +13,7 @@ export const Endpoints = {
 
     createProduct: "/products/create-multipart",
 
-    // �?    favoriteStatus: (pid) => `/favorites/${pid}`,
+    favoriteStatus: (pid) => `/favorites/${pid}`,
     favoriteToggle: (pid) => `/favorites/${pid}/toggle`,
 };
 

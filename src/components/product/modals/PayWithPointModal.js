@@ -2,32 +2,20 @@
 
 import { useState, useEffect } from "react";
 import BaseModal from "@/components/ui/modal/BaseModal";
-import tokenStore from "@/store/TokenStore";
 import { api } from "@/lib/api/client";
-import { getSafeLocalStorage, safeGetItem } from "@/lib/safeStorage";
 
-export default function PayWithPointModal({ id, close, itemId, title, qty, total }) {
+export default function PayWithPointModal({ id, close, itemId, title, qty, total, productImageUrl }) {
     const [currentBalance, setCurrentBalance] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
-    const { token } = tokenStore();
 
     // 현재 포인트 잔액 조회
     useEffect(() => {
         const fetchBalance = async () => {
-            const ls = getSafeLocalStorage();
-            const currentToken = token || safeGetItem(ls, 'accessToken');
-            if (!currentToken) {
-                setError("로그인이 필요합니다");
-                setIsLoading(false);
-                return;
-            }
-
             try {
-                const data = await api("/pay/balance", {
-                    headers: { 'Authorization': `Bearer ${currentToken}` },
-                });
-                setCurrentBalance(data.balance);
+                // api는 axios 인스턴스 → 인터셉터가 토큰 자동 첨부
+                const res = await api.get("/pay/balance");
+                setCurrentBalance(res.data?.balance ?? res.data ?? 0);
             } catch (err) {
                 console.error("잔액 조회 오류:", err);
                 setError(err.message);
@@ -37,7 +25,7 @@ export default function PayWithPointModal({ id, close, itemId, title, qty, total
             }
         };
         fetchBalance();
-    }, [token]);
+    }, []);
 
     const handlePayWithPoints = async () => {
         if (isLoading) return;
@@ -52,22 +40,13 @@ export default function PayWithPointModal({ id, close, itemId, title, qty, total
         }
 
         try {
-            const ls = getSafeLocalStorage();
-            const currentToken = token || safeGetItem(ls, 'accessToken');
-            const result = await api("/pay/purchase-with-points", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${currentToken}`,
-                },
-                body: JSON.stringify({
-                    itemId: itemId,
-                    qty: qty,
-                    amount: total,
-                }),
+            const res = await api.post("/pay/purchase-with-points", {
+                itemId,
+                qty,
+                amount: total,
             });
 
-            alert(`결제가 완료되었습니다.\n남은 잔액: ${result.remainingBalance?.toLocaleString() || '?'} P`);
+            alert(`결제가 완료되었습니다.\n남은 잔액: ${res.data?.remainingBalance?.toLocaleString() || '?'} P`);
             close();
         } catch (err) {
             console.error("포인트 결제 오류:", err);
@@ -100,7 +79,17 @@ export default function PayWithPointModal({ id, close, itemId, title, qty, total
 
     return (
         <BaseModal id={id} close={close} title="포인트 결제">
-            <div style={{ marginBottom: 10, fontWeight: 700 }}>{title}</div>
+            {/* 상품 이미지 + 제목 */}
+            <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
+                {productImageUrl && (
+                    <img
+                        src={productImageUrl}
+                        alt="상품 이미지"
+                        style={{ width: 64, height: 64, objectFit: "cover", borderRadius: 8, flexShrink: 0 }}
+                    />
+                )}
+                <div style={{ fontWeight: 700, fontSize: 15 }}>{title}</div>
+            </div>
             <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom: 16 }}>
                 <span>수량: {qty}</span>
             </div>

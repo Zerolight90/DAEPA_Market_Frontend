@@ -8,7 +8,6 @@ import { loadTossPayments } from '@tosspayments/payment-sdk';
 import styles from './BuyModal.module.css';
 import AddressChangeModal from "@/components/product/modals/AddressChangeModal";
 import { api } from "@/lib/api/client";
-import { getSafeLocalStorage, safeGetItem } from "@/lib/safeStorage";
 
 // 일반 결제 진행 모달
 export default function BuyModal({ id, close, itemId, title, price }) {
@@ -33,10 +32,10 @@ export default function BuyModal({ id, close, itemId, title, price }) {
 
         const fetchProductImage = async () => {
             try {
-                const data = await api(`/products/${itemId}`);
-                if (data && data.pdThumb) {
-                    setProductImageUrl(data.pdThumb);
-                }
+                // api는 axios 인스턴스 → 응답 객체 { data, status, ... } 반환
+                const res = await api.get(`/products/${itemId}`);
+                const thumb = res.data?.pdThumb ?? res.data?.thumbnail ?? null;
+                if (thumb) setProductImageUrl(thumb);
             } catch (error) {
                 console.error("상품 이미지를 불러오는 데 실패했습니다.", error);
             }
@@ -49,13 +48,8 @@ export default function BuyModal({ id, close, itemId, title, price }) {
         const fetchDefaultAddress = async () => {
             setAddressLoading(true);
             try {
-                const ls = getSafeLocalStorage();
-                const token = safeGetItem(ls, 'accessToken');
-
-                const data = await api(`/sign/locations/default`, {
-                    headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
-                });
-                setSelectedAddress(data);
+                const res = await api.get(`/sign/locations/default`);
+                setSelectedAddress(res.data);
 
             } catch (error) {
                 if (error.status !== 204) {
@@ -104,9 +98,9 @@ export default function BuyModal({ id, close, itemId, title, price }) {
                 itemId={itemId}
                 title={title}
                 qty={qty}
-                price={price}
+                total={total}              // price*qty 계산된 총액 전달
+                productImageUrl={productImageUrl}  // 이미지 전달
                 selectedAddress={selectedAddress}
-                onAddressChange={() => {}}
             />
         ));
     };
