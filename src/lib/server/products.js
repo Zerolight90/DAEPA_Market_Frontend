@@ -21,7 +21,9 @@ export async function fetchProducts({
     })();
 
     const hasCategoryIds = Boolean(lowId || middleId || upperId);
-    let path = hasCategoryIds ? "/products" : "/products/by-name";
+    // 카테고리 ID가 있으면 /products, 카테고리 이름이 있으면 /products/by-name,
+    // 둘 다 없으면 전체 조회이므로 /products (파라미터 없이 호출)
+    let path = hasCategoryIds || (!decodedCategory) ? "/products" : "/products/by-name";
 
     if (hasCategoryIds) {
         if (upperId) qs.set("upperId", String(upperId));
@@ -29,9 +31,8 @@ export async function fetchProducts({
         if (lowId) qs.set("low", String(lowId));
     } else if (decodedCategory) {
         qs.set("big", decodedCategory);
-    } else {
-        return { items: [], page, size, total: 0 };
     }
+    // 카테고리 없음 → 쿼리스트링 추가 없이 전체 조회 (/products?page=0&size=20&...)
 
     // 🚨 핵심: 서버 사이드에서는 무조건 절대 주소(http://...)가 필요합니다!
     const backendUrl = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8080";
