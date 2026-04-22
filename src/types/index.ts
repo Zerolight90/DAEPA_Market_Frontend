@@ -89,13 +89,20 @@ export interface User {
   userId?: number;
   id?: number;
   uIdx?: number;
+  uId?: string;
   nickname?: string;
+  nickName?: string;
+  uNickname?: string;
+  u_nickname?: string;
   unickname?: string;
   uname?: string;
+  uName?: string;
+  u_name?: string;
   email?: string;
   uEmail?: string;
   avatarUrl?: string;
   uProfile?: string;
+  u_profile?: string;
   profileImage?: string;
   role?: string;
   uRole?: string;
@@ -105,6 +112,7 @@ export interface User {
   profile?: string;
   manner?: number;
   uManner?: number;
+  accessToken?: string;
 }
 
 /** 배송지 */

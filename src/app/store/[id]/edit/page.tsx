@@ -205,7 +205,7 @@ export default function ProductEditPage() {
                 onSubmit={submit}
                 onKeyDown={(e) => {
                     // textarea에서는 엔터 허용
-                    const tag = e.target.tagName;
+                    const tag = (e.target as HTMLElement).tagName;
                     if (e.key === "Enter" && tag !== "TEXTAREA") {
                         e.preventDefault();
                     }

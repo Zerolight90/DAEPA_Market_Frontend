@@ -5,6 +5,7 @@ import { ArrowLeft, Save, X } from "lucide-react";
 import Link from "next/link";
 import styles from "../../admin.module.css";
 import api from "@/lib/api"; // axios 인스턴스 가져오기
+import { getSafeSessionStorage, safeGetItem } from "@/lib/safeStorage";
 
 export default function CreateNoticePage() {
   // 폼 입력 데이터(제목, 카테고리, 내용)를 관리하는 상태

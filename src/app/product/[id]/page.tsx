@@ -6,18 +6,14 @@ export default function ProductDetail({ product }) {
     const router = useRouter();
 
     // 예시 데이터: 실제로는 로그인 상태 / 상품 데이터에서 가져옴
-    const me = { id: 10 }; // 로그인 사용자 (buyer)
     const sellerId = product.sellerId; // 판매자
     const productId = product.id; // 상품 pk
-    const dealId = null; // 거래 생성 전이므로 null
 
     const handleChatClick = async () => {
         try {
-            const { roomId } = await openChatRoom ({
-                buyerId: me.id,
+            const { roomId } = await openChatRoom({
                 sellerId,
                 productId,
-                dealId,
             });
 
             // ✅ 채팅 페이지로 이동

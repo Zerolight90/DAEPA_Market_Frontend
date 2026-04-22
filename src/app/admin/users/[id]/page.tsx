@@ -108,7 +108,7 @@ export default function UserDetailPage({ params }) {
     if (!value) return "";
     const reviewDate = new Date(value);
     const now = new Date();
-    const diffMs = now - reviewDate;
+    const diffMs = now.getTime() - reviewDate.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     if (diffDays === 0) return "오늘";
     if (diffDays === 1) return "1일전";
@@ -405,8 +405,8 @@ export default function UserDetailPage({ params }) {
                     max="100"
                     value={pendingManner ?? user.umanner ?? 0}
                     onChange={(event) => setPendingManner(Number(event.target.value))}
-                    onMouseUp={(event) => commitManner(Number(event.target.value))}
-                    onTouchEnd={(event) => commitManner(Number(event.target.value))}
+                    onMouseUp={(event) => commitManner(Number((event.target as HTMLInputElement).value))}
+                    onTouchEnd={(event) => commitManner(Number((event.target as HTMLInputElement).value))}
                     style={{
                       position: "absolute",
                       inset: 0,

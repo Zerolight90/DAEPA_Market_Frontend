@@ -10,7 +10,7 @@ import Link from "next/link";
 
 import { useParams } from "next/navigation";
 
-import styles from "../../bbs.module.css"; // Reusing admin styles for now
+import styles from "../admin.module.css";
 
 
 

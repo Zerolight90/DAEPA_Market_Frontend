@@ -82,7 +82,7 @@ export default function ReportsPage() {
     });
   };
 
-  const handleAction = async (reportId, action, formData = {}) => {
+  const handleAction = async (reportId: number | string, action: string, formData: { suspendDate?: string; reason?: string; duration?: string | number } = {}) => {
     setActionLoading(`${reportId}-${action}`);
     try {
       const endpoint =

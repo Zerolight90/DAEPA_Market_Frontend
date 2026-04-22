@@ -84,7 +84,7 @@ export default function AdminDashboard() {
             if (!dateString) return "-";
             const date = new Date(dateString);
             const now = new Date();
-            const diffMs = now - date;
+            const diffMs = now.getTime() - date.getTime();
             const diffMins = Math.floor(diffMs / 60000);
             const diffHours = Math.floor(diffMs / 3600000);
             const diffDays = Math.floor(diffMs / 86400000);
@@ -553,7 +553,7 @@ export default function AdminDashboard() {
             <tbody>
               {recentProducts.length === 0 ? (
                 <tr>
-                  <td colSpan="5" style={{ padding: "2rem", textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
+                  <td colSpan={5} style={{ padding: "2rem", textAlign: "center", color: "#64748b", fontSize: "0.875rem" }}>
                     등록된 상품이 없습니다.
                   </td>
                 </tr>

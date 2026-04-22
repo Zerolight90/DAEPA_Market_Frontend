@@ -115,7 +115,7 @@ export default function Page() {
             setForm({
                 upperId: null, middleId: null, lowId: null,
                 title: "", price: "", content: "", location: "",
-                pdStatus: 0, dDeal: "DELIVERY", files: [],
+                pdStatus: 0, dDeal: "DELIVERY", files: [], previews: [],
             });
             if (fileRef.current) fileRef.current.value = "";
         } catch (err) {
