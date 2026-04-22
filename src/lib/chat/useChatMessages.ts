@@ -182,13 +182,16 @@ export function useChatMessages(activeId, me, activeChat) {
         if (!activeId || !me?.id) return;
         
         const currentRoomMessages = messagesByRoom[activeId] || [];
-        const lastMessageId = Math.max(...currentRoomMessages
+        // 빈 배열에서 Math.max(...[]) = -Infinity 가 되는 엣지케이스 방지
+        const validIds = currentRoomMessages
             .filter(m => !m.__divider && m.type !== 'SYSTEM')
             .map(m => Number(m.id || m.messageId))
-            .filter(Number.isFinite)
-        );
+            .filter(Number.isFinite);
 
-        if (!lastMessageId) return;
+        if (validIds.length === 0) return;
+        const lastMessageId = Math.max(...validIds);
+
+        if (!lastMessageId || lastMessageId <= 0) return;
 
         const lastSentId = lastReadSentByRoomRef.current[activeId] || 0;
         if (lastSentId >= lastMessageId) return; // 이미 처리했으면 중복 전송 방지

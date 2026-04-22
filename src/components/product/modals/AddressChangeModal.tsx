@@ -4,24 +4,38 @@ import { useState, useEffect } from "react";
 import BaseModal from "@/components/ui/modal/BaseModal";
 import styles from './AddressChangeModal.module.css';
 import { api } from "@/lib/api/client";
-import { getSafeLocalStorage, safeGetItem } from "@/lib/safeStorage";
+// api 인터셉터가 Authorization 헤더를 자동으로 첨부 — localStorage 토큰 읽기 불필요
 
-export default function AddressChangeModal({ id, close, onAddressSelect }) {
-    const [addresses, setAddresses] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<any>(null);
+interface Address {
+    locKey: number;
+    locTitle: string;
+    locName?: string;
+    locNum?: string;
+    locCode?: string;
+    locAddress: string;
+    locDetail?: string;
+    locDefault?: boolean;
+}
+
+interface AddressChangeModalProps {
+    id: string;
+    close: () => void;
+    onAddressSelect: (address: Address) => void;
+}
+
+export default function AddressChangeModal({ id, close, onAddressSelect }: AddressChangeModalProps) {
+    const [addresses, setAddresses] = useState<Address[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string | null>(null);
 
     // 주소 목록을 불러오는 함수
     const fetchAddresses = async () => {
         setLoading(true);
         setError(null);
         try {
-            const ls = getSafeLocalStorage();
-            const token = safeGetItem(ls, 'accessToken');
-            const data = await api("/sign/locations", {
-                headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
-            });
-            setAddresses(data);
+            // api 인터셉터가 Authorization 헤더를 자동으로 첨부합니다
+            const res = await api.get<Address[]>("/sign/locations");
+            setAddresses(res.data);
         } catch (err) {
             setError("주소 목록을 불러오는 데 실패했습니다.");
             console.error(err);
@@ -36,21 +50,16 @@ export default function AddressChangeModal({ id, close, onAddressSelect }) {
     }, []);
 
     // '선택' 버튼 핸들러
-    const handleSelectAddress = (address) => {
+    const handleSelectAddress = (address: Address) => {
         onAddressSelect(address);
         close();
     };
 
     // '기본으로 설정' 버튼 핸들러
-    const handleSetDefault = async (locationId) => {
+    const handleSetDefault = async (locationId: number) => {
         try {
-            const ls = getSafeLocalStorage();
-            const token = safeGetItem(ls, 'accessToken');
-            await api(`/sign/location/${locationId}/update`, {
-                method: 'PUT',
-                headers: token ? { 'Authorization': `Bearer ${token}` } : undefined
-            });
-
+            // api 인터셉터가 Authorization 헤더를 자동으로 첨부합니다
+            await api.put(`/sign/location/${locationId}/update`);
             await fetchAddresses();
         } catch (err) {
             alert("기본 배송지 설정에 실패했습니다.");

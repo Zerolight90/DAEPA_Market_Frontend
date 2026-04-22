@@ -24,12 +24,12 @@ export async function fetchSellerProducts({
     const path = `/sellers/${sellerId}/products?${qs.toString()}`;
 
     try {
-        const data = await api(path, {
-            cache: "no-store",
+        // api.get()으로 호출해야 res.data 에 실제 응답이 들어옵니다
+        const res = await api.get(path, {
             headers: { Accept: "application/json" },
-        } as never);
+        });
 
-        const responseData = (data as { data: unknown }).data;
+        const responseData = res.data;
         const items: Record<string, unknown>[] = Array.isArray((responseData as Record<string, unknown>)?.content)
             ? (responseData as Record<string, unknown>).content as Record<string, unknown>[]
             : Array.isArray(responseData)
@@ -59,15 +59,16 @@ export async function fetchSellerProducts({
     }
 }
 
-export async function fetchProductDetail(productId: number | string): Promise<unknown> {
+export async function fetchProductDetail(productId: number | string): Promise<Product | null> {
     if (!productId) return null;
 
     try {
-        const data = await api(`/products/${productId}`, {
-            cache: "no-store",
+        // 수정 전: api() 직접 호출 시 AxiosResponse 전체가 반환됨
+        // 수정 후: api.get()으로 호출하고 res.data 만 반환
+        const res = await api.get<Product>(`/products/${productId}`, {
             headers: { Accept: "application/json" },
-        } as never);
-        return data;
+        });
+        return res.data ?? null;
     } catch (error) {
         console.error(`[fetchProductDetail] API Error for product ${productId}:`, error);
         return null;

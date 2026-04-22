@@ -1,10 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import BaseModal from "@/components/ui/modal/BaseModal";
 
-export default function ChatModal({ id, close, seller }) {
-    const [msg, setMsg] = useState("");
+interface ChatModalProps {
+    id: string;
+    close: () => void;
+    seller?: { nickname?: string };
+}
+
+export default function ChatModal({ id, close, seller }: ChatModalProps) {
+    const [msg, setMsg] = useState<string>("");
 
     const send = () => {
         // TODO: 실제 채팅 API 연동
@@ -25,4 +31,4 @@ export default function ChatModal({ id, close, seller }) {
         </BaseModal>
     );
 }
-const primaryBtn = { background: "#008c6e", color: "#fff", border: "none", borderRadius: 8, padding: "10px 14px", cursor: "pointer" };
+const primaryBtn: CSSProperties = { background: "#008c6e", color: "#fff", border: "none", borderRadius: 8, padding: "10px 14px", cursor: "pointer" };

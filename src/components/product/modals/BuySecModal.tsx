@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type CSSProperties } from "react";
 import BaseModal from "@/components/ui/modal/BaseModal";
 import { useModal } from "@/components/ui/modal/ModalProvider";
 import SecPayWithPointModal from "./SecPayWithPointModal";
@@ -9,7 +9,7 @@ import AddressChangeModal from "@/components/product/modals/AddressChangeModal";
 import { api } from "@/lib/api/client";
 
 // ─── 공통 인라인 스타일 (BuyModal과 동일) ───
-const primaryBtn = {
+const primaryBtn: CSSProperties = {
     width: "100%",
     padding: "12px 14px",
     background: "#008c6e",
@@ -21,7 +21,7 @@ const primaryBtn = {
     cursor: "pointer",
     marginBottom: 10,
 };
-const secondaryBtn = {
+const secondaryBtn: CSSProperties = {
     width: "100%",
     padding: "12px 14px",
     background: "#1aab8a",
@@ -33,7 +33,7 @@ const secondaryBtn = {
     cursor: "pointer",
     marginBottom: 10,
 };
-const ghostBtn = {
+const ghostBtn: CSSProperties = {
     width: "100%",
     padding: "11px 14px",
     background: "#fff",
@@ -44,7 +44,7 @@ const ghostBtn = {
     fontSize: 14,
     cursor: "pointer",
 };
-const qtyBtn = {
+const qtyBtn: CSSProperties = {
     width: 32,
     height: 32,
     border: "1px solid #ddd",
@@ -56,12 +56,20 @@ const qtyBtn = {
     lineHeight: 1,
 };
 
-export default function BuySecModal({ id, close, itemId, title, price }) {
+interface BuySecModalProps {
+    id: string;
+    close: () => void;
+    itemId: number | string;
+    title: string;
+    price: number | string;
+}
+
+export default function BuySecModal({ id, close, itemId, title, price }: BuySecModalProps) {
     const [qty, setQty] = useState(1);
     const total = (Number(price) || 0) * qty;
     const modal = useModal();
 
-    const [selectedAddress, setSelectedAddress] = useState<any>(null);
+    const [selectedAddress, setSelectedAddress] = useState<Record<string, unknown> | null>(null);
     const [addressLoading, setAddressLoading] = useState(true);
     const [productImageUrl, setProductImageUrl] = useState('/images/placeholder.jpg');
 

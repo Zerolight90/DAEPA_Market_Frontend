@@ -22,18 +22,18 @@ import styles from "./css/header.module.css";
 import useAuthStore from "@/store/useAuthStore";
 import tokenStore from "@/store/TokenStore";
 
-function getDisplayName(me) {
+function getDisplayName(me: Record<string, unknown> | null | undefined): string | null {
     if (!me) return null;
 
     return (
-        me.uNickname ||
-        me.u_nickname ||
-        me.nickname ||
-        me.nickName ||
-        me.uName ||
-        me.u_name ||
-        me.uId ||
-        me.u_id ||
+        (me.uNickname as string) ||
+        (me.u_nickname as string) ||
+        (me.nickname as string) ||
+        (me.nickName as string) ||
+        (me.uName as string) ||
+        (me.u_name as string) ||
+        (me.uId as string) ||
+        (me.u_id as string) ||
         null
     );
 }

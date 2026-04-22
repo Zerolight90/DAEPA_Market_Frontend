@@ -1,11 +1,11 @@
-//lib/chat/useChatSocket.js
+//lib/chat/useChatSocket.ts
 import { useEffect, useRef, useState, useCallback } from "react";
 import SockJS from "sockjs-client";
-import { Client } from "@stomp/stompjs";
+import { Client, type StompSubscription } from "@stomp/stompjs";
 
 const HEARTBEAT_MS = 10000;
 
-function resolveWsUrl(baseUrl) {
+function resolveWsUrl(baseUrl: string): string {
     if (!baseUrl && typeof window !== "undefined") return "/ws-stomp";
     if (!baseUrl) return "/ws-stomp";
     try {
@@ -16,25 +16,31 @@ function resolveWsUrl(baseUrl) {
     }
 }
 
-export function useChatSocket({ roomId, me, baseUrl = "" }) {
-    const [connected, setConnected] = useState(false);
-    const [messages, setMessages] = useState<any[]>([]);
+interface UseChatSocketOptions {
+    roomId: number | string | null;
+    me?: { id?: number | string } | null;
+    baseUrl?: string;
+}
 
-    const clientRef = useRef(null);
+export function useChatSocket({ roomId, me, baseUrl = "" }: UseChatSocketOptions) {
+    const [connected, setConnected] = useState<boolean>(false);
+    const [messages, setMessages] = useState<Record<string, unknown>[]>([]);
+
+    const clientRef = useRef<Client | null>(null);
 
     // 최신 값 유지용 ref (onConnect 클로저 stale 방지)
-    const meIdRef = useRef(null);
-    const roomIdRef = useRef(null);
+    const meIdRef = useRef<number | null>(null);
+    const roomIdRef = useRef<number | null>(null);
 
     // 구독 핸들
-    const roomSubRef = useRef(null);
-    const badgeSubRef = useRef(null);
+    const roomSubRef = useRef<StompSubscription | null>(null);
+    const badgeSubRef = useRef<StompSubscription | null>(null);
 
     // 외부 콜백 저장
-    const onMsgRef = useRef(() => {});
-    const onBadgeRef = useRef(() => {});
-    const setOnServerMessage = useCallback((fn) => { onMsgRef.current = fn || (() => {}); }, []);
-    const setOnBadge        = useCallback((fn) => { onBadgeRef.current = fn || (() => {}); }, []);
+    const onMsgRef = useRef<(msg: Record<string, unknown>) => void>(() => {});
+    const onBadgeRef = useRef<(badge: Record<string, unknown>) => void>(() => {});
+    const setOnServerMessage = useCallback((fn: ((msg: Record<string, unknown>) => void) | null) => { onMsgRef.current = fn || (() => {}); }, []);
+    const setOnBadge        = useCallback((fn: ((badge: Record<string, unknown>) => void) | null) => { onBadgeRef.current = fn || (() => {}); }, []);
 
     // 최신 값 동기화
     useEffect(() => { meIdRef.current = me?.id ?? null; }, [me?.id]);
@@ -142,7 +148,7 @@ export function useChatSocket({ roomId, me, baseUrl = "" }) {
     }, [me?.id, subscribeBadge, subscribeRoom]);
 
     /** 발행 유틸: 연결 확인 필수 */
-    const publishJson = useCallback((destination, body) => {
+    const publishJson = useCallback((destination: string, body: Record<string, unknown>) => {
         const client = clientRef.current;
         if (!client || !client.connected) return; // 미연결이면 무시
         client.publish({
