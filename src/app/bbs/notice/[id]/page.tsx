@@ -16,18 +16,18 @@ export default function NoticeDetailPage() {
 
     const fetchNotice = async () => {
       try {
-        const res = await fetch(`/api/admin/notices/${id}`);
+        const res = await fetch(`/api/public/notices/${id}`);
         if (!res.ok) throw new Error("공지사항을 불러오지 못했습니다.");
         const data = await res.json();
 
         setNotice({
-          id: data.nidx,
-          title: data.nsubject,
-          content: data.ncontent,
+          id: data.nIdx,
+          title: data.nSubject,
+          content: data.nContent,
           author: data.adminNick,
-          category: convertCategory(data.ncategory),
-          createdAt: data.ndate,
-          imageUrl: data.nimg,
+          category: convertCategory(data.nCategory),
+          createdAt: data.nDate,
+          imageUrl: data.nImg,
         });
       } catch (err) {
         console.error("공지사항 조회 실패:", err);
