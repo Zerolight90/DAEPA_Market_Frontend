@@ -1,7 +1,7 @@
 // components/chat/ScrollArea.js
 "use client";
 import React from "react";
-import { Box, styled } from "@mui/material";
+import { Box, styled, type BoxProps } from "@mui/material";
 
 const ScrollAreaBase = styled(Box)(({ theme }) => ({
     overflowY: "auto",
@@ -14,7 +14,7 @@ const ScrollAreaBase = styled(Box)(({ theme }) => ({
 }));
 
 // ✅ forwardRef로 외부에서 scrollTop/scrollHeight 제어 가능
-const ScrollArea = React.forwardRef<HTMLDivElement, { children?: React.ReactNode; [key: string]: unknown }>(function ScrollArea({ children, ...props }, ref) {
+const ScrollArea = React.forwardRef<HTMLDivElement, BoxProps>(function ScrollArea({ children, ...props }, ref) {
     return (
         <ScrollAreaBase ref={ref} {...props}>
             {children}
