@@ -121,3 +121,8 @@ backend/src/main/resources/*.yml
 
 # 공통 yml 차단 규칙으로 인해 예기치 않게 막히는 파일이 있다면
 # !경로/파일.yml 로 개별 허용 예외를 추가하면 됩니다.
+# Claude Code
+.claude/settings.local.json
+
+# TypeScript 빌드 캐시
+tsconfig.tsbuildinfo
