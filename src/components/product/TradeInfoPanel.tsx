@@ -5,7 +5,13 @@ export default function TradeInfoPanel({
                                            item,
                                            condition,
                                            dealType,
-                                       }) {
+                                           meetLocation,
+                                       }: {
+    item?: any;
+    condition?: any;
+    dealType?: any;
+    meetLocation?: any;
+}) {
     const _dealType =
         dealType ??
         item?.dealType ??

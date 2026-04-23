@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import styles from './ShareModal.module.css';
 
-export default function ShareModal({ open = true, onClose, title, url, image }) {
+export default function ShareModal({ open = true, onClose, title, url, image }: { open?: boolean; onClose: any; title: any; url: any; image?: any }) {
     // 페이지 스크롤 잠금
     useEffect(() => {
         if (!open) return;

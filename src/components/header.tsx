@@ -22,7 +22,7 @@ import styles from "./css/header.module.css";
 import useAuthStore from "@/store/useAuthStore";
 import tokenStore from "@/store/TokenStore";
 
-function getDisplayName(me: Record<string, unknown> | null | undefined): string | null {
+function getDisplayName(me: Record<string, unknown> | { [key: string]: any } | null | undefined): string | null {
     if (!me) return null;
 
     return (

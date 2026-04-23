@@ -7,7 +7,7 @@ import ImageIcon from "@mui/icons-material/Image";
 import EmojiPicker from "emoji-picker-react";
 import s from "./MarketChat.module.css";
 
-export default function InputBar({ onSend }) {
+export default function InputBar({ onSend, disabled }: { onSend: any; disabled?: boolean }) {
     const [text, setText] = useState("");
     const [emojiOpen, setEmojiOpen] = useState(false);
     const [pendingImage, setPendingImage] = useState<any>(null);
@@ -38,7 +38,7 @@ export default function InputBar({ onSend }) {
     };
 
     const onPaste = (e) => {
-        const item = Array.from(e.clipboardData.items).find((x) => x.type.startsWith("image/"));
+        const item = Array.from(e.clipboardData.items as DataTransferItemList).find((x) => (x as DataTransferItem).type.startsWith("image/")) as DataTransferItem | undefined;
         if (item) {
             const file = item.getAsFile();
             if (file) setPendingImage({ file, previewUrl: URL.createObjectURL(file) });

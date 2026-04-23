@@ -43,7 +43,7 @@ export function useChatSocket({ roomId, me, baseUrl = "" }: UseChatSocketOptions
     const setOnBadge        = useCallback((fn: ((badge: Record<string, unknown>) => void) | null) => { onBadgeRef.current = fn || (() => {}); }, []);
 
     // 최신 값 동기화
-    useEffect(() => { meIdRef.current = me?.id ?? null; }, [me?.id]);
+    useEffect(() => { meIdRef.current = me?.id != null ? Number(me.id) : null; }, [me?.id]);
     useEffect(() => { roomIdRef.current = roomId ? Number(roomId) : null; }, [roomId]);
 
     const url = resolveWsUrl(baseUrl);

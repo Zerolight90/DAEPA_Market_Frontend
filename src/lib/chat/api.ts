@@ -41,7 +41,7 @@ export async function fetchRooms(userId) {
     }
 }
 
-export async function fetchMessages(roomId, size = 30, before) {
+export async function fetchMessages(roomId, size = 30, before?) {
     const rid = normRoomId(roomId);
     const { data } = await http.get(`/chats/${rid}/messages`, {
         params: { size, before },

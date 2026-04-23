@@ -7,6 +7,7 @@ import SecPayWithPointModal from "./SecPayWithPointModal";
 import { loadTossPayments } from '@tosspayments/payment-sdk';
 import AddressChangeModal from "@/components/product/modals/AddressChangeModal";
 import { api } from "@/lib/api/client";
+import type { Address } from "@/types";
 
 // ─── 공통 인라인 스타일 (BuyModal과 동일) ───
 const primaryBtn: CSSProperties = {
@@ -69,7 +70,7 @@ export default function BuySecModal({ id, close, itemId, title, price }: BuySecM
     const total = (Number(price) || 0) * qty;
     const modal = useModal();
 
-    const [selectedAddress, setSelectedAddress] = useState<Record<string, unknown> | null>(null);
+    const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
     const [addressLoading, setAddressLoading] = useState(true);
     const [productImageUrl, setProductImageUrl] = useState('/images/placeholder.jpg');
 

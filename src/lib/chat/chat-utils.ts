@@ -327,7 +327,7 @@ export function normalizeRoomDto(raw, meId) {
     };
 }
 
-export const resolvePeerId = (room, myId, role) => {
+export const resolvePeerId = (room, myId, role?) => {
     if (!room) return null;
     if (room.counterpartyId) return Number(room.counterpartyId);
     const buyerId = room.buyerId != null ? Number(room.buyerId) : null;

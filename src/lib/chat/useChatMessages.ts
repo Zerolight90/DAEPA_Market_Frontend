@@ -131,7 +131,7 @@ export function useChatMessages(activeId, me, activeChat) {
             const currentRoomMessages = [...(prev[activeId] || [])];
 
             for (const msg of newMessages) {
-                const type = (msg?.type || "").toUpperCase();
+                const type = ((msg?.type as string) || "").toUpperCase();
 
                 // 읽음 이벤트 처리
                 if (type === "READ") {
