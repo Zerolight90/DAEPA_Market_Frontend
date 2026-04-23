@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Autoplay, Pagination, A11y } from "swiper/modules";
 import styles from "./css/banner.module.css";
-import api from "@/lib/api";
 
 export default function Banner() {
     const [slides, setSlides] = useState<any[]>([]);
@@ -22,7 +21,8 @@ export default function Banner() {
 
     const fetchBanners = async () => {
         try {
-            const { data } = await api.get("/admin/banners/active");
+            const res = await fetch("/api/banners", { cache: "no-store" });
+            const data = res.ok ? await res.json() : [];
             const activeBanners = (Array.isArray(data) ? data : [])
                 .sort((a, b) => (a.displayOrder ?? 999) - (b.displayOrder ?? 999))
                 .map(item => ({
