@@ -21,13 +21,13 @@ export default function NoticeDetailPage() {
         const data = await res.json();
 
         setNotice({
-          id: data.nIdx,
-          title: data.nSubject,
-          content: data.nContent,
+          id: data.nidx,
+          title: data.nsubject,
+          content: data.ncontent,
           author: data.adminNick,
-          category: convertCategory(data.nCategory),
-          createdAt: data.nDate,
-          imageUrl: data.nImg,
+          category: convertCategory(data.ncategory),
+          createdAt: data.ndate,
+          imageUrl: data.nimg,
         });
       } catch (err) {
         console.error("공지사항 조회 실패:", err);
