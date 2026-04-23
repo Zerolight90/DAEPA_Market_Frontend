@@ -4,7 +4,15 @@
       "Bash(npm run *)",
       "Bash(npm ls *)",
       "Bash(npm install *)",
-      "Bash(npx tsc *)"
+      "Bash(npx tsc *)",
+      "Bash(git checkout *)",
+      "Bash(git pull *)",
+      "Bash(git merge *)",
+      "Bash(git push *)",
+      "Bash(git rm *)",
+      "Bash(rm -f cd npm tsc \"daepa@0.1.0\" tsconfig.tsbuildinfo)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)"
     ]
   }
 }
